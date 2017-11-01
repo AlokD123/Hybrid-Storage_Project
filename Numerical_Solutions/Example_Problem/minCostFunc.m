@@ -1,5 +1,5 @@
-function [ minCostOut ] = minCostFunc5( x,currStatePtr,currStateCostPtr )
-%minCostFunc5 Calculates min cost, all-in-one (version 5)
+function [ minCostOut ] = minCostFunc( x,currStatePtr,currStateCostPtr )
+%minCostFunc Calculates min cost, all-in-one (version 5)
 %   Cost calculation dependent only on x (u set dynamically)
 %   Added state 
 %   Added pointer passing to avoid repeated recursion
