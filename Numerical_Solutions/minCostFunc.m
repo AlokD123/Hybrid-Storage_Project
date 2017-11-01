@@ -1,11 +1,15 @@
-function [ minCostOut ] = minCostFunc2( x,u )
-%minCostFunc2 Calculates min cost, all-in-one
+function [ minCostOut ] = minCostFunc3( x )
+%minCostFunc3 Calculates min cost, all-in-one (version 2)
+%   Cost calculation dependent only on x (u set dynamically)
+%   Issue: repetition of recursion, infinite loop
 
-totalCtrlCost=@(u)(u^2 + minCostFunc2(  f(x,u), fminbnd(nextStateCost,-f(x,u),5-f(x,u)) ));
-nextStateCost=@(v) minCostFunc2(f(x,u),v);
+f=@(x,u)x+u;
 
-u0=fminbnd(totalCtrlCost,-x,5-x);
+totalCtrlCost=@(u)(u^2 + minCostFunc3(f(x,u)));
 
-minCostOut=x^2+u0^2+ minCostFunc2(  f(x,u), fminbnd(nextStateCost,-f(x,u),5-f(x,u)) );
+uOpt=fminbnd(totalCtrlCost,-x,5-x);
+fprintf('uOpt=%f',uOpt)
+
+minCostOut=x^2+uOpt^2+ minCostFunc3(f(x,u));
 
 end
