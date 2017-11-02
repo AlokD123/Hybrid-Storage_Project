@@ -17,20 +17,55 @@
 	
 	\section{Model}
 	
+	\subsection{Definitions}
+	\begin{itemize}
+		\item Indices
+		$i$: discrete time step index
+		$j$: storage device number (1: battery, 2: supercapacitor)
+		\item Parameters
+		$\alpha^{C}$: charging efficiency
+		$\alpha^{D}$: discharging efficiency
+		$\beta$: storage efficiency factor (constant)
+		$N$: number of steps (DP horizon)
+		$K$: cost weighting factor for rate (relative to cost of energy loss)
+		\item Variables
+		$L$: load energy demand (Random Variable!!)
+		$E$: energy state of storage device
+		$D$: energy released by discharging (AFTER loss)
+		$C$: energy consumed by charging (BEFORE loss)
+		$J$: value function
+	\end{itemize}
+	
+	NOTE: $C_{1}$ does not exist because not possible to charge the battery while driving. (Assuming no regenerative braking at the moment.)
+	
 	\subsection{Constraints}
 	\begin{itemize}
 		\item Supply demand balance: 
-		\item Stored energy changes, including constant leakage loss:\\
+		\[ \left[D_{1}(i)\right] + \left[D_{2}(i)\right] - \left[C_{2}(i)\right] = L(i) \]
+		\item Stored energy changes, including constant leakage loss:
+		\[E_{1}(i+1)=\beta_{1}E_{1}(i)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(i)\right] \]
+		
+		\[E_{2}(i+1)=\beta_{2}E_{2}(i)+\left[\alpha_{2}^{C}C_{2}(i)-\frac{1}{\alpha_{2}^{D}}D_{2}(i)\right] \]
+		
 		\item Bounds on stored energy: 
+		\[E_{j}^{min}\leq E_{j}(i)\leq E_{j}^{max}\]
 		\item Bounds on charging:
+		\[0\leq C_{2}(i)\leq C_{2}^{max}\]
 		\item Bounds on discharging:
+		\[0\leq D_{j}(i)\leq D_{j}^{max}\]
 	\end{itemize}
 
 	\subsection{Objective Function}
 	\begin{itemize}
 		\item Minimize charge and discharge rates
-		 for the first storage device (battery)
+		 for the first storage device (battery):
+		 \[J_{rate}=min\left[\sum_{i=0}^{N}K\left[D_{1}(i)\right]^{2}\right]\]
  		\item Minimize power loss due to energy transfers
+		 \[J_{loss}=min\left[\sum_{i=0}^{N}
+		 (1-\alpha_{1}^{D})D_{1}(i)+
+		 (1-\alpha_{2}^{C})C_{2}(i)+
+ 		 (1-\alpha_{2}^{D})D_{2}(i)
+		  \right]\]
 	\end{itemize}
 	
 	\bibliographystyle{plain}
