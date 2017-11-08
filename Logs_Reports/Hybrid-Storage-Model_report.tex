@@ -7,6 +7,7 @@
 
 \usepackage{natbib}
 \usepackage{graphicx}
+\usepackage{amsmath}
 
 \begin{document}
 	
@@ -41,14 +42,14 @@
 	\subsection{Constraints}
 	\begin{itemize}
 		\item Supply demand balance: 
-		\[ \left[D_{1}(i)\right] + \left[D_{2}(i) - C_{2}(i)\right] = L(i) \]
+		\begin{equation} \left[D_{1}(i)\right] + \left[D_{2}(i) - C_{2}(i)\right] = L(i) \end{equation}
 						
 		\item Bounds on stored energy: 
-		\[E_{j}^{min}\leq E_{j}(i)\leq E_{j}^{max}\]
+		\begin{equation}E_{j}^{min}\leq E_{j}(i)\leq E_{j}^{max}\end{equation}
 		\item Bounds on charging:
-		\[0\leq C_{2}(i)\leq C_{2}^{max}\]
+		\begin{equation}0\leq C_{2}(i)\leq C_{2}^{max}\end{equation}
 		\item Bounds on discharging:
-		\[0\leq D_{j}(i)\leq D_{j}^{max}\]
+		\begin{equation}0\leq D_{j}(i)\leq D_{j}^{max}\end{equation}
 	\end{itemize}
 
 	\subsection{Recursive State Equations}
@@ -56,22 +57,44 @@
 	 
 	 The following recursive equations describe the changes in the state, including due to constant leakage loss:
 	 
-	 \[E_{1}(i+1)=\beta_{1}E_{1}(i)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(i)\right] \]
+	 \begin{equation}\label{eq:StateEq1}E_{1}(i+1)=\beta_{1}E_{1}(i)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(i)\right] \end{equation}
 	 
-	 \[E_{2}(i+1)=\beta_{2}E_{2}(i)+\left[\alpha_{2}^{C}C_{2}(i)-\frac{1}{\alpha_{2}^{D}}D_{2}(i)\right] \]
+	 \begin{equation}\label{eq:StateEq2}E_{2}(i+1)=\beta_{2}E_{2}(i)+\left[\alpha_{2}^{C}C_{2}(i)-\frac{1}{\alpha_{2}^{D}}D_{2}(i)\right]\end{equation} 
 	 
 
 	\subsection{Objective Function}
 	\begin{itemize}
 		\item Minimize charge and discharge rates
 		 for the first storage device (battery):
-		 \[J_{rate}=min\left[\sum_{i=0}^{N}K\left[D_{1}(i)\right]^{2}\right]\]
+		 \begin{equation}J_{rate}=min\left[\sum_{i=0}^{N}K\left[D_{1}(i)\right]^{2}\right]\end{equation}
  		\item Minimize power loss due to energy transfers
-		 \[J_{loss}=min\left[\sum_{i=0}^{N}
+		 \begin{equation}J_{loss}=min\left[\sum_{i=0}^{N}
 		 (1-\alpha_{1}^{D})D_{1}(i)+
 		 (1-\alpha_{2}^{C})C_{2}(i)+
  		 (1-\alpha_{2}^{D})D_{2}(i)
-		  \right]\]
+		  \right]\end{equation}
+		  
+		  \item Cost-to-Go function, for battery storage:\\
+		  \begin{multline}
+		  J_{i}[E_{1}(i)] = \min_{D_{1},D_{2}}
+		  {(1-\alpha_{1}^{D})D_{1}(i) 
+		  	+ K[D_{1}(i)]^{2}
+		  	+(1-\alpha_{2}^{D})[D_{2}(i)]\\	  +(1-\alpha_{2}^{C})[D_{1}(i)+D_{2}(i)-E\{L(i)\}]
+		  	+E\{J_{i+1}[f_{1}(E_{1}(i),D_{1}(i))]\}}
+		  \end{multline}
+		  
+		  where $f_{1}(\cdot)$ is \eqref{eq:StateEq1}, the state equation for the battery.
+		  
+		  \item Cost-to-Go function, for supercapacitor storage:\\
+		  \begin{multline}
+		  J_{i}[E_{2}(i)] = \min_{D_{1},D_{2}}
+		  {(1-\alpha_{1}^{D})D_{1}(i) 
+		  	+ K[D_{1}(i)]^{2}
+		  	+(1-\alpha_{2}^{D})[D_{2}(i)]\\	  +(1-\alpha_{2}^{C})[D_{1}(i)+D_{2}(i)-E\{L(i)\}]
+		  	+E\{J_{i+1}[f_{2}(E_{2}(i),D_{2}(i)),C_{2}(i))]\}}
+		  \end{multline}
+		  
+		  where $f_{2}(\cdot)$ is \eqref{eq:StateEq2}, the state equation for the supercapacitor.
 	\end{itemize}
 	
 	\bibliographystyle{plain}
