@@ -1,47 +1,48 @@
 clear all;
 
-global iterCost;
+INF=1e6;
+MIN_STATE=-10;
+MAX_STATE=10;
+
+MIN_PERTURB=-2;
+MAX_PERTURB=2;
+P_PERTURB=1/(MAX_PERTURB-MIN_PERTURB+1);
+
 global uOpt;
 global LAST_ITER;
 
 %Define ending iteration
-LAST_ITER=1;    %Recurse for 2 iterations (0 and 1)
+LAST_ITER=2;    %Recurse for 2 iterations (1 and 2)
 
- for i=0:LAST_ITER
-     iterCost=[iterCost;0]; %iterCost(k) holds cost of the kth iteration
-     uOpt=[uOpt;0];         %uOpt(k) holds optimal control of the kth iteration
- end
+V(MIN_STATE:MAX_STATE,1:LAST_ITER) = INF;     %V(:,k) holds the cost of the kth iteration for each possible state
+uOptState(1:MAX_STATE-MIN_STATE+1)=0;         %uOptState holds the optimal control for each state, at a SINGLE GIVEN iteration
+uOpt(1:LAST_ITER)=0;                          %uOpt holds the optimal control for each iteration
+optIterCost(1:LAST_ITER)=INF;                 %holds lowest cost amongst all states AT a GIVEN iteration (i.e. state to choose)
 
- 
- function [ minCost ] = getMinCost2( x,k )
-%getMinCost2 Calculates the "cost" metric of an iteration
-%   k: iteration #
-%   x: "state" value of iteration (updated at each iteration)
-%   iterCost: cost of the current iteration
-%   minCost: cost of iteration k (output)
+V(:,LAST_ITER)=0;                             %final cost is 0, for all possible states
 
-global iterCost;
-global uOpt;
-
-global LAST_ITER;
-
-if k<LAST_ITER
-    %In any but last iteration, find optimum value of u basd on next iteration cost....
-    totalCtrlCost=@(u) getMinCost2(x+u,k+1) ; %Get cost of next iteration (k+1). x+u is expression to find value of next state.
-    uOpt(k+1)=fminbnd(totalCtrlCost,-x,5-x);       %Get optimal value of u, within arbitrary constraints -x<u<-x+5
-    %Calculate total cost of iteration...
-    iterCost(k+1)=x^2+uOpt(k+1)^2+iterCost(k+2); %"Cost function"
-else
-    %In last iteration, no "control" needed, so....
-    uOpt(k+1)=2;
-    %Calculate total cost of iteration...
-    iterCost(k+1)=x^2; %"Cost function"
+for t=(LAST_ITER-1):1         %Start at 2nd-last iteration (time, t), and continue backwards
+  for x=MIN_STATE:MAX_STATE   %For each state at an iteration...
+    CostX(x)=INF;             %CostX will LOWEST cost-to-go for a state. (Assume infinite cost by default)
+    for u=-x:(-x+5)           %For each possible control for that state (at a given iteration)... (TO DO: customize set of possible control)
+      CostX_U=0;              %CostX_U will hold EXPECTED cost of next state
+      for w=MIN_PERTURB:MAX_PERTURB     %Find expected cost-to-go for a given control to be the Expected Cost for over all random perturbances
+        if((x+u+w)<MAX_STATE && (x+u+w)>MIN_STATE) %If next state is amongst those achievable with a given perturbance....
+          CostX_U=CostX_U+V(t+1,x+u+w)*P_PERTURB   %Add to running cost     (TO DO: customize next-state calculation)
+        end
+      end
+      if(CostX_U=0) disp('State with no achievable next state') return end; %If cannot go to any next state, break script. (TO DO: update to cost=INF)
+      if(CostX(x)>CostX_U)    %Find lowest cost-to-go for the state amongst those possible for each of the controls
+        CostX(x)=CostX_U;
+        uOptState(x)=u;       %Find best control for the state (providing the lowst cost to go)
+      end
+    end
+    V(t,x)=CostX(x) + (x^2+uOptState(x)^2);  %Fill in value vector (for a given time t) with: LOWEST costs-to-go for each state + Cost of the state ITSELF (x^2+u^2)
+    % (TO DO: customize current state cost calculation)
+    if(optIterCost(t)>V(t,x)) %Find lowest cost amongst all the states at a given time
+      optIterCost(t)= V(t,x);
+      uOpt(t)=uOptState(x);   %Optimal control at an iteration amongst all the states is that which has the lowest cost of state.
+  end
 end
 
-fprintf('State=%d, uOpt=%f, iterCost=%f\n',k,uOpt(k+1),iterCost(k+1)); %Should display iteration #, optimal u value, and cost
-
-%NOTE: Calculation for cost is in terms of updated state value, optimal u (0 in
-%last iteration), and cost of the following iteration (0 in last iteration)
-minCost=iterCost(k+1);       %Return value for function (SAME as iterCost)
-
-end
+%NOTE: at end, uOpt will have best control policy, and optIterCost(1) will contain total cost of DP operation
