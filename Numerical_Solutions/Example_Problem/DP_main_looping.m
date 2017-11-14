@@ -11,7 +11,7 @@ MAX_PERTURB=2;
 P_PERTURB=1/(MAX_PERTURB-MIN_PERTURB+1);
 
 %Define ending iteration
-LAST_ITER=2;    %Recurse for 2 iterations (1 and 2)
+LAST_ITER=3;    %Recurse for 3 iterations (1,2,3)
 
 V(1:(MAX_STATE-MIN_STATE+1),1:LAST_ITER) = INF; %V(:,k) holds the cost of the kth iteration for each possible state
 uOptState(1:(MAX_STATE-MIN_STATE+1))=0;         %uOptState holds the optimal control for each state, at a SINGLE GIVEN iteration
@@ -22,7 +22,7 @@ V(:,LAST_ITER)=0;                               %final cost is 0, for all possib
 
 %NOTE: at end, uOpt will have best control policy, and optIterCost(1) will contain total cost of DP operation
 
-for t=(LAST_ITER-1):1         %Start at 2nd-last iteration (time, t), and continue backwards
+for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and continue backwards
   for state_Index=1:(MAX_STATE-MIN_STATE+1)   %For each state at an iteration...
     x=MIN_STATE+(state_Index-1);      %Map state index to state (TO DO: customize to non-consecutive AND/OR non-integer states)
     CostX(state_Index)=INF;           %CostX will be LOWEST cost-to-go for a state. (Assume infinite cost by default)
