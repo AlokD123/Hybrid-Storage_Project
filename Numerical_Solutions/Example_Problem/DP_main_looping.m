@@ -11,7 +11,7 @@ MAX_PERTURB=2;
 P_PERTURB=1/(MAX_PERTURB-MIN_PERTURB+1);
 
 %Define ending iteration
-LAST_ITER=3;    %Recurse for 3 iterations (1,2,3)
+LAST_ITER=5;    %Recurse for 3 iterations (1,2,3)
 
 V(1:(MAX_STATE-MIN_STATE+1),1:LAST_ITER) = INF; %V(:,k) holds the cost of the kth iteration for each possible state
 uOptState(1:(MAX_STATE-MIN_STATE+1))=0;         %uOptState holds the optimal control for each state, at a SINGLE GIVEN iteration
@@ -35,6 +35,7 @@ for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and con
         end
       end
       if(CostX_U==0 & (t~=LAST_ITER-1)) %If cannot go to any next state, update to cost=INF. Exception: not in penultimate state (ASSUMING final cost=0)
+        %ASSUMPTION: all of next possible states have non-zero cost
         disp('State with no achievable next state');
         CostX_U = INF;
       end;
@@ -45,11 +46,12 @@ for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and con
     end
     V(state_Index,t)=CostX(state_Index) + (x^2+uOptState(state_Index)^2);  %Fill in value vector (for a given time t) with: LOWEST costs-to-go for each state + Cost of the state ITSELF (x^2+u^2)
     % (TO DO: customize current state cost calculation)
+    % Possible error: not choosing control to minimize current state cost too (only doing for Cost-to-Go?)
     if(optIterCost(t)>V(state_Index,t)) %Find lowest cost amongst all the states at a given time
       optIterCost(t)= V(state_Index,t);
       uOpt(t)=uOptState(state_Index);   %Optimal control at an iteration amongst all the states is that which has the lowest cost of state.
     end
   end
-  disp('Reached here');
-  disp('Reached here2');
+  %disp('Reached here');
+  %disp('Reached here2');
 end
