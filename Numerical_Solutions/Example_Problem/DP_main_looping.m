@@ -1,5 +1,7 @@
 clear all;
 
+%ASSUMING FINAL COST = 0
+
 INF=1e6;
 MIN_STATE=-6;
 MAX_STATE=6;
@@ -7,9 +9,6 @@ MAX_STATE=6;
 MIN_PERTURB=-2;
 MAX_PERTURB=2;
 P_PERTURB=1/(MAX_PERTURB-MIN_PERTURB+1);
-
-global uOpt;
-global LAST_ITER;
 
 %Define ending iteration
 LAST_ITER=2;    %Recurse for 2 iterations (1 and 2)
@@ -30,12 +29,15 @@ for t=(LAST_ITER-1):1         %Start at 2nd-last iteration (time, t), and contin
     for u=-x:(-x+5)                   %For each possible control for that state (at a given iteration)... (TO DO: customize set of possible control)
       CostX_U=0;                      %CostX_U will hold EXPECTED cost of next state
       for w=MIN_PERTURB:MAX_PERTURB   %Find expected cost-to-go for a given control to be the Expected Cost for over all random perturbances
-        if((x+u+w)<=MAX_STATE && (x+u+w)>=MIN_STATE) %If next state is amongst those achievable with a given perturbance....
+        if((x+u+w)<=MAX_STATE & (x+u+w)>=MIN_STATE) %If next state is amongst those achievable with a given perturbance....
           nextState_Index=(x+u+w)-MIN_STATE+1;       %Map state to state index, to find cost of next state based on its index
           CostX_U=CostX_U+V(nextState_Index,t+1)*P_PERTURB;   %Add to running cost     (TO DO: customize next-state calculation)
         end
       end
-      if(CostX_U==0) disp('State with no achievable next state') end; %If cannot go to any next state, break script. (TO DO: update to cost=INF)
+      if(CostX_U==0 & (t~=LAST_ITER-1)) %If cannot go to any next state, update to cost=INF. Exception: not in penultimate state (ASSUMING final cost=0)
+        disp('State with no achievable next state');
+        CostX_U = INF;
+      end;
       if(CostX(state_Index)>CostX_U)    %Find lowest cost-to-go for the state amongst those possible for each of the controls
         CostX(state_Index)=CostX_U;      
         uOptState(state_Index)=u;       %Find best control for the state (providing the lowst cost to go)
@@ -48,4 +50,6 @@ for t=(LAST_ITER-1):1         %Start at 2nd-last iteration (time, t), and contin
       uOpt(t)=uOptState(state_Index);   %Optimal control at an iteration amongst all the states is that which has the lowest cost of state.
     end
   end
+  disp('Reached here');
+  disp('Reached here2');
 end
