@@ -1,5 +1,5 @@
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-
+INF=1e6;
 clear all;
 
 %Input: initial state
@@ -7,32 +7,43 @@ x_init=3; %Must be between MIN_STATE and MAX_STATE
 
 %ASSUMING FINAL COST = 0
 
-INF=1e6;
-MIN_STATE=1;
-MAX_STATE=3;
+%Model setup
+E_MIN=[]; %Minimum energy to be stored (lower bound)
+E_MAX=[]; %Maximum energy to be stored (upper bound)
 
-MIN_PERTURB=0;
-MAX_PERTURB=0;
-P_PERTURB=1/(MAX_PERTURB-MIN_PERTURB+1);
+MIN_LOAD=0;
+MAX_CHARGE=[0;_]; %Maximum charging of the supercapacitor
+MAX_DISCHARGE=[]; %Maximum discharging of the 1) battery and 2) supercap
+P_PERTURB=normpdf(100,1); %1/(MAX_PERTURB-MIN_PERTURB+1);
 
-j=1; %storage device number
-ALPHA=[];
-BETA=[];
+j=1; %storage device number (1 or 2)
+NUM_STORAGES=2; %number of storages to be used
+ALPHA_C=[]; %Efficiency of charging
+ALPHA_D=[]; %Efficiency of discharging
+BETA=[];    %Storage efficiency
 
 
-%Define ending iteration
-LAST_ITER=4;    %Recurse for 4 iterations (1,2,3,4)
+%DP Setup... duplication for each storage
+V1(1:(E_MAX(1)-E_MIN(1)+1),1:LAST_ITER) = INF; %COST MATRIX....V(:,k) holds the cost of the kth iteration for each possible state
+V2(1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER) = INF;
 
+%------------------------STOPPED UPDATING HERE Nov.15,9am ------------------------------------
 
-V(1:(MAX_STATE-MIN_STATE+1),1:LAST_ITER) = INF; %COST MATRIX....V(:,k) holds the cost of the kth iteration for each possible state
 uOptState(1:(MAX_STATE-MIN_STATE+1),1:LAST_ITER)=0;         %uOptState holds the optimal control for each state, and for all iterations
 uOpt(1:LAST_ITER)=0;                            %uOpt holds the optimal control for each iteration, starting from the GIVEN INITIAL STATE
 optState(1:LAST_ITER)=INF;                      %holds the value of the optimal state AT a GIVEN iteration
 
 V(:,LAST_ITER)=0; %final cost is 0, for all possible states
-%V(:,LAST_ITER)=linspace(1,(MAX_STATE-MIN_STATE+1),13); %final cost is least for state -6
-
 %NOTE: at end, uOpt will have best control policy, and NetCost will contain total cost of DP operation
+
+%Define ending iteration
+LAST_ITER=4;    %Recurse for 4 iterations (1,2,3,4)
+
+
+
+%Set initial conditions
+E(1:NUM_STORAGES,1:LAST_ITER)=0;
+
 
 for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and continue backwards
   for state_Index=1:(MAX_STATE-MIN_STATE+1)   %For each state at an iteration...
@@ -92,6 +103,6 @@ end
 
 
 
-function [ nextX ] = StateEqn( x,u,w,j )
-  nextX(j)=BETA(j)*x(1)+ALPHA_C(j)*uC(1)-1/ALPHA_D(j)*uD(j)
+function [ nextE ] = StateEqn( E,u,w,j ) % Input: E(:,t)
+  nextE(j)=BETA(j)*E(j)+ALPHA_C(j)*uC(j)-1/ALPHA_D(j)*uD(j)
 end
