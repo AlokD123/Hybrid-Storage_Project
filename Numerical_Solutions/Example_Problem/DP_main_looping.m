@@ -37,8 +37,8 @@ for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and con
       CostX_U=0;                      %CostX_U will hold EXPECTED cost of next state, for GIVEN u.
       
       %Find cost-to-go for each possible control, under conditions of perturbations
-      %NOTE: this is the perturbation of the next state [w(k+1)]
-      for w=MIN_PERTURB:MAX_PERTURB   %Find expected cost-to-go for a given control to be the Expected Cost for over all random perturbances
+      %NOTE: this is the perturbation of the NEXT STATE [w(k+1)], NOT CURRENT STATE!!
+      for w=MIN_PERTURB:MAX_PERTURB   %Find expected cost-to-go for a given control, to be the Expected Cost for over all random perturbations
         if((x+u+w)<=MAX_STATE && (x+u+w)>=MIN_STATE) %If next state is amongst those achievable with a given perturbance....
           nextState_Index=(x+u+w)-MIN_STATE+1;       %Map state to state index, to find cost of next state based on its index
           CostX_U=CostX_U+V(nextState_Index,t+1)*P_PERTURB;   %Add to running cost     (TO DO: customize probability distribution)
@@ -68,6 +68,7 @@ for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and con
     end    
     V(state_Index,t)=CostX(state_Index) + (x^2+uOptState(state_Index,t)^2);  %Fill in value vector (for a given time t) with: LOWEST costs-to-go for each state + Cost of the state ITSELF (x^2+u^2)
     % (TO DO: customize current state cost calculation)
+    % (TO DO: take Expectated cost V w.r.t. SECOND random variable). NOTE: perturbation of the CURRENT STATE [w(k)]
   end
 end
 

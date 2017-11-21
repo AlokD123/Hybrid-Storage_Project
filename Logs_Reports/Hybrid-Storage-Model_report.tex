@@ -44,8 +44,8 @@
 	
 	\subsection{Constraints}
 	\begin{itemize}
-		\item Supply demand balance: 
-		\begin{equation} \left[D_{1}(i)\right] + \left[D_{2}(i) - C_{2}(i)\right] = L(i) \end{equation}
+		\item Supply-demand balance: 
+		\begin{equation} \label{eq:BalanceEqn}\left[D_{1}(i)\right] + \left[D_{2}(i) - C_{2}(i)\right] = L(i) \end{equation}
 						
 		\item Bounds on stored energy: 
 		\begin{equation}E_{j}^{min}\leq E_{j}(i)\leq E_{j}^{max}\end{equation}
@@ -62,7 +62,11 @@
 	 
 	 \begin{equation}\label{eq:StateEq1}E_{1}(i+1)=\beta_{1}E_{1}(i)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(i)\right] \end{equation}
 	 
-	 \begin{equation}\label{eq:StateEq2}E_{2}(i+1)=\beta_{2}E_{2}(i)+\left[\alpha_{2}^{C}C_{2}(i)-\frac{1}{\alpha_{2}^{D}}D_{2}(i)\right]\end{equation} 
+	 \begin{equation}\label{eq:StateEq2}E_{2}(i+1)=\beta_{2}E_{2}(i)+\left[\alpha_{2}^{C}C_{2}(i)-\frac{1}{\alpha_{2}^{D}}D_{2}(i)\right]\end{equation}
+	 
+	 Substituting \eqref{eq:BalanceEqn} into \eqref{eq:StateEq2}, one obtains:
+	 
+	 \begin{equation}\label{eq:DPStateEq2}E_{2}(i+1)=\beta_{2}E_{2}(i)+\left[\alpha_{2}^{C}[D_{1}(i)+D_{2}(i)-L(i)]-\frac{1}{\alpha_{2}^{D}}D_{2}(i)\right]\end{equation}
 	 
 
 	\subsection{Objective Function}
@@ -76,8 +80,12 @@
 		 (1-\alpha_{2}^{C})C_{2}(i)+
  		 (1-\alpha_{2}^{D})D_{2}(i)
 		  \right]\end{equation}
-		  
-		  \item Cost function, for battery storage:\\
+	\end{itemize}
+	
+	Hence, the cost functions are as follow:
+	  
+	\begin{itemize}
+		  \item Battery storage:\\
 		  \begin{multline}
 		  J_{i}[E_{1}(i)] = \mathop{\mathbb{E}}_{L(i)}
 		  \{\min_{D_{1},D_{2}}
@@ -89,7 +97,7 @@
 		  
 		  where $f_{1}(\cdot)$ is \eqref{eq:StateEq1}, the state equation for the battery.
 		  
-		  \item Cost function, for supercapacitor storage:\\
+		  \item Supercapacitor storage:\\
 		  \begin{multline}
 		  J_{i}[E_{2}(i)] = \mathop{\mathbb{E}}_{L(i)} \{\min_{D_{1},D_{2}}
 		  (1-\alpha_{1}^{D})D_{1}(i) 
@@ -98,7 +106,7 @@
 		  	+\mathop{\mathbb{E}}_{L(i+1)} \{J_{i+1}[f_{2}(E_{2}(i),D_{2}(i)),L(i+1)]\}\}
 		  \end{multline}
 		  
-		  where $f_{2}(\cdot)$ is \eqref{eq:StateEq2}, the state equation for the supercapacitor.
+		  where $f_{2}(\cdot)$ is \eqref{eq:DPStateEq2}, the state equation for the supercapacitor.
 	\end{itemize}
 	
 	\bibliographystyle{plain}
