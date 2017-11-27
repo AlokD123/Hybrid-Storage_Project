@@ -51,43 +51,51 @@ for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and con
   for state_Ind=[1 1]':(E_MAX-E_MIN+1)   %For each state at an iteration...
     E=MIN_STATE+(state_Ind-[1 1]');      %Map state index to state                 %%(TO DO: customize to non-consecutive AND/OR non-integer states)
 %---------------------------------------    
-    CostE(state_Ind)=INF;           %CostE will be LOWEST cost-to-go for a state. (Assume infinite cost by default)
-    
-    for D1=0:     %For each possible control for that state (at a given iteration)... (TO DO: customize set of possible control)
-    
-      CostX_D1D2=0;                      %CostX_U will hold EXPECTED cost of next state, for GIVEN value of u=(D1,D2).
+    CostX(state_Index)=0;             %CostX will be EXPECTED cost-to-go for a given state.
       
-      %Find cost-to-go for each possible control, under conditions of perturbations
-      %NOTE: this is the perturbation of the next state [L(k+1)]
-      for w=MIN_PERTURB:MAX_PERTURB   %Find expected cost-to-go for a given control to be the Expected Cost for over all random perturbances
+    %Find cost-to-go for each possible value of perturbation (w)
+    %NOTE: this is the perturbation of the current time, leading to an expected cost-to-go for the PREV time
+    for w=MIN_PERTURB:MAX_PERTURB
+      CostX_W=INF;                  %CostX_W will be LOWEST cost of next state, for GIVEN perturbation w. (Assume infinite cost by default)        
+      
+      for u=(MIN_STATE-MAX_STATE):(MAX_STATE-MIN_STATE) %For each possible control for that state (at a given iteration)...
+      %(^TO DO: customize set of possible control)
+      
         if((x+u+w)<=MAX_STATE && (x+u+w)>=MIN_STATE) %If next state is amongst those achievable with a given perturbance....
-          nextstate_Ind=(x+u+w)-MIN_STATE+1;       %Map state to state index, to find cost of next state based on its index
-          CostX_U=CostX_U+V(nextstate_Ind,t+1)*P_PERTURB;   %Add to running cost     (TO DO: customize probability distribution)
+          nextState_Index=(x+u+w)-MIN_STATE+1;       %Map state to state index, to find cost of next state based on its index
+          %Find the Cost-To-Go+Control combination yielding lowest cost for state, amongst those possible for each admissible value of control
+          if( (CostX_W+uOptState(state_Index,t)^2) > (V(nextState_Index,t+1)+u^2) )  %MOST IMPORTANT.
+            %(^TO DO: customize current control cost calculation)
+            %Note: Cost-to-go for given u&w (state at next time) is that at time t+1 in matrix V
+            
+            CostX_W=V(nextState_Index,t+1);     %For best combo, set cost-to-go to be that cost-to-go for the state
+            uOptState(state_Index,t)=u;         %For best combo, set control to give that combo
+          end
         else
-          %fprintf('Control not allowed: x=%d,u=%d,x+u=%d\n',x,u,x+u);
+          %fprintf('Control u not allowed, FOR GIVEN w: x=%d,u=%d,x+u=%d\n',x,u,x+u);
         end
-      end
-      %NOTE: IF NO PERTURBATION.... CostX_U should just hold cost of next state for the given value of u.
-      if(CostX_U==0 && (t~=LAST_ITER-1)) %If cannot go to any next state FOR GIVEN CONTROL, update to cost=INF. Exception: in penultimate iteration (ASSUMING final cost=0)
-        %ASSUMPTION: all of next possible states have non-zero cost, except for last iteration
-        %disp('No achievable next state for this control');
-        CostX_U = INF;
+
       end
       
-      
-      %Find the Cost-To-Go+Control combination yielding lowest cost for state, amongst those possible for each admissible value of control
-      if( (CostX(state_Ind)+uOptState(state_Ind,t)^2) > (CostX_U+u^2) )  %MOST IMPORTANT
-        % (TO DO: customize current control cost calculation)
-        CostX(state_Ind)=CostX_U;     %For best combo, set cost-to-go to be that cost-to-go for the state
-        uOptState(state_Ind,t)=u;     %For best combo, set control to give that combo
+      %NOTE: IF NO PERTURBATION.... CostX_W should just hold cost of next state for the given value of u.
+    
+      if(CostX_W==INF) %If cannot go to any next state FOR GIVEN PERTURBATION w...
+        %IGNORE possibility of such a perturbation
+        %disp('Perturbation w too large. No admissible next state.');
+      else
+        %ELSE... find expected cost-to-go, to be the Expected Cost for over all random perturbations
+        %Find expected value by adding to running cost...
+        CostX(state_Index) = CostX(state_Index) + CostX_W*P_PERTURB;
+        %(^TO DO: customize probability distribution)
       end
     end
     
     %Set next state costs in Cost Matrix
-    if(CostX(state_Ind)==INF)
+    if(CostX(state_Index)==INF)
       disp('State with no achievable next state');
-    end    
-    V(state_Ind,t)=CostX(state_Ind) + (x^2+uOptState(state_Ind,t)^2);  %Fill in value vector (for a given time t) with: LOWEST costs-to-go for each state + Cost of the state ITSELF (x^2+u^2)
+    end
+    % Cost Function...
+    V(state_Index,t)=CostX(state_Index) + (x^2+uOptState(state_Index,t)^2);  %Fill in components of value vector (for a given time t) with: LOWEST cost-to-go for a state + Cost of the state ITSELF (x^2+u^2)
     % (TO DO: customize current state cost calculation)
   end
 end
