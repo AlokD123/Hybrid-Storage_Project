@@ -119,6 +119,7 @@ for secondStateInd=1:(MAX_STATE-MIN_STATE+1)
     end
 end
 uOpt(1)=uOptState(initStateInd,1);
+optState(1)=x_init;
 %At end, uOpt(1) contains control leading to optimal second state, and secondCostX contains minimum cost for second state (i.e. state at t=2)
 
 
