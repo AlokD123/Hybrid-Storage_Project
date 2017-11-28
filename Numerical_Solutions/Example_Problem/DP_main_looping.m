@@ -11,7 +11,7 @@ INF=1e6;
 MIN_STATE=1;
 MAX_STATE=3;
 
-MIN_PERTURB=0;
+MIN_PERTURB=-5;
 MAX_PERTURB=0;
 P_PERTURB=1/(MAX_PERTURB-MIN_PERTURB+1);
 
@@ -51,6 +51,7 @@ for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and con
             
             CostX_W=V(nextState_Index,t+1);     %For best combo, set cost-to-go to be that cost-to-go for the state
             uOptState(state_Index,t)=u;         %For best combo, set control to give that combo
+            %^^ value of uOptState obtained here is UNUSED after value of CostX_W is found!!!
           end
         else
           %fprintf('Control u not allowed, FOR GIVEN w: x=%d,u=%d,x+u=%d\n',x,u,x+u);
@@ -75,27 +76,66 @@ for t=(LAST_ITER-1):-1:1         %Start at 2nd-last iteration (time, t), and con
     if(CostX(state_Index)==INF)
       disp('State with no achievable next state');
     end
+    %If no single next state (cost) for values of w (i.e. if the expected
+    %cost, CostX, falls between possible ones)... Then ROUND to nearest POSSIBLE next cost (state)
+    %EXCEPTION: second-last iteration, when all next states have 0 cost...
+    if(t~=(LAST_ITER-1))
+        Diff_Cost=abs(V(1,t+1)-CostX(state_Index)); %Difference in cost between Expected next cost and Possible costs of next state
+        temp_CostX=V(1,t+1);                        %Placeholder to hold closest Possible next state cost for given state
+        uOptState(state_Index,t)=1-state_Index;     %Determine actual (possible) control, starting from going to next state = 1
+        for nextState_Index=2:(MAX_STATE-MIN_STATE+1)
+            if abs(V(nextState_Index,t+1)-CostX(state_Index))<Diff_Cost
+                Diff_Cost=abs(V(nextState_Index,t+1)-CostX(state_Index)); %Find minimum difference in costs (i.e. to find closest Possible optimal next state)
+                uOptState(state_Index,t)=nextState_Index-state_Index;     %OBTAIN best possible CONTROL for given state
+                temp_CostX=V(nextState_Index,t+1);                        %Get possible next state cost
+            end
+        end
+        CostX(state_Index)=temp_CostX;
+        %At end, uOptState is a matrix of best controls for each state, and CostX contains lowest possible cost of next state FOR GIVEN STATE
+    end
+    
     % Cost Function...
     V(state_Index,t)=CostX(state_Index) + (x^2+uOptState(state_Index,t)^2);  %Fill in components of value vector (for a given time t) with: LOWEST cost-to-go for a state + Cost of the state ITSELF (x^2+u^2)
     % (TO DO: customize current state cost calculation)
   end
 end
 
+%Get control policy: done in 2 parts...
+%Part 1: get state of t=2 (called 'S2') with MINIMUM cost-to-go from GIVEN initial state
 
 %Get index associated with initial state
 initStateInd = x_init-MIN_STATE+1;
-%Get minimum total cost given that starting state
-NetCost=V(initStateInd,1);
-%Get control policy
-state_Index=initStateInd; %Starting from initial state...
-for(t=1:(LAST_ITER)) %Iterate through cost matrix to find optimal control values
+%Find next state minimizing cost-to-go...
+%Start with default values for second state cost and control leading to it
+secondCostX=INF;
+uOptState(initStateInd,1)=0;
+optSecStateInd = 0;         %Variable to hold optimal second state index at end (i.e. index of S2)
+for secondStateInd=1:(MAX_STATE-MIN_STATE+1)
+    if( (secondCostX+uOptState(initStateInd,1)^2) > (V(secondStateInd,2)+(secondStateInd-initStateInd)^2) )  %MOST IMPORTANT.
+        %(^TO DO: customize current control cost calculation)
+        secondCostX=V(secondStateInd,2);                        %Set cost-to-go to be that minimizing cost-to-go for the state
+        uOptState(initStateInd,1)=secondStateInd-initStateInd;  %Set control to lead to optimal second state
+        optSecStateInd=secondStateInd;                          %Get index of S2
+    end
+end
+uOpt(1)=uOptState(initStateInd,1);
+%At end, uOpt(1) contains control leading to optimal second state, and secondCostX contains minimum cost for second state (i.e. state at t=2)
+
+
+%Part 2: get control policy for remaining times, starting from S2
+state_Index=optSecStateInd; %Starting from state S2...
+for(t=2:(LAST_ITER)) %Iterate through cost matrix to find optimal control values
   uOpt(t)=uOptState(state_Index,t);       % Store in uOpt
   optState(t)= MIN_STATE+(state_Index-1); % Also store optimal subsequent states (for reference)
   %If control too large/small, limit control...
   if(state_Index+uOpt(t)>(MAX_STATE-MIN_STATE+1)) %If next state index would be higher than index of MAX_STATE...
     uOpt(t) = (MAX_STATE-MIN_STATE+1) - state_Index; %Set control so index of next state is maximum state's index
   elseif(state_Index+uOpt(t)<(MIN_STATE-MIN_STATE+1)) %If next state index would be lower than index of MIN_STATE...
-    uOpt(t) = (MAX_STATE-MIN_STATE+1) - state_Index; %Set control so index of next state is minimum state's index
+    uOpt(t) = (MIN_STATE-MIN_STATE+1) - state_Index; %Set control so index of next state is minimum state's index
   end
   state_Index = state_Index+uOpt(t);
 end
+
+%Finally, get minimum total cost given the starting state
+%Cost = first state cost + cost to go to second state
+NetCost=x_init^2+uOptState(initStateInd,1)^2+secondCostX;
