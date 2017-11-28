@@ -1,9 +1,9 @@
-%warning('off', 'Octave:possible-matlab-short-circuit-operator');
+warning('off', 'Octave:possible-matlab-short-circuit-operator');
 clear all;
 INF=1e6;
 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[0;0]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;1]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
@@ -21,20 +21,20 @@ LAST_ITER=4;
 
 %Model setup
 
-MAX_CHARGE=[0;0]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[0;0]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[0;5]; %Maximum charging of the supercapacitor
+MAX_DISCHARGE=[1;3]; %Maximum discharging of the 1) battery and 2) supercap
 
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %SHOULD SET MAXIMUM IF DEPENDENT ON STATE?
 P_PERTURB=1/(MAX_LOAD-MIN_LOAD+1);
 
-j=1; %storage device number (1 or 2)
+%j=1; %storage device number (1 or 2)
 NUM_STORAGES=2; %number of storages to be used
-global ALPHA_C=[0;0]; %Efficiency of charging
-global ALPHA_D=[0;0]; %Efficiency of discharging
-global BETA=[0;0];    %Storage efficiency
-global K=0;           %Weighting factor for D1^2 cost
-global C1=0;C2=0;     %Cost weighting factors
+global ALPHA_C=[0.99;0.99]; %Efficiency of charging
+global ALPHA_D=[0.95;0.9]; %Efficiency of discharging
+global BETA=[0.99;0.99];    %Storage efficiency
+global K=2;           %Weighting factor for D1^2 cost
+global C1=1;C2=1;     %Cost weighting factors
 
 
 %DP Setup... with duplication for each storage and each control input
@@ -82,13 +82,13 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
             if(StateEqn1(E1,D1)<=E_MAX(1) && StateEqn1(E1,D1)>=E_MIN(1))
               if(StateEqn2(E2,D1,D2,L)<=E_MAX(2) && StateEqn2(E2,D1,D2,L)>=E_MIN(2))
                 %Map state to state index, to find cost of next state based on its index
-                nextE_Ind1=StateEqn1(E1,D1)-E_MIN(1)+1; 
-                nextE_Ind2=StateEqn2(E2,D1,D2,L)-E_MIN(2)+1; 
+                nextE_Ind1=round(StateEqn1(E1,D1)-E_MIN(1)+1);
+                nextE_Ind2=round(StateEqn2(E2,D1,D2,L)-E_MIN(2)+1); 
                 %%%% MISSING CONDITION C_MAX... add here
                 %Find the Cost-To-Go+Control combination yielding lowest cost for state, amongst those possible for each admissible value of control
                 %MOST IMPORTANT: minimization
-                if( (CostE1_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind1,t),L)) > (V(nextE_Ind1,t+1)+CtrlCost(D1,D2,L)) )
-                  if( (CostE2_L+CtrlCost(D1Opt_State(E_Ind2,t),D2Opt_State(E_Ind2,t),L)) > (V(nextE_Ind2,t+1)+CtrlCost(D1,D2,L)) )
+                if( (CostE1_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V1(nextE_Ind1,t+1)+CtrlCost(D1,D2,L)) )
+                  if( (CostE2_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V2(nextE_Ind2,t+1)+CtrlCost(D1,D2,L)) )
                     %%%% (^TO DO: RECHECK IF DIFFERENCE BETWEEN D1(E_Ind1) and D1(E_Ind2) ALLOWED!!!!?
                     %(^TO DO: customize current control cost calculation)
                     %Note: Cost-to-go for given u&w (state at next time) is that at time t+1 in matrix V
@@ -120,7 +120,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
           %ELSE... find expected cost-to-go, to be the Expected Cost for over all random perturbations
           %Find expected value by adding to running cost...
           CostE1(E_Ind1) = CostE1(E_Ind1) + CostE1_L*P_PERTURB;
-          CostE2(E_Ind2) = CostE1(E_Ind2) + CostE2_L*P_PERTURB;
+          CostE2(E_Ind2) = CostE2(E_Ind2) + CostE2_L*P_PERTURB;
           %(^TO DO: customize probability distribution)
         end
       end
@@ -140,8 +140,8 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
           temp_CostE1=V1(1,t+1); 
           temp_CostE2=V2(1,t+1); 
           %Determine actual (possible) control, starting from going to next state = 1
-          D1Opt_State(state_Index,t)=1-E_Ind1;
-          D2Opt_State(state_Index,t)=1-E_Ind2;
+          D1Opt_State(E_Ind1,t)=1-E_Ind1;
+          D2Opt_State(E_Ind2,t)=1-E_Ind2;
           for nextE_Ind1=2:(E_MAX(1)-E_MIN(1)+1)
             for nextE_Ind2=2:(E_MAX(2)-E_MIN(2)+1)
               if abs(V1(nextE_Ind1,t+1)-CostE1(E_Ind1))<Diff_Cost1
@@ -173,8 +173,8 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       
       % Cost Function...
       %%% TO DO: recheck if L=0 gives cost (I.E. WHETHER would be double counting otherwise??) <-------------------- !!!!!!!!!!!!!!!!!!!!!!!
-      V1(E_Ind1,t)=CostE1(E_Ind1) + CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind1,t),0);
-      V1(E_Ind2,t)=CostE2(E_Ind2) + CtrlCost(D2Opt_State(E_Ind2,t),D2Opt_State(E_Ind2,t),0);
+      V1(E_Ind1,t)=CostE1(E_Ind1) + CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),0);
+      V2(E_Ind2,t)=CostE2(E_Ind2) + CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),0);
       %Fill in components of value vector (for a given time t) with: LOWEST cost of next state for a state + Cost of the control
     end
   end
@@ -205,8 +205,8 @@ for secondE1_Ind=1:(E_MAX(1)-E_MIN(1)+1)
     
     x=round(-ALPHA_D(1)*(nextE1-BETA(1)*E1)); %%% NEED TO CHECK!!!
     y=round((nextE1-BETA(1)*E1-ALPHA_C(2)*x)/(ALPHA_C(2)-1/ALPHA_D(2)));
-    if( (secondCostE1+CtrlCost(D1Opt_State(initE1_Ind,1),D2Opt_State(initE1_Ind,1),0)) > (V(secondE1_Ind,2)+CtrlCost(x,y,0)) )  %MOST IMPORTANT. <----------- TO DO: MAKE SAME (nested or not) as "IMPORTANT" above
-      if( (secondCostE2+CtrlCost(D1Opt_State(initE2_Ind,1),D2Opt_State(initE2_Ind,1),0)) > (V(secondE2_Ind,2)+CtrlCost(x,y,0)) )
+    if( (secondCostE1+CtrlCost(D1Opt_State(initE1_Ind,1),D2Opt_State(initE2_Ind,1),0)) > (V1(secondE1_Ind,2)+CtrlCost(x,y,0)) )  %MOST IMPORTANT. <----------- TO DO: MAKE SAME (nested or not) as "IMPORTANT" above
+      if( (secondCostE2+CtrlCost(D1Opt_State(initE1_Ind,1),D2Opt_State(initE2_Ind,1),0)) > (V2(secondE2_Ind,2)+CtrlCost(x,y,0)) )
           %(^TO DO: customize current control cost calculation)
           %Set cost-to-go to be that minimizing cost-to-go for the state
           secondCostE1=V1(secondE1_Ind,2);        
@@ -262,8 +262,8 @@ for(t=2:(LAST_ITER)) %Iterate through cost matrix to find optimal control values
   nextE1 = StateEqn1(E1,D1Opt(t));
   nextE2 = StateEqn2(E2,D1Opt(t),D2Opt(t),0);
   %Update index to next state...
-  E_Ind1 = nextE1-E_MIN(1)+1;
-  E_Ind2 = nextE2-E_MIN(2)+1;
+  E_Ind1 = round(nextE1-E_MIN(1)+1);
+  E_Ind2 = round(nextE2-E_MIN(2)+1);
 end
 
 %Finally, get minimum total cost given the starting state
