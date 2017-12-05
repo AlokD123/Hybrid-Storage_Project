@@ -31,6 +31,7 @@ P_PERTURB=1/(MAX_LOAD-MIN_LOAD+1);
 %NUM_STORAGES=2; %number of storages to be used
 global ALPHA_C=[0.99;0.99];%[1;1]; %Efficiency of charging
 global ALPHA_D=[0.9;0.95]; %[1;1]; %Efficiency of discharging
+global BETA=[0.99;0.99];   %[1;1]; %Storage efficiency
 global K=2;           %Weighting factor for D1^2 cost
 global C1=1;C2=1;     %Cost weighting factors
 PERFECT_EFF=0;
