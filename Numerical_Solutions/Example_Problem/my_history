@@ -1,0 +1,263 @@
+w0 = 10020.53607
+Q = 1.255286269
+num1 = [0.7079^2*w0^2/(Q^2) 0 0]; %Erik
+den1 = [1 0.6449*w0/Q 2*w0^2+0.7079*w0^2/(Q^2) 0.6449*w0^3/Q w0^4]; %Erik
+%trans1 = tf(num1, den1)
+%bode(trans1)
+%pzmap(trans1)
+%num1 = [0.7079^2/w0^2 0 0]; %Ann
+%den1 = [Q^2/w0^4 0.6449*Q/w0^3 2*Q^2/w0^2+0.7079/w0^2 0.6449*Q/w0 Q^2]; %Ann
+trans1 = tf(num1, den1)
+figure;
+bode(trans1)
+figure;
+pzmap(trans1)
+num_split = sqrt(num1);
+num_sts = [num_split(1) 0];
+den_sts = roots(den1);
+den_st1 = poly(den_sts(1:2));
+den_st2 = poly(den_sts(3:4));
+st1 = tf(num_sts, den_st1)
+figure;
+bode(st1)
+st2 = tf(num_sts, den_st2)
+figure;
+bode(st2)
+wo1 = sqrt(den_st1(3));
+Q_1 = wo1/den_st1(2);
+C_1 = 22e-9;
+R_1 = 1/(wo1*C_1);
+RQ_1 = R_1*Q_1;
+r_1 = 3.3e3; %Erik
+R3_1 = (-(num_sts(1)*C_1)*(1/r_1)*R_1)^-1; %Ann
+wo2 = sqrt(den_st2(3));
+Q_2 = wo2/den_st2(2);
+C_2 = 33e-9;
+R_2 = 1/(wo2*C_2);
+RQ_2 = R_2*Q_2;
+r_2 = 3.3e3; %Erik
+R3_2 = (-(C_2*num_sts(1))*(1/r_2)*R_2)^-1 %Ann
+pkg list
+pkg install control-3.0.0.tar.gz
+pkg install control-3.0.0.tar.gz
+pkg install control-3.0.0.tar.gz
+exit
+# Octave 4.0.0, Sun Nov 29 13:05:50 2015 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+pkg install control-3.0.0.tar.gz
+control-3.0.0.tar
+pkg install control-3.0.0.tar.gz
+exit
+# Octave 4.0.0, Sun Nov 29 13:09:06 2015 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+pkg install control-3.0.0.tar.gz
+exit
+exit
+# Octave 4.0.0, Sun Nov 29 13:13:07 2015 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+A=[5 -11 5; 0 -6 0; -5 5 -1];
+B=[1 -2; 0 0; 1 2];
+Qc=[B A*B A^2*B]
+rank(Qc)
+P=[1 0 0; 0 0 1; 1 1 0];
+rank(P)
+Az=P^(-1)*A*P
+Bz=P^(-1)*B
+Ahat=Az
+Bhat=Bz
+help delete
+clear Az
+clear Bz
+Qc1=[1 -2; 0 4]
+rank(Qc1)
+T1=[-4 1; 1 0]
+P1=Qc1*T1
+K1ccf=[-32 -16]
+K1ccf*P1^(-1)
+eig([-1 1; 1 -1])
+clear 
+P=[0 -2 0; 1 1 0; 1 -1 1];
+P^(-1)
+[0 0 1]*ans
+[0 0 2]*P^(-1)
+[0 1 1; -1 -1 -3; 1 2 7]
+[0 1 1; -1 -1 -3; 1 2 7]*[0 -3 1; -3 1 0;1 0 0]
+[3 -3 -6]*ans^(-1)
+exit
+# Octave 4.0.0, Tue Nov 07 12:46:30 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+# Octave 4.0.0, Wed Nov 08 07:58:02 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+exit
+# Octave 4.0.0, Thu Nov 09 07:59:34 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+clear
+DP_main_looping
+clear
+DP_main_looping
+DP_main_looping
+clear
+DP_main_looping
+clear
+DP_main_looping
+clear
+DP_main_looping
+clear
+DP_main_looping
+clear
+DP_main_looping
+DP_main_looping
+clear
+DP_main_looping
+V
+uOptState
+clear
+DP_main_looping
+clear
+DP_main_looping
+DP_main_looping
+uOptState
+DP_main_looping
+DP_main_looping
+DP_main_looping
+x
+DP_main_looping
+x
+CostX
+exit
+# Octave 4.0.0, Mon Nov 13 22:13:16 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+DP_main_looping
+DP_main_looping
+x+u+w
+x
+x+u+w
+u
+w
+DP_main_looping
+w
+w
+exit
+exit
+# Octave 4.0.0, Mon Nov 13 22:21:18 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+exit
+exit
+# Octave 4.0.0, Mon Nov 13 22:22:33 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+V
+dbclear
+DP_main_looping
+DP_main_looping
+DP_main_looping
+V
+V
+uOpt
+uOptState
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+V
+exit
+# Octave 4.0.0, Mon Nov 13 23:36:16 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+A=[-1 0 0; 0 -2 0; 0 0 -3]
+C=[1 1 1]
+[C;C*A;C*A^2]
+rank(ans')
+B=[0;0;1]
+K=[0 0 1]
+A=A+B*K
+[C;C*A;C*A^2]
+rank(ans')
+clear all
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+V
+clc
+DP_main_looping
+V
+linspace(1,(MAX_STATE-MIN_STATE+1))
+linspace(1,(MAX_STATE-MIN_STATE+1),13)
+DP_main_looping
+V
+uOpt
+DP_main_looping
+V
+uOpt
+DP_main_looping
+V
+uOpt
+optIterCost
+DP_main_looping
+DP_main_looping
+DP_main_looping
+V
+DP_main_looping
+CostX_U
+CostX_U
+uOptState
+V
+CostX
+DP_main_looping
+CostX
+uOptState
+DP_main_looping
+uOptState
+CostX
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+DP_main_looping
+exit
+# Octave 4.0.0, Wed Nov 15 10:18:22 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+[1;2]
+clear
+cls
+DP_main_looping
+exit
+exit
+# Octave 4.0.0, Tue Nov 21 12:17:54 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+DP_main_looping
+DP_main_looping
+exit
+# Octave 4.0.0, Fri Nov 24 16:03:39 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+DP_main_looping
+uOpt
+DP_main_looping
+DP_main_looping
+uOpt
+DP_main_looping
+uOpt
+DP_main_looping
+uOpt
+NetCost
+DP_main_looping
+uOpt
+NetCost
+save ('my_environment');
+history -w 'my_history';

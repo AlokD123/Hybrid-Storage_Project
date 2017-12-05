@@ -3,16 +3,15 @@ clear all;
 INF=1e6;
 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[10;1]; %Maximum energy to be stored (upper bound)
+E_MAX=[3;1]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
+%Must be between E_MIN and E_MAX
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
-%Recurse for 4 iterations (1,2,3,4)
-LAST_ITER=4;
-
-%Must be between MIN_STATE and MAX_STATE
+%Recurse for 3 iterations (1,2,3)
+LAST_ITER=3;
 
 
 %NOTE: at end, uOpt will have best control policy, and NetCost will contain total cost of DP operation
@@ -21,21 +20,20 @@ LAST_ITER=4;
 
 %Model setup
 
-MAX_CHARGE=[0;5]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[1;3]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[0;2]; %Maximum charging of the supercapacitor
+MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
 
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %SHOULD SET MAXIMUM IF DEPENDENT ON STATE?
 P_PERTURB=1/(MAX_LOAD-MIN_LOAD+1);
 
 %j=1; %storage device number (1 or 2)
-NUM_STORAGES=2; %number of storages to be used
-global ALPHA_C=[0.99;0.99]; %Efficiency of charging
-global ALPHA_D=[0.95;0.9]; %Efficiency of discharging
-global BETA=[0.99;0.99];    %Storage efficiency
+%NUM_STORAGES=2; %number of storages to be used
+global ALPHA_C=[0.99;0.99];%[1;1]; %Efficiency of charging
+global ALPHA_D=[0.9;0.95]; %[1;1]; %Efficiency of discharging
 global K=2;           %Weighting factor for D1^2 cost
 global C1=1;C2=1;     %Cost weighting factors
-
+PERFECT_EFF=0;
 
 %DP Setup... with duplication for each storage and each control input
 %COST MATRIX....V(:,k) holds the cost of the kth iteration for each possible state
@@ -76,7 +74,6 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
         
         %For each possible control for that state (at a given iteration and value of w)...
         for D1=0:MAX_DISCHARGE(1)
-        %(^TO DO: customize set of possible control)
           for D2=0:MAX_DISCHARGE(2)
             %If next state is amongst those achievable with a given perturbance....
             if(StateEqn1(E1,D1)<=E_MAX(1) && StateEqn1(E1,D1)>=E_MIN(1))
@@ -84,13 +81,14 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
                 %Map state to state index, to find cost of next state based on its index
                 nextE_Ind1=round(StateEqn1(E1,D1)-E_MIN(1)+1);
                 nextE_Ind2=round(StateEqn2(E2,D1,D2,L)-E_MIN(2)+1); 
+                
                 %%%% MISSING CONDITION C_MAX... add here
+                
                 %Find the Cost-To-Go+Control combination yielding lowest cost for state, amongst those possible for each admissible value of control
                 %MOST IMPORTANT: minimization
                 if( (CostE1_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V1(nextE_Ind1,t+1)+CtrlCost(D1,D2,L)) )
                   if( (CostE2_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V2(nextE_Ind2,t+1)+CtrlCost(D1,D2,L)) )
                     %%%% (^TO DO: RECHECK IF DIFFERENCE BETWEEN D1(E_Ind1) and D1(E_Ind2) ALLOWED!!!!?
-                    %(^TO DO: customize current control cost calculation)
                     %Note: Cost-to-go for given u&w (state at next time) is that at time t+1 in matrix V
                     
                     %For best combo, set cost-to-go to be that cost-to-go for the state
@@ -204,7 +202,11 @@ for secondE1_Ind=1:(E_MAX(1)-E_MIN(1)+1)
     nextE2=E_MIN(2)+(secondE2_Ind-1);
     
     x=round(-ALPHA_D(1)*(nextE1-BETA(1)*E1)); %%% NEED TO CHECK!!!
-    y=round((nextE1-BETA(1)*E1-ALPHA_C(2)*x)/(ALPHA_C(2)-1/ALPHA_D(2)));
+    if(PERFECT_EFF==0)
+      y=round((nextE1-BETA(1)*E1-ALPHA_C(2)*x)/(ALPHA_C(2)-1/ALPHA_D(2)));
+    else
+      y=(nextE1-BETA(1)*E1-ALPHA_C(2)*x);
+    end
     if( (secondCostE1+CtrlCost(D1Opt_State(initE1_Ind,1),D2Opt_State(initE2_Ind,1),0)) > (V1(secondE1_Ind,2)+CtrlCost(x,y,0)) )  %MOST IMPORTANT. <----------- TO DO: MAKE SAME (nested or not) as "IMPORTANT" above
       if( (secondCostE2+CtrlCost(D1Opt_State(initE1_Ind,1),D2Opt_State(initE2_Ind,1),0)) > (V2(secondE2_Ind,2)+CtrlCost(x,y,0)) )
           %(^TO DO: customize current control cost calculation)

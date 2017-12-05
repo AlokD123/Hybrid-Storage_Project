@@ -1,0 +1,125 @@
+# Created by Octave 4.0.0, Sun Nov 26 23:41:16 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+# name: CostX
+# type: matrix
+# rows: 1
+# columns: 3
+ 0.7777777777777778 3 4.333333333333333
+
+
+# name: CostX_U
+# type: scalar
+1000000
+
+
+# name: INF
+# type: scalar
+1000000
+
+
+# name: LAST_ITER
+# type: scalar
+4
+
+
+# name: MAX_PERTURB
+# type: scalar
+1
+
+
+# name: MAX_STATE
+# type: scalar
+3
+
+
+# name: MIN_PERTURB
+# type: scalar
+-1
+
+
+# name: MIN_STATE
+# type: scalar
+1
+
+
+# name: NetCost
+# type: scalar
+14.33333333333333
+
+
+# name: P_PERTURB
+# type: scalar
+0.3333333333333333
+
+
+# name: V
+# type: matrix
+# rows: 3
+# columns: 4
+ 2.777777777777778 2.333333333333333 1 0
+ 8 6.666666666666666 4 0
+ 14.33333333333333 13 9 0
+
+
+# name: initStateInd
+# type: scalar
+3
+
+
+# name: nextState_Index
+# type: scalar
+3
+
+
+# name: optState
+# type: matrix
+# rows: 1
+# columns: 4
+ 3 3 3 3
+
+
+# name: state_Index
+# type: scalar
+3
+
+
+# name: t
+# type: scalar
+4
+
+
+# name: u
+# type: scalar
+2
+
+
+# name: uOpt
+# type: matrix
+# rows: 1
+# columns: 4
+ 0 0 0 0
+
+
+# name: uOptState
+# type: matrix
+# rows: 3
+# columns: 4
+ -1 -1 0 0
+ -1 -1 0 0
+ 1 1 0 0
+
+
+# name: w
+# type: scalar
+1
+
+
+# name: x
+# type: scalar
+3
+
+
+# name: x_init
+# type: scalar
+3
+
+

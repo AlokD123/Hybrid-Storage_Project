@@ -1,0 +1,125 @@
+# Created by Octave 4.0.0, Sun Nov 26 22:23:07 2017 Eastern Standard Time <unknown@LAPTOP-G0LPCCK7>
+# name: CostX
+# type: matrix
+# rows: 1
+# columns: 3
+ 2 2 2
+
+
+# name: CostX_U
+# type: scalar
+1000000
+
+
+# name: INF
+# type: scalar
+1000000
+
+
+# name: LAST_ITER
+# type: scalar
+4
+
+
+# name: MAX_PERTURB
+# type: scalar
+0
+
+
+# name: MAX_STATE
+# type: scalar
+3
+
+
+# name: MIN_PERTURB
+# type: scalar
+0
+
+
+# name: MIN_STATE
+# type: scalar
+1
+
+
+# name: NetCost
+# type: scalar
+15
+
+
+# name: P_PERTURB
+# type: scalar
+1
+
+
+# name: V
+# type: matrix
+# rows: 3
+# columns: 4
+ 3 2 1 0
+ 7 6 4 0
+ 15 14 9 0
+
+
+# name: initStateInd
+# type: scalar
+3
+
+
+# name: nextState_Index
+# type: scalar
+3
+
+
+# name: optState
+# type: matrix
+# rows: 1
+# columns: 4
+ 3 1 1 1
+
+
+# name: state_Index
+# type: scalar
+1
+
+
+# name: t
+# type: scalar
+4
+
+
+# name: u
+# type: scalar
+2
+
+
+# name: uOpt
+# type: matrix
+# rows: 1
+# columns: 4
+ -2 0 0 0
+
+
+# name: uOptState
+# type: matrix
+# rows: 3
+# columns: 4
+ 0 0 0 0
+ -1 -1 0 0
+ -2 -2 0 0
+
+
+# name: w
+# type: scalar
+0
+
+
+# name: x
+# type: scalar
+3
+
+
+# name: x_init
+# type: scalar
+3
+
+
