@@ -20,12 +20,11 @@ LAST_ITER=3;
 
 %Model setup
 
-MAX_CHARGE=[0;2]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
+MAX_DISCHARGE=[2;1]; %Maximum discharging of the 1) battery and 2) supercap
 
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %SHOULD SET MAXIMUM IF DEPENDENT ON STATE?
-P_PERTURB=1/(MAX_LOAD-MIN_LOAD+1);
 
 %j=1; %storage device number (1 or 2)
 %NUM_STORAGES=2; %number of storages to be used
@@ -65,20 +64,25 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       %CostX will be EXPECTED cost-to-go for a given state.
       CostE1(E_Ind1)=0;
       CostE2(E_Ind2)=0;
-        
+      
+      %Reset count of admissible loads
+      numAdmissibleLoads=0;
+    
       %Find cost-to-go for each possible value of perturbation (w)
       %NOTE: this is the perturbation of the current time, leading to an expected cost-to-go for the PREV time
       for L=MIN_LOAD:MAX_LOAD
+        %Map load value to index
+        indL=L-MIN_LOAD+1;
         %CostX_W will be LOWEST cost of next state, for GIVEN perturbation w. (Assume infinite cost by default)        
-        CostE1_L=INF;
-        CostE2_L=INF;
+        CostE1_L(indL)=INF;
+        CostE2_L(indL)=INF;
         
         %For each possible control for that state (at a given iteration and value of w)...
         for D1=0:MAX_DISCHARGE(1)
           for D2=0:MAX_DISCHARGE(2)
             %If next state is amongst those achievable with a given perturbance....
-            if(StateEqn1(E1,D1)<=E_MAX(1) && StateEqn1(E1,D1)>=E_MIN(1))
-              if(StateEqn2(E2,D1,D2,L)<=E_MAX(2) && StateEqn2(E2,D1,D2,L)>=E_MIN(2))
+            if(round(StateEqn1(E1,D1))<=E_MAX(1) && round(StateEqn1(E1,D1))>=E_MIN(1))
+              if(round(StateEqn2(E2,D1,D2,L))<=E_MAX(2) && round(StateEqn2(E2,D1,D2,L))>=E_MIN(2))
                 %Map state to state index, to find cost of next state based on its index
                 nextE_Ind1=round(StateEqn1(E1,D1)-E_MIN(1)+1);
                 nextE_Ind2=round(StateEqn2(E2,D1,D2,L)-E_MIN(2)+1); 
@@ -87,14 +91,13 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
                 
                 %Find the Cost-To-Go+Control combination yielding lowest cost for state, amongst those possible for each admissible value of control
                 %MOST IMPORTANT: minimization
-                if( (CostE1_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V1(nextE_Ind1,t+1)+CtrlCost(D1,D2,L)) )
-                  if( (CostE2_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V2(nextE_Ind2,t+1)+CtrlCost(D1,D2,L)) )
-                    %%%% (^TO DO: RECHECK IF DIFFERENCE BETWEEN D1(E_Ind1) and D1(E_Ind2) ALLOWED!!!!?
+                if( (CostE1_L(indL)+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V1(nextE_Ind1,t+1)+CtrlCost(D1,D2,L)) )
+                  if( (CostE2_L(indL)+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V2(nextE_Ind2,t+1)+CtrlCost(D1,D2,L)) )
                     %Note: Cost-to-go for given u&w (state at next time) is that at time t+1 in matrix V
                     
                     %For best combo, set cost-to-go to be that cost-to-go for the state
-                    CostE1_L=V1(nextE_Ind1,t+1); 
-                    CostE2_L=V2(nextE_Ind2,t+1); 
+                    CostE1_L(indL)=V1(nextE_Ind1,t+1); 
+                    CostE2_L(indL)=V2(nextE_Ind2,t+1); 
                     %For best combo, set control to give that combo
                     D1Opt_State(E_Ind1,t)=D1;  
                     D2Opt_State(E_Ind2,t)=D2;  
@@ -102,27 +105,38 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
                   end
                 end
               else
-                %fprintf('Control combo D1,D2 not allowed, FOR GIVEN L);
+                %fprintf('nextE_2=%d not allowed\n',round(StateEqn2(E2,D1,D2,L))); %Control combo D1,D2 not allowed, FOR GIVEN L
               end
             else
-              %fprintf('Control D1 not allowed, FOR GIVEN L);
+              %fprintf('nextE_1=%d not allowed\n',round(StateEqn1(E1,D1))); %Control D1 not allowed, FOR GIVEN E2
             end
           end
         end
         
         %NOTE: IF NO PERTURBATION.... CostX_W should just hold cost of next state for the given value of u.
-      
-        if(CostE1_L==INF)|(CostE2_L==INF) %If cannot go to any next state FOR GIVEN PERTURBATION w...
-          %IGNORE possibility of such a perturbation
-          %disp('Perturbation w too large. No admissible next state.');
+        if(CostE1_L(indL)==INF)|(CostE2_L(indL)==INF) %If cannot go to any next state FOR GIVEN PERTURBATION w...
+          printf('Got here. L=%d, E1=%d, E2=%d\n',L,E1,E2);
+          %IGNORE possibility of such a perturbation. Perturbation w too large. No admissible next state
         else
-          %ELSE... find expected cost-to-go, to be the Expected Cost for over all random perturbations
-          %Find expected value by adding to running cost...
-          CostE1(E_Ind1) = CostE1(E_Ind1) + CostE1_L*P_PERTURB;
-          CostE2(E_Ind2) = CostE2(E_Ind2) + CostE2_L*P_PERTURB;
-          %(^TO DO: customize probability distribution)
+          %Else if load admissible, increment count of admissible loads
+          numAdmissibleLoads=numAdmissibleLoads+1;
         end
       end
+      
+      %SET PROBABILITY DISTRIBUTION for loads... Uniform  %<------------------------------- **********
+      P_PERTURB=1/(numAdmissibleLoads);
+      %(^TO DO: customize probability distribution)
+      
+      %Try to calculate total expected cost of the state, now knowing the admissible loads
+      for indL=1:(MAX_LOAD-MIN_LOAD+1)
+        if(CostE1_L(indL)!=INF)&&(CostE2_L(indL)!=INF) %If CAN go to any next state FOR GIVEN PERTURBATION w...
+          %Find expected cost-to-go, to be the Expected Cost for over all random perturbations
+          %Find expectation by adding to running cost, for each value of load...
+          CostE1(E_Ind1) = CostE1(E_Ind1) + CostE1_L(indL)*P_PERTURB;
+          CostE2(E_Ind2) = CostE2(E_Ind2) + CostE2_L(indL)*P_PERTURB;
+        end
+      end
+      
       
       %Set next state costs in Cost Matrix
       if(CostE1(E_Ind1)==INF)|(CostE2(E_Ind2)==INF)
@@ -248,15 +262,15 @@ for(t=2:(LAST_ITER)) %Iterate through cost matrix to find optimal control values
   optE2(t)= E2;
   %If control too large/small, limit control...
   %For D1 control...
-  if(StateEqn1(E1,D1Opt(t))>E_MAX(1)) %If next state index would be higher than index of MAX_STATE...
+  if(round(StateEqn1(E1,D1Opt(t)))>E_MAX(1)) %If next state index would be higher than index of MAX_STATE...
     D1Opt(t)=round(-ALPHA_D(1)*(E_MAX(1)-BETA(1)*E1)); %%% NEED TO CHECK!!! %Set control so index of next state is maximum state's index
-  elseif(StateEqn1(E1,D1Opt(t))<E_MIN(1))              %If next state index would be lower than index of MIN_STATE...
+  elseif(round(StateEqn1(E1,D1Opt(t)))<E_MIN(1))              %If next state index would be lower than index of MIN_STATE...
     D1Opt(t)=round(-ALPHA_D(1)*(E_MAX(1)-BETA(1)*E1)); %%% NEED TO CHECK!!!  %Set control so index of next state is minimum state's index
   end
   %Repeated for D2 control...
-  if(StateEqn2(E2,D1Opt(t),D2Opt(t),0)>E_MAX(2))
+  if(round(StateEqn2(E2,D1Opt(t),D2Opt(t),0))>E_MAX(2))
     D2Opt(t)=round((E_MAX(2)-BETA(1)*E2-ALPHA_C(2)*D1Opt(t))/(ALPHA_C(2)-1/ALPHA_D(2)));
-  elseif(StateEqn2(E2,D1Opt(t),D2Opt(t),0)<E_MIN(2))
+  elseif(round(StateEqn2(E2,D1Opt(t),D2Opt(t),0))<E_MIN(2))
     D2Opt(t)=round((E_MIN(2)-BETA(1)*E2-ALPHA_C(2)*D1Opt(t))/(ALPHA_C(2)-1/ALPHA_D(2)));
   end
   
