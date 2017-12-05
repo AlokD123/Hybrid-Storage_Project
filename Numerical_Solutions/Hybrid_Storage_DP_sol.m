@@ -80,9 +80,10 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
         %For each possible control for that state (at a given iteration and value of w)...
         for D1=0:MAX_DISCHARGE(1)
           for D2=0:MAX_DISCHARGE(2)
+            fprintf('D2=%d\n',D2);
             %If next state is amongst those achievable with a given perturbance....
-            if(round(StateEqn1(E1,D1))<=E_MAX(1) && round(StateEqn1(E1,D1))>=E_MIN(1))
-              if(round(StateEqn2(E2,D1,D2,L))<=E_MAX(2) && round(StateEqn2(E2,D1,D2,L))>=E_MIN(2))
+            if(StateEqn1(E1,D1)<=E_MAX(1) && StateEqn1(E1,D1)>=E_MIN(1))
+              if(StateEqn2(E2,D1,D2,L)<=E_MAX(2) && StateEqn2(E2,D1,D2,L)>=E_MIN(2))
                 %Map state to state index, to find cost of next state based on its index
                 nextE_Ind1=round(StateEqn1(E1,D1)-E_MIN(1)+1);
                 nextE_Ind2=round(StateEqn2(E2,D1,D2,L)-E_MIN(2)+1); 
@@ -115,7 +116,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
         
         %NOTE: IF NO PERTURBATION.... CostX_W should just hold cost of next state for the given value of u.
         if(CostE1_L(indL)==INF)|(CostE2_L(indL)==INF) %If cannot go to any next state FOR GIVEN PERTURBATION w...
-          printf('Got here. L=%d, E1=%d, E2=%d\n',L,E1,E2);
+          fprintf('Got here. L=%d, E1=%d, E2=%d\n',L,E1,E2);
           %IGNORE possibility of such a perturbation. Perturbation w too large. No admissible next state
         else
           %Else if load admissible, increment count of admissible loads
@@ -129,7 +130,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       
       %Try to calculate total expected cost of the state, now knowing the admissible loads
       for indL=1:(MAX_LOAD-MIN_LOAD+1)
-        if(CostE1_L(indL)!=INF)&&(CostE2_L(indL)!=INF) %If CAN go to any next state FOR GIVEN PERTURBATION w...
+        if(CostE1_L(indL)~=INF)&&(CostE2_L(indL)~=INF) %If CAN go to any next state FOR GIVEN PERTURBATION w...
           %Find expected cost-to-go, to be the Expected Cost for over all random perturbations
           %Find expectation by adding to running cost, for each value of load...
           CostE1(E_Ind1) = CostE1(E_Ind1) + CostE1_L(indL)*P_PERTURB;
@@ -262,15 +263,15 @@ for(t=2:(LAST_ITER)) %Iterate through cost matrix to find optimal control values
   optE2(t)= E2;
   %If control too large/small, limit control...
   %For D1 control...
-  if(round(StateEqn1(E1,D1Opt(t)))>E_MAX(1)) %If next state index would be higher than index of MAX_STATE...
+  if(StateEqn1(E1,D1Opt(t))>E_MAX(1)) %If next state index would be higher than index of MAX_STATE...
     D1Opt(t)=round(-ALPHA_D(1)*(E_MAX(1)-BETA(1)*E1)); %%% NEED TO CHECK!!! %Set control so index of next state is maximum state's index
-  elseif(round(StateEqn1(E1,D1Opt(t)))<E_MIN(1))              %If next state index would be lower than index of MIN_STATE...
+  elseif(StateEqn1(E1,D1Opt(t))<E_MIN(1))              %If next state index would be lower than index of MIN_STATE...
     D1Opt(t)=round(-ALPHA_D(1)*(E_MAX(1)-BETA(1)*E1)); %%% NEED TO CHECK!!!  %Set control so index of next state is minimum state's index
   end
   %Repeated for D2 control...
-  if(round(StateEqn2(E2,D1Opt(t),D2Opt(t),0))>E_MAX(2))
+  if(StateEqn2(E2,D1Opt(t),D2Opt(t),0)>E_MAX(2))
     D2Opt(t)=round((E_MAX(2)-BETA(1)*E2-ALPHA_C(2)*D1Opt(t))/(ALPHA_C(2)-1/ALPHA_D(2)));
-  elseif(round(StateEqn2(E2,D1Opt(t),D2Opt(t),0))<E_MIN(2))
+  elseif(StateEqn2(E2,D1Opt(t),D2Opt(t),0)<E_MIN(2))
     D2Opt(t)=round((E_MIN(2)-BETA(1)*E2-ALPHA_C(2)*D1Opt(t))/(ALPHA_C(2)-1/ALPHA_D(2)));
   end
   
