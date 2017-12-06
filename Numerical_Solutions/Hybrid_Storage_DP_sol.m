@@ -42,6 +42,10 @@ V2(1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER) = INF;
 %uOptState holds the optimal control U for each state, and for all iterations
 D1Opt_State(1:(E_MAX(1)-E_MIN(1)+1),1:LAST_ITER)=0; 
 D2Opt_State(1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER)=0;
+%wExpState holds the expected value of the 
+
+
+
 %uOpt holds the optimal control for each iteration, starting from the GIVEN INITIAL STATE
 D1Opt(1:LAST_ITER)=0;
 D2Opt(1:LAST_ITER)=0;
@@ -84,15 +88,12 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
             if(StateEqn1(E1,D1)<=E_MAX(1) && StateEqn1(E1,D1)>=E_MIN(1))
               if(StateEqn2(E2,D1,D2,L)<=E_MAX(2) && StateEqn2(E2,D1,D2,L)>=E_MIN(2))
               
-                %IF meeting following conditions:
-                %1)net supply (discharging) never below demand, 2) not charging cap. too quickly
+                %IF meeting following conditions: (C_MAX and C_MIN)
+                %1) net supply (discharging) never below demand, 2) not charging cap. too quickly
                 if(~((D1+D2-L)<0||(D1+D2-L)>MAX_CHARGE(2)))
                   %Map state to state index, to find cost of next state based on its index
                   nextE_Ind1=round(StateEqn1(E1,D1)-E_MIN(1)+1);
                   nextE_Ind2=round(StateEqn2(E2,D1,D2,L)-E_MIN(2)+1); 
-                  
-                  %%%% MISSING CONDITIONS for C_MAX and C_MIN... add here
-                  
                   
                   %Find the Cost-To-Go+Control combination yielding lowest cost for state, amongst those possible for each admissible value of control
                   %MOST IMPORTANT: minimization
@@ -145,7 +146,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       
       
       %Set next state costs in Cost Matrix
-      if(CostE1(E_Ind1)==INF)|(CostE2(E_Ind2)==INF)
+      if(CostE1(E_Ind1)==INF)||(CostE2(E_Ind2)==INF)
         disp('State with no achievable next state');
       end
       %If no single next state (cost) for values of w (i.e. if the expected
@@ -153,18 +154,22 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       %EXCEPTION: second-last iteration, when all next states have 0 cost...
       if(t~=(LAST_ITER-1))
           %Difference in cost between Expected next cost and Possible costs of next state
+          %Default... starting with difference in cost from state 1 as next state
           Diff_Cost1=abs(V1(1,t+1)-CostE1(E_Ind1));
           Diff_Cost2=abs(V2(1,t+1)-CostE2(E_Ind2));
           %Placeholder to hold closest Possible next state cost for given state
           temp_CostE1=V1(1,t+1); 
           temp_CostE2=V2(1,t+1); 
-          %Determine actual (possible) control, starting from going to next state = 1
-          D1Opt_State(E_Ind1,t)=1-E_Ind1;
-          D2Opt_State(E_Ind2,t)=1-E_Ind2;
+          %Determine actual (possible) control, starting from going to next state index = 1
+          D1Opt_State(E_Ind1,t)=E_Ind1-1; %Discharge is subtracted off (must be positive)
+          D2Opt_State(E_Ind2,t)=E_Ind2-1;
+          %Find closest & lowest cost combination of next states
           for nextE_Ind1=2:(E_MAX(1)-E_MIN(1)+1)
             for nextE_Ind2=2:(E_MAX(2)-E_MIN(2)+1)
+              %Find closest-in-cost next states to the expected cost next states
               if abs(V1(nextE_Ind1,t+1)-CostE1(E_Ind1))<Diff_Cost1
                 if abs(V2(nextE_Ind2,t+1)-CostE2(E_Ind2))<Diff_Cost2
+                  %Find next states minimizing overall cost (WEIGHTED)!!! <------------------ NEED TO CONFIRM!!
                   if((C1*temp_CostE1+C2*temp_CostE2)>(C1*V1(nextE_Ind1,t+1)+C2*V2(nextE_Ind2,t+1)))
                     %Find minimum difference in costs (i.e. to find closest Possible optimal next state)
                     Diff_Cost1=abs(V1(nextE_Ind1,t+1)-CostE1(E_Ind1));
@@ -175,8 +180,9 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
                     nextE1=E_MIN(1)+(nextE_Ind1-1);
                     nextE2=E_MIN(2)+(nextE_Ind2-1);
                     %OBTAIN best possible CONTROL for given state
-                    D1Opt_State(E_Ind1,t)=round(-ALPHA_D(1)*(nextE1-BETA(1)*E1)); %%% NEED TO CHECK!!!
-                    D2Opt_State(E_Ind2,t)=round((nextE1-BETA(1)*E1-ALPHA_C(2)*D1Opt_State(E_Ind1,t))/(ALPHA_C(2)-1/ALPHA_D(2)));
+                    %Pick the higher of the value and zero to ensure POSITIVE
+                    D1Opt_State(E_Ind1,t)=max(  round(-ALPHA_D(1)*(nextE1-BETA(1)*E1)) ,  0); %%% NEED TO CHECK!!!
+                    D2Opt_State(E_Ind2,t)=max(  round((nextE2-BETA(2)*E2-ALPHA_C(2)*D1Opt_State(E_Ind1,t))/(ALPHA_C(2)-1/ALPHA_D(2))) ,  0);
                     %Get possible next state cost
                     temp_CostE1=V1(nextE_Ind1,t+1);
                     temp_CostE2=V2(nextE_Ind2,t+1);
@@ -191,6 +197,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       end
       
       % Cost Function...
+      % State Cost = Cost of Next State (lowest cost-to-go&control) + Cost of Control
       %%% TO DO: recheck if L=0 gives cost (I.E. WHETHER would be double counting otherwise??) <-------------------- !!!!!!!!!!!!!!!!!!!!!!!
       V1(E_Ind1,t)=CostE1(E_Ind1) + CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),0);
       V2(E_Ind2,t)=CostE2(E_Ind2) + CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),0);
