@@ -25,16 +25,16 @@ function [ CostE1_L,CostE2_L ] = GetCtrlsUnkNextState( E_Ind1,E_Ind2,L,t ) % Inp
 
               %Find the Cost-To-Go+Control combination yielding lowest cost for state, amongst those possible for each admissible value of control
               %MOST IMPORTANT: minimization
-              if( (CostE1_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V1(nextE_Ind1,t+1)+CtrlCost(D1,D2,L)) )
-                if( (CostE2_L+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V2(nextE_Ind2,t+1)+CtrlCost(D1,D2,L)) )
+              if( (CostE1_L+CtrlCost(D1Opt_State(E_Ind1,E_Ind2,t),D2Opt_State(E_Ind2,E_Ind1,t),L)) > (V1(nextE_Ind1,nextE_Ind2,t+1)+CtrlCost(D1,D2,L)) )
+                if( (CostE2_L+CtrlCost(D1Opt_State(E_Ind1,E_Ind2,t),D2Opt_State(E_Ind2,E_Ind1,t),L)) > (V2(nextE_Ind2,nextE_Ind1,t+1)+CtrlCost(D1,D2,L)) )
                   %Note: Cost-to-go for given u&w (state at next time) is that at time t+1 in matrix V
 
                   %For best combo, set cost-to-go to be that cost-to-go for the state
-                  CostE1_L=V1(nextE_Ind1,t+1); 
-                  CostE2_L=V2(nextE_Ind2,t+1); 
+                  CostE1_L=V1(nextE_Ind1,nextE_Ind2,t+1); 
+                  CostE2_L=V2(nextE_Ind2,nextE_Ind1,t+1); 
                   %For best combo, set control to give that combo
-                  D1Opt_State(E_Ind1,t)=D1;  
-                  D2Opt_State(E_Ind2,t)=D2;  
+                  D1Opt_State(E_Ind1,E_Ind2,t)=D1;  
+                  D2Opt_State(E_Ind2,E_Ind1,t)=D2;  
                   %^^ value of uOptState obtained here is UNUSED after value of CostX_W is found!!!
                 end
               end
