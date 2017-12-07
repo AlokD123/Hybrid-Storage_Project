@@ -43,8 +43,8 @@ V2(1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER) = INF;
 %uOptState holds the optimal control U for each state, and for all iterations
 D1Opt_State(1:(E_MAX(1)-E_MIN(1)+1),1:LAST_ITER)=0; 
 D2Opt_State(1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER)=0;
-%wExpState holds the expected value of the ADMISSIBLE load in each state
-LExpState(1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER)=0;
+%expW_State holds the expected value of the ADMISSIBLE load in each state
+expL_State(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER)=0;
 %uOpt holds the optimal control for each iteration, starting from the GIVEN INITIAL STATE
 D1Opt(1:LAST_ITER)=0;
 D2Opt(1:LAST_ITER)=0;
@@ -94,15 +94,19 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       P_PERTURB=1/(numAdmissibleLoads);
       %(^TO DO: customize probability distribution)
       
-      %Try to calculate total expected cost of the state, now knowing the admissible loads
+      %Try to calculate expected cost of the state, now knowing the admissible loads
       for indL=1:(MAX_LOAD-MIN_LOAD+1)
         if(CostE1_L(indL)~=INF)&&(CostE2_L(indL)~=INF) %If CAN go to any next state FOR GIVEN PERTURBATION w...
           %Find expected cost-to-go, to be the Expected Cost for over all random perturbations
           %Find expectation by adding to running cost, for each value of load...
           CostE1(E_Ind1) = CostE1(E_Ind1) + CostE1_L(indL)*P_PERTURB;
           CostE2(E_Ind2) = CostE2(E_Ind2) + CostE2_L(indL)*P_PERTURB;
+          
+          %Determine expected value of load for that state, also by adding to running values, weighted
+          expL_State(E_Ind1,E_Ind2,t)=expL_State(E_Ind1,E_Ind2,t)+L*P_PERTURB;
         end
       end
+      %At end, CostX contains the expected cost and expW_State contains the expected value of the load in state (E1,E2)
       
       
       %Set next state costs in Cost Matrix
@@ -154,11 +158,18 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
           CostE1(E_Ind1)=temp_CostE1;
           CostE2(E_Ind2)=temp_CostE2;
           %At end, uOptState is a matrix of best controls for each state, and CostX contains lowest possible cost of next state FOR GIVEN STATE
+      else
+          %EXCEPTION: second-last iteration, when all next states have 0 cost...
+          %In this case, find control values to minimize cost (since ZERO cost-to-go).
+          %Assume the load is its EXPECTED VALUE at that particular state (E1,E2).
+          %First, reset controls to zero for penultimate iteration
+          D1Opt_State(E_Ind1,t)=0; D2Opt_State(E_Ind1,t)=0;
+          %Then, get optimal controls
+          GetCtrlsUnkNextState( E_Ind1,E_Ind2,expL_State(E_Ind1,E_Ind2,t),t);
       end
       
       % Cost Function...
       % State Cost = Cost of Next State (lowest cost-to-go&control) + Cost of Control
-      %%% TO DO: recheck if L=0 gives cost (I.E. WHETHER would be double counting otherwise??) <-------------------- !!!!!!!!!!!!!!!!!!!!!!!
       V1(E_Ind1,t)=CostE1(E_Ind1) + CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),0);
       V2(E_Ind2,t)=CostE2(E_Ind2) + CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),0);
       %Fill in components of value vector (for a given time t) with: LOWEST cost of next state for a state + Cost of the control
