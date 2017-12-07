@@ -1,9 +1,9 @@
 warning('off', 'Octave:possible-matlab-short-circuit-operator');
 clear all;
-INF=1e6;
+global INF=1e6;
 
-E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[3;1]; %Maximum energy to be stored (upper bound)
+global E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
+global E_MAX=[3;1]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
@@ -20,8 +20,8 @@ LAST_ITER=3;
 
 %Model setup
 
-MAX_CHARGE=[0;100]; %Maximum charging of the 1) battery and 2) supercap
-MAX_DISCHARGE=[2;1]; %Maximum discharging of the 1) battery and 2) supercap
+global MAX_CHARGE=[0;100]; %Maximum charging of the 1) battery and 2) supercap
+global MAX_DISCHARGE=[2;1]; %Maximum discharging of the 1) battery and 2) supercap
 
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %SHOULD SET MAXIMUM IF DEPENDENT ON STATE?
@@ -36,6 +36,7 @@ global C1=1;C2=1;     %Cost weighting factors
 PERFECT_EFF=0;
 
 %DP Setup... with duplication for each storage and each control input
+global V1; global V2; global D1Opt_State; global D2Opt_State;
 %COST MATRIX....V(:,k) holds the cost of the kth iteration for each possible state
 V1(1:(E_MAX(1)-E_MIN(1)+1),1:LAST_ITER) = INF; %2 matrices b/c 2 cost functions
 V2(1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER) = INF;
@@ -59,10 +60,6 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
   %For each state at an iteration...
   for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
     for E_Ind2=1:(E_MAX(2)-E_MIN(2)+1)
-      %Map state index to state    %%(TO DO: customize to non-consecutive AND/OR non-integer states)
-      E1=E_MIN(1)+(E_Ind1-1);
-      E2=E_MIN(2)+(E_Ind2-1);
-    
       %CostX will be EXPECTED cost-to-go for a given state.
       CostE1(E_Ind1)=0;
       CostE2(E_Ind2)=0;
@@ -80,47 +77,12 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
         CostE2_L(indL)=INF;
         
         %For each possible control for that state (at a given iteration and value of w)...
-        for D1=0:MAX_DISCHARGE(1)
-          for D2=0:MAX_DISCHARGE(2)
-            %If next state is amongst those achievable with a given perturbance....
-            if(StateEqn1(E1,D1)<=E_MAX(1) && StateEqn1(E1,D1)>=E_MIN(1))
-              if(StateEqn2(E2,D1,D2,L)<=E_MAX(2) && StateEqn2(E2,D1,D2,L)>=E_MIN(2))
-              
-                %IF meeting following conditions: (C_MAX and C_MIN)
-                %1) net supply (discharging) never below demand, 2) not charging cap. too quickly
-                if(~((D1+D2-L)<0||(D1+D2-L)>MAX_CHARGE(2)))
-                  %Map state to state index, to find cost of next state based on its index
-                  nextE_Ind1=round(StateEqn1(E1,D1)-E_MIN(1)+1);
-                  nextE_Ind2=round(StateEqn2(E2,D1,D2,L)-E_MIN(2)+1); 
-                  
-                  %Find the Cost-To-Go+Control combination yielding lowest cost for state, amongst those possible for each admissible value of control
-                  %MOST IMPORTANT: minimization
-                  if( (CostE1_L(indL)+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V1(nextE_Ind1,t+1)+CtrlCost(D1,D2,L)) )
-                    if( (CostE2_L(indL)+CtrlCost(D1Opt_State(E_Ind1,t),D2Opt_State(E_Ind2,t),L)) > (V2(nextE_Ind2,t+1)+CtrlCost(D1,D2,L)) )
-                      %Note: Cost-to-go for given u&w (state at next time) is that at time t+1 in matrix V
-                      
-                      %For best combo, set cost-to-go to be that cost-to-go for the state
-                      CostE1_L(indL)=V1(nextE_Ind1,t+1); 
-                      CostE2_L(indL)=V2(nextE_Ind2,t+1); 
-                      %For best combo, set control to give that combo
-                      D1Opt_State(E_Ind1,t)=D1;  
-                      D2Opt_State(E_Ind2,t)=D2;  
-                      %^^ value of uOptState obtained here is UNUSED after value of CostX_W is found!!!
-                    end
-                  end
-                end
-              else
-                %fprintf('nextE_2=%d not allowed\n',round(StateEqn2(E2,D1,D2,L))); %Control combo D1,D2 not allowed, FOR GIVEN L
-              end
-            else
-              %fprintf('nextE_1=%d not allowed\n',round(StateEqn1(E1,D1))); %Control D1 not allowed, FOR GIVEN E2
-            end
-          end
-        end
-        
+        %Get optimal cost of next state (and control u leading to that cost) for all combos of w and u
+        [CostE1_L(indL),CostE2_L(indL)]=GetCtrlsUnkNextState( E_Ind1,E_Ind2,L,t );
+                
         %NOTE: IF NO PERTURBATION.... CostX_W should just hold cost of next state for the given value of u.
         if(CostE1_L(indL)==INF)||(CostE2_L(indL)==INF) %If cannot go to any next state FOR GIVEN PERTURBATION w...
-          fprintf('Got here. L=%d, E1=%d, E2=%d\n',L,E1,E2);
+          fprintf('Got here. L=%d, E1=%d, E2=%d\n',L,E_MIN(1)+(E_Ind1-1),E_MIN(2)+(E_Ind2-1));
           %IGNORE possibility of such a perturbation. Perturbation w too large. No admissible next state
         else
           %Else if load admissible, increment count of admissible loads
