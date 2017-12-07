@@ -202,9 +202,9 @@ for secondE1_Ind=1:(E_MAX(1)-E_MIN(1)+1)
     
     x=round(-ALPHA_D(1)*(nextE1-BETA(1)*E1)); %%% NEED TO CHECK!!!
     if(PERFECT_EFF==0)
-      y=round((nextE2-BETA(2)*E1-ALPHA_C(2)*x)/(ALPHA_C(2)-1/ALPHA_D(2)));
+      y=round((nextE2-BETA(2)*E2-ALPHA_C(2)*x)/(ALPHA_C(2)-1/ALPHA_D(2)));
     else
-      y=(nextE2-BETA(2)*E1-ALPHA_C(2)*x);
+      y=(nextE2-BETA(2)*E2-ALPHA_C(2)*x);
     end
     if( (secondCostE1+CtrlCost(D1Opt_State(initE1_Ind,1),D2Opt_State(initE2_Ind,1),0)) > (V1(secondE1_Ind,2)+CtrlCost(x,y,0)) )  %MOST IMPORTANT. <----------- TO DO: MAKE SAME (nested or not) as "IMPORTANT" above
       if( (secondCostE2+CtrlCost(D1Opt_State(initE1_Ind,1),D2Opt_State(initE2_Ind,1),0)) > (V2(secondE2_Ind,2)+CtrlCost(x,y,0)) )
