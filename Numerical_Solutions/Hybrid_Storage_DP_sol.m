@@ -38,7 +38,7 @@ C1=1;C2=1;     %Cost weighting factors
 PERFECT_EFF=0;
 
 %DP Setup... with duplication for each storage and each control input
-global V1; global V2; global D1Opt_State; global D2Opt_State;
+global V1; global V2; global D1Opt_State; global D2Opt_State; global expL_State;
 %COST MATRIX....V(:,k) holds the cost of the kth iteration for each possible state
 V1(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:LAST_ITER) = INF; %2 matrices b/c 2 cost functions
 V2(1:(E_MAX(2)-E_MIN(2)+1),1:(E_MAX(1)-E_MIN(1)+1),1:LAST_ITER) = INF;
@@ -169,7 +169,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
           %In this case, find control values to minimize cost (since ZERO cost-to-go).
           %Assume the load is its EXPECTED VALUE at that particular state (E1,E2).
           %First, reset controls to zero for penultimate iteration
-          D1Opt_State(E_Ind1,E_Ind2,t)=0; D2Opt_State(E_Ind2,E_Ind1,t)=0;
+          D1Opt_State(E_Ind1,E_Ind2,t)=INF; D2Opt_State(E_Ind2,E_Ind1,t)=INF;
           %Then, get optimal controls
           GetCtrlsUnkNextState( E_Ind1,E_Ind2,expL_State(E_Ind1,E_Ind2,t),t);
       end
@@ -193,19 +193,19 @@ initE2_Ind = E2_INIT-E_MIN(2)+1;
 %Start with default values for second state cost and control leading to it
 secondCostE1=INF;
 secondCostE2=INF;
-D1Opt_State(initE1_Ind,initE2_Ind,1)=0;
-D2Opt_State(initE2_Ind,initE1_Ind,1)=0;
+D1Opt_State(initE1_Ind,initE2_Ind,1)=INF;
+D2Opt_State(initE2_Ind,initE1_Ind,1)=INF;
 %Variable to hold optimal second state index at end (i.e. index of S2)
 optSecondE1_Ind = 0;     
 optSecondE2_Ind = 0; 
-for secondE1_Ind=1:(E_MAX(1)-E_MIN(1)+1)    %Originally up to E_MAX, but 
+for secondE1_Ind=1:((E1_INIT-1)-E_MIN(1)+1)             %Originally up to E_MAX(1), but should be limited to E_INIT-1 (since always need to decrease energy, due to inefficiencies)
   for secondE2_Ind=1:(E_MAX(2)-E_MIN(2)+1)
     %Get energies associated with state indices
     E1=E1_INIT;
     E2=E2_INIT;
     nextE1=E_MIN(1)+(secondE1_Ind-1);
     nextE2=E_MIN(2)+(secondE2_Ind-1);
-    
+    %disp("Got here");
     %Get control value leading to this second state
     D1_OptSecondE1=GetCtrl1_CurrNextState(E1,nextE1);
     if(PERFECT_EFF==0)
@@ -230,8 +230,12 @@ for secondE1_Ind=1:(E_MAX(1)-E_MIN(1)+1)    %Originally up to E_MAX, but
     end
   end
 end
+% Store optimal initial control in uOpt(1)
 D1Opt(1)=D1Opt_State(initE1_Ind,initE2_Ind,1);
 D2Opt(1)=D2Opt_State(initE2_Ind,initE1_Ind,1);
+% Limit controls if lead to a state out of bounds... OR..
+[D1Opt(1),D2Opt(1)]=LimitCtrls(E1_INIT,E2_INIT,D1Opt(1),D2Opt(1),1);
+% Set first state to be the initialized one (user-defined)
 optE1(1)=E1_INIT;
 optE2(1)=E2_INIT;
 %At end, uOpt(1) contains control leading to optimal second state, and secondCostX contains minimum cost for second state (i.e. state at t=2)
@@ -247,25 +251,14 @@ for(t=2:(LAST_ITER)) %Iterate through cost matrix to find optimal control values
   E1=E_MIN(1)+(E_Ind1-1);
   E2=E_MIN(2)+(E_Ind2-1);
   % Store in uOpt
-  D1Opt(t)=D1Opt_State(E_Ind1,initE2_Ind,t);
-  D2Opt(t)=D2Opt_State(E_Ind2,initE1_Ind,t);
+  D1Opt(t)=D1Opt_State(E_Ind1,E_Ind2,t);
+  D2Opt(t)=D2Opt_State(E_Ind2,E_Ind1,t);
   % Also store optimal subsequent states (for reference)
   optE1(t)= E1;
   optE2(t)= E2;
   %If control too large/small, limit control...
-  %For D1 control...
-  if(StateEqn1(E1,D1Opt(t))>E_MAX(1)) %If next state index would be higher than index of MAX_STATE... (should not be possible)
-    D1Opt(t)=0;                                        %%% NEED TO CHECK!!! %Set control so index of next state is maximum state's index
-  elseif(StateEqn1(E1,D1Opt(t))<E_MIN(1))              %If next state index would be lower than index of MIN_STATE...
-    D1Opt(t)=GetCtrl1_CurrNextState(E1,E_MIN(1));      %Set control so index of next state is minimum state's index
-  end
-  %Repeated for D2 control...
-  if(StateEqn2(E2,D1Opt(t),D2Opt(t),expL_State(E1-E_MIN(1)+1,E2-E_MIN(2)+1,t))>E_MAX(2))
-    D2Opt(t)=GetCtrl2_CurrNextState(E2,E_MAX(2),D1Opt(t),expL_State(E1-E_MIN(1)+1,E2-E_MIN(2)+1,t)); %Set control so index of next state is maximum state's index <------------ %%% NEED TO CHECK that D2>=0 !!!!!
-  elseif(StateEqn2(E2,D1Opt(t),D2Opt(t),expL_State(E1-E_MIN(1)+1,E2-E_MIN(2)+1,t))<E_MIN(2))
-    D2Opt(t)=GetCtrl2_CurrNextState(E2,E_MIN(2),D1Opt(t),expL_State(E1-E_MIN(1)+1,E2-E_MIN(2)+1,t)); %Set control so index of next state is minimum state's index
-  end
-  
+  [D1Opt(t),D2Opt(t)]=LimitCtrls(E1,E2,D1Opt(t),D2Opt(t),t);
+    
   %Update index to next state, after confirming correct control
   %Determine energy of next state...
   nextE1 = StateEqn1(E1,D1Opt(t));
@@ -277,5 +270,7 @@ end
 
 %Finally, get minimum total cost given the starting state
 %Cost = first state cost + cost to go to second state
-NetCost1=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,t))+secondCostE1;
-NetCost2=CtrlCost(D1Opt(2),D2Opt(2),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,t))+secondCostE2;
+V1(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1)=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1));
+V2(E2_INIT-E_MIN(2)+1,E1_INIT-E_MIN(1)+1)=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1));
+%Have that the cost matrices SHOULD BE THE SAME, so single final cost
+NetCost=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1))+secondCostE1;
