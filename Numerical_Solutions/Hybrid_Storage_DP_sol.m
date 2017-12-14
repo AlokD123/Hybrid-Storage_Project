@@ -1,6 +1,7 @@
-warning('off', 'Octave:possible-matlab-short-circuit-operator');
+%warning('off', 'Octave:possible-matlab-short-circuit-operator');
 clear all;
-global INF=1e6;
+global INF;
+INF=1e6;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -29,7 +30,7 @@ MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %SHOULD SET MAXIMUM IF DEPENDENT ON 
 %P_PERTURB=1/(MAX_LOAD-MIN_LOAD+1);
 
 global ALPHA_C; global ALPHA_D; global BETA; global K; global C1; global C2;
-ALPHA_C=[0.99;0.99]; %Efficiency of charging
+ALPHA_C=[0.99 0.99]; %Efficiency of charging
 ALPHA_D=[0.9;0.95]; %Efficiency of discharging
 BETA=[0.99;0.99];    %Storage efficiency
 K=2;           %Weighting factor for D1^2 cost
@@ -136,7 +137,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
               %Find closest-in-cost next states to the expected cost next states
               if abs(V1(nextE_Ind1,nextE_Ind2,t+1)-CostE1(E_Ind1,E_Ind2))<Diff_Cost1
                 if abs(V2(nextE_Ind2,nextE_Ind1,t+1)-CostE2(E_Ind2,E_Ind1))<Diff_Cost2
-                  %Find next states minimizing overall cost (WEIGHTED)!!! <------------------ NEED TO CONFIRM!!
+                  %Find next states minimizing overall cost (WEIGHTED)!!! <----------------------------------------------------- NEED TO CONFIRM!!
                   if((C1*temp_CostE1+C2*temp_CostE2)>(C1*V1(nextE_Ind1,nextE_Ind2,t+1)+C2*V2(nextE_Ind2,nextE_Ind2,t+1)))
                     %Find minimum difference in costs (i.e. to find closest Possible optimal next state)
                     Diff_Cost1=abs(V1(nextE_Ind1,nextE_Ind2,t+1)-CostE1(E_Ind1,E_Ind2));
@@ -147,9 +148,8 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
                     nextE1=E_MIN(1)+(nextE_Ind1-1);
                     nextE2=E_MIN(2)+(nextE_Ind2-1);
                     %OBTAIN best possible CONTROL for given state
-                    %Pick the higher of the value and zero to ensure POSITIVE
-                    D1Opt_State(E_Ind1,E_Ind2,t)=max(  round(-ALPHA_D(1)*(nextE1-BETA(1)*E1)) ,  0); %%% NEED TO CHECK!!!
-                    D2Opt_State(E_Ind2,E_Ind1,t)=max(  round((nextE2-BETA(2)*E2-ALPHA_C(2)*D1Opt_State(E_Ind1,E_Ind2,t))/(ALPHA_C(2)-1/ALPHA_D(2))) ,  0);
+                    D1Opt_State(E_Ind1,E_Ind2,t)=GetCtrl1_CurrNextState(E1,nextE1);
+                    D2Opt_State(E_Ind2,E_Ind1,t)=GetCtrl2_CurrNextState(E2,nextE2,D1Opt_State(E_Ind1,E_Ind2,t),0); %<--------------------NOTE: using E(L) @(E1,E2) as load
                     %Get possible next state cost
                     temp_CostE1=V1(nextE_Ind1,nextE_Ind2,t+1);
                     temp_CostE2=V2(nextE_Ind2,nextE_Ind1,t+1);
