@@ -141,7 +141,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
               if abs(V1(nextE_Ind1,nextE_Ind2,t+1)-CostE1(E_Ind1,E_Ind2))<Diff_Cost1
                 if abs(V2(nextE_Ind2,nextE_Ind1,t+1)-CostE2(E_Ind2,E_Ind1))<Diff_Cost2
                   %Find next states minimizing overall cost (WEIGHTED)!!! <----------------------------------------------------- NEED TO CONFIRM!!
-                  if((C1*temp_CostE1+C2*temp_CostE2)>(C1*V1(nextE_Ind1,nextE_Ind2,t+1)+C2*V2(nextE_Ind2,nextE_Ind2,t+1)))
+                  if((C1*temp_CostE1+C2*temp_CostE2)>(C1*V1(nextE_Ind1,nextE_Ind2,t+1)+C2*V2(nextE_Ind2,nextE_Ind2,t+1))) %****************MOST IMPORTANT*********.... Minimizing weighted average cost (ACTUAL COST FUNCTION)
                     %Find minimum difference in costs (i.e. to find closest Possible optimal next state)
                     Diff_Cost1=abs(V1(nextE_Ind1,nextE_Ind2,t+1)-CostE1(E_Ind1,E_Ind2));
                     Diff_Cost2=abs(V2(nextE_Ind2,nextE_Ind1,t+1)-CostE2(E_Ind2,E_Ind1));
@@ -175,7 +175,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       end
       
       % Cost Function...
-      % State Cost = Cost of Next State (lowest cost-to-go&control) + Cost of Control
+      % State Cost = Cost of Next State (based on lowest cost-to-go&control) + Cost of Control
       V1(E_Ind1,E_Ind2,t)=CostE1(E_Ind1,E_Ind2) + CtrlCost(D1Opt_State(E_Ind1,E_Ind2,t),D2Opt_State(E_Ind2,E_Ind1,t),expL_State(E_Ind1,E_Ind2,t));
       V2(E_Ind2,E_Ind1,t)=CostE2(E_Ind2,E_Ind1) + CtrlCost(D1Opt_State(E_Ind1,E_Ind2,t),D2Opt_State(E_Ind2,E_Ind1,t),expL_State(E_Ind1,E_Ind2,t));
       %Fill in components of value vector (for a given time t) with: LOWEST cost of next state for a state + Cost of the control
@@ -198,7 +198,7 @@ D2Opt_State(initE2_Ind,initE1_Ind,1)=0;
 %Variable to hold optimal second state index at end (i.e. index of S2)
 optSecondE1_Ind = 0;     
 optSecondE2_Ind = 0; 
-for secondE1_Ind=1:(E_MAX(1)-E_MIN(1)+1)
+for secondE1_Ind=1:(E_MAX(1)-E_MIN(1)+1)    %Originally up to E_MAX, but 
   for secondE2_Ind=1:(E_MAX(2)-E_MIN(2)+1)
     %Get energies associated with state indices
     E1=E1_INIT;
@@ -213,7 +213,8 @@ for secondE1_Ind=1:(E_MAX(1)-E_MIN(1)+1)
     else
       D2_OptSecondE2=(nextE2-BETA(2)*E2-ALPHA_C(2)*(D1_OptSecondE1-expL_State(E1-E_MIN(1)+1,E2-E_MIN(2)+1,t)));
     end
-    if( (secondCostE1+CtrlCost(D1Opt_State(initE1_Ind,initE2_Ind,1),D2Opt_State(initE2_Ind,initE1_Ind,1),expL_State(initE1_Ind,initE2_Ind,t))) > (V1(secondE1_Ind,secondE2_Ind,2)+CtrlCost(D1_OptSecondE1,D2_OptSecondE2,expL_State(secondE1_Ind,secondE2_Ind,t))) )  %MOST IMPORTANT. <----------- TO DO: RECHECK
+    %MOST IMPORTANT: minimization
+    if( (secondCostE1+CtrlCost(D1Opt_State(initE1_Ind,initE2_Ind,1),D2Opt_State(initE2_Ind,initE1_Ind,1),expL_State(initE1_Ind,initE2_Ind,t))) > (V1(secondE1_Ind,secondE2_Ind,2)+CtrlCost(D1_OptSecondE1,D2_OptSecondE2,expL_State(secondE1_Ind,secondE2_Ind,t))) )
       if( (secondCostE2+CtrlCost(D1Opt_State(initE1_Ind,initE2_Ind,1),D2Opt_State(initE2_Ind,initE1_Ind,1),expL_State(initE1_Ind,initE2_Ind,t))) > (V2(secondE2_Ind,secondE1_Ind,2)+CtrlCost(D1_OptSecondE1,D2_OptSecondE2,expL_State(secondE1_Ind,secondE2_Ind,t))) )
           %(^TO DO: customize current control cost calculation)
           %Set cost-to-go to be that minimizing cost-to-go for the state
