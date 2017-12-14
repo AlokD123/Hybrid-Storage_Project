@@ -5,7 +5,7 @@ INF=1e6;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[3;1]; %Maximum energy to be stored (upper bound)
+E_MAX=[20;5]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
@@ -23,7 +23,7 @@ LAST_ITER=3;
 %Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[2;1]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[5;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %SHOULD SET MAXIMUM IF DEPENDENT ON STATE?
@@ -233,8 +233,16 @@ end
 % Store optimal initial control in uOpt(1)
 D1Opt(1)=D1Opt_State(initE1_Ind,initE2_Ind,1);
 D2Opt(1)=D2Opt_State(initE2_Ind,initE1_Ind,1);
-% Limit controls if lead to a state out of bounds... OR..
+% Limit controls if lead to a state out of bounds OR discharge too high
 [D1Opt(1),D2Opt(1)]=LimitCtrls(E1_INIT,E2_INIT,D1Opt(1),D2Opt(1),1);
+% If limiting occurred...
+if( D1Opt(1)~=D1Opt_State(initE1_Ind,initE2_Ind,1) || D2Opt(1)~=D2Opt_State(initE2_Ind,initE1_Ind,1) )
+    %Recalculate resulting optimal second states
+    [secondE1,secondE2]=optNextStateLimited(E1_INIT,E2_INIT,D1Opt(1),D2Opt(1),1);
+    %Map to index
+    optSecondE1_Ind=round(secondE1-E_MIN(1)+1);%<--------------------------------------- CONFIRM IF ROUNDING ALLOWED!!!
+    optSecondE2_Ind=round(secondE2-E_MIN(2)+1);
+end
 % Set first state to be the initialized one (user-defined)
 optE1(1)=E1_INIT;
 optE2(1)=E2_INIT;
@@ -258,11 +266,11 @@ for(t=2:(LAST_ITER)) %Iterate through cost matrix to find optimal control values
   optE2(t)= E2;
   %If control too large/small, limit control...
   [D1Opt(t),D2Opt(t)]=LimitCtrls(E1,E2,D1Opt(t),D2Opt(t),t);
-    
+  
   %Update index to next state, after confirming correct control
-  %Determine energy of next state...
-  nextE1 = StateEqn1(E1,D1Opt(t));
-  nextE2 = StateEqn2(E2,D1Opt(t),D2Opt(t),expL_State(E1-E_MIN(1)+1,E2-E_MIN(2)+1,t));
+  %Determine energy of next state (possibly after control limited)...
+  [nextE1,nextE2]=optNextStateLimited(E1,E2,D1Opt(t),D2Opt(t),t);
+  
   %Update index to next state...
   E_Ind1 = round(nextE1-E_MIN(1)+1);
   E_Ind2 = round(nextE2-E_MIN(2)+1);
@@ -270,7 +278,7 @@ end
 
 %Finally, get minimum total cost given the starting state
 %Cost = first state cost + cost to go to second state
-V1(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1)=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1));
-V2(E2_INIT-E_MIN(2)+1,E1_INIT-E_MIN(1)+1)=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1));
+V1(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1)=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1));
+V2(E2_INIT-E_MIN(2)+1,E1_INIT-E_MIN(1)+1,1)=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1));
 %Have that the cost matrices SHOULD BE THE SAME, so single final cost
 NetCost=CtrlCost(D1Opt(1),D2Opt(1),expL_State(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,1))+secondCostE1;
