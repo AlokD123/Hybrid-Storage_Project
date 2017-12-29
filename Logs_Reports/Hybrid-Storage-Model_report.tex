@@ -106,6 +106,16 @@
 		  \end{multline}
 		  
 		  where $f_{2}(\cdot)$ is \eqref{eq:DPStateEq2}, the state equation for the supercapacitor.
+		  
+		  \item Combined:\\
+		  \begin{multline}
+		  J_{i}[E_{1}(i),E_{2}(i),L(i)] = \min_{D_{1},D_{2}}
+		  (1-\alpha_{1}^{D})D_{1}(i) 
+			  + K[D_{1}(i)]^{2}\\
+			  +(1-\alpha_{2}^{D})[D_{2}(i)]	  +(1-\alpha_{2}^{C})[D_{1}(i)+D_{2}(i)-L(i)]\\
+			  +\mathop{\mathbb{E}}_{L(i+1)}\{J_{i+1}[f_{1}(E_{1}(i),D_{1}(i)), f_{2}(E_{2}(i),D_{1}(i),D_{2}(i),L(i)), L(i+1)]\}
+		  \end{multline}
+		  
 	\end{itemize}
 
 
