@@ -4,7 +4,7 @@ function [ nextE1,nextE2 ] = optNextStateLimited( E1,E2,D1,D2,L ) % Input: state
     global E_MIN; global BETA;
     newE1=StateEqn1(E1,D1,BETA(1));
     if(newE1<E_MIN(1))                      %If below lower bound...
-        if(StateEqn1(E1,D1,1)>=E_MIN(1)) %If would not be if with no inherent loss, ASSUME lossless
+        if(StateEqn1(E1,D1,1)>=E_MIN(1))    %If would not be if with no inherent loss, ASSUME lossless
             nextE1=E_MIN(1);                %In this case, will drop to lower bound
         else
             nextE1=newE1;                   %Else, doesn't matter
