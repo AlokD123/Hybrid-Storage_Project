@@ -1,20 +1,26 @@
-%If limited in control, recalculate resulting optimal subsequent state
-function [ nextE1,nextE2 ] = optNextStateLimited( E1,E2,D1Opt,D2Opt,t ) % Input: states, and controls (before saturation), at time t
-  global E_MAX;
-  global expL_State;
-    newE1=StateEqn1(E1,D1Opt);
-    if(newE1<0)
-        nextE1=0;
-    elseif(newE1>E_MAX(1)) %Should not get here
-        nextE1=E_MAX(1);
+%Calculate subsequent state accounting for no inherent storage loss when
+%dropping below lower bound of state
+function [ nextE1,nextE2 ] = optNextStateLimited( E1,E2,D1,D2,L ) % Input: state, controls, load
+    global E_MIN; global BETA;
+    newE1=StateEqn1(E1,D1,BETA(1));
+    if(newE1<E_MIN(1))                      %If below lower bound...
+        if(StateEqn1(E1,D1,1)>=E_MIN(1)) %If would not be if with no inherent loss, ASSUME lossless
+            nextE1=E_MIN(1);                %In this case, will drop to lower bound
+        else
+            nextE1=newE1;                   %Else, doesn't matter
+        end
     else
         nextE1=newE1;
     end
-    newE2=StateEqn2(E2,D1Opt,D2Opt,expL_State(E1,E2,t));
-    if(newE2<0)
-        nextE2=0;
-    elseif(newE2>E_MAX(2))
-        nextE2=E_MAX(2);
+    
+    %Repeat for second storage
+    newE2=StateEqn2(E2,D1,D2,L,BETA(2));
+    if(newE2<E_MIN(2))
+        if(StateEqn2(E2,D1,D2,L,1)>=E_MIN(2))
+            nextE2=E_MIN(2);
+        else
+            nextE2=newE2;
+        end
     else
         nextE2=newE2;
     end
