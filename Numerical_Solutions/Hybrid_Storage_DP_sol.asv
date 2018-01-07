@@ -21,7 +21,7 @@ LAST_ITER=3;
 %Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[3;2]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -110,7 +110,20 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
     end
   end
 end
-%Replace infinite costs with -1%
-V(V==inf)=-1;
+
 %Final costs, depending on load
 NetCost=V(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,:,1);
+
+
+%uOpt holds the optimal control for each iteration, starting from the GIVEN INITIAL STATE
+%D1Opt(1:LAST_ITER)=0;
+%D2Opt(1:LAST_ITER)=0;
+%optE holds the value of the optimal state (energy stored) AT a GIVEN iteration
+%optE1(1:LAST_ITER)=-1;
+%optE2(1:LAST_ITER)=-1;
+
+
+%If zero ("INFINITE") expected cost in given state, next state not possible for given load
+%if(CostE1(E_Ind1,E_Ind2)==0)||(CostE2(E_Ind2,E_Ind1)==0 && t~=(LAST_ITER-1)) %ASSUMING NOT POSSIBLE to have zero cost of state for given load EXCEPT FOR 2ND-LAST ITERATION
+%  disp('State with no achievable next state for L=%');
+%end

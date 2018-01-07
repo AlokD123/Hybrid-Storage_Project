@@ -1,6 +1,6 @@
 function [ expCostE_L ] = GetCtrlsUnkNextState( E_Ind1,E_Ind2,indL,t ) % Input: E1(t),E2(t), and L (particular load for which opt control)
-  global MAX_DISCHARGE;global MAX_CHARGE; global E_MAX; global E_MIN; global INF; global MIN_LOAD;
-  global V; global D1Opt_State; global D2Opt_State; global expCostE;
+  global MAX_DISCHARGE;global MAX_CHARGE; global E_MAX; global E_MIN; global MIN_LOAD;
+  global V; global D1Opt_State; global D2Opt_State; global expCostE; global optNextE1; global optNextE2;
   
     %Map state index to state    %%(TO DO: customize to non-consecutive AND/OR non-integer states)
     E1=E_MIN(1)+(E_Ind1-1);
@@ -9,7 +9,7 @@ function [ expCostE_L ] = GetCtrlsUnkNextState( E_Ind1,E_Ind2,indL,t ) % Input: 
     L=indL+MIN_LOAD-1; 
   
     %tempCostX_W will contain LOWEST cost of next state, for GIVEN perturbation w. (Assume infinite cost by default)        
-    tempCostE_L=INF;
+    tempCostE_L=Inf;
 
     %For each possible control for that state (at a given iteration and value of w)...
     for D1=0:MAX_DISCHARGE(1)
@@ -42,6 +42,10 @@ function [ expCostE_L ] = GetCtrlsUnkNextState( E_Ind1,E_Ind2,indL,t ) % Input: 
                 
                 %Set the lowest TOTAL cost of the current state, for given controls
                 V(E_Ind1,E_Ind2,indL,t)=tempCostE_L+CtrlCost(D1,D2,L);           %<------ TOTAL COST
+                
+                %Find optimal next state for this state (for reference)
+                optNextE1(E_Ind1,E_Ind2,indL,t)=round(nextE1);
+                optNextE2(E_Ind1,E_Ind2,indL,t)=round(nextE2);
               end
             end
           else
