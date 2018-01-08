@@ -3,7 +3,7 @@ clear all;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[3;2]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
@@ -21,18 +21,29 @@ LAST_ITER=3;
 %Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[3;2]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2);
+%SET PROBABILITY DISTRIBUTION for loads... Normal  %<------------------------------- **********
+MU_LOAD=floor(0.5*(MAX_LOAD+MIN_LOAD))-3;
+%Set stdev so less than 1e-4 probability of outside bounds
+SIGMA_LOAD=MAX_LOAD-MIN_LOAD;
+while ( (normpdf(MAX_LOAD+1,MU_LOAD,SIGMA_LOAD)>1e-4 || normpdf(MIN_LOAD-1,MU_LOAD,SIGMA_LOAD)>1e-4) && SIGMA_LOAD>1)
+    SIGMA_LOAD=SIGMA_LOAD-1;
+end
+%If probabilities not summing to within 1e-3 of 1, give error
+probs=normpdf(linspace(MIN_LOAD,MAX_LOAD,MAX_LOAD-MIN_LOAD+1),MU_LOAD,SIGMA_LOAD);
+if sum(probs)<0.999
+   disp('Continuous approximation error!!\n'); 
+end
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
 ALPHA_C=[0.99 0.99]; %Efficiency of charging
 ALPHA_D=[0.9;0.95]; %Efficiency of discharging
 BETA=[0.99;0.99];    %Storage efficiency
 K=2;           %Weighting factor for D1^2 cost
-%C1=1;C2=1;     %Cost weighting factors
 PERFECT_EFF=0;
 
 %DP Setup... with duplication for each control input
@@ -88,15 +99,17 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       
       %If the no-load case permits a next state (i.e. not going outside bounds for all controls)...
       if(numAdmissibleLoads~=0)
-        %SET PROBABILITY DISTRIBUTION for loads... Uniform  %<------------------------------- **********
-        P_PERTURB=1/(numAdmissibleLoads);
-        %(^TO DO: customize probability distribution)
+        %P_PERTURB=1/(numAdmissibleLoads);
         
         %Try to calculate expected cost of the state, now knowing the admissible loads
         for indL=1:(MAX_LOAD-MIN_LOAD+1)
           if(expCostE_L(E_Ind1,E_Ind2,indL)~=Inf) %If CAN go to any next state FOR GIVEN PERTURBATION w...
             %Find expected cost of state, to be the Expected Cost for over all random demands at NEXT TIME STAGE t+1
-            %Find expectation by adding to running cost, for each value of load...
+            %1) Determine probability of given load value
+                %Map index to value of load
+                L=indL+MIN_LOAD-1;
+            P_PERTURB=normpdf(L,MU_LOAD,SIGMA_LOAD);
+            %2) Find expectation by adding to running cost, for each value of load...
             expCostE(E_Ind1,E_Ind2,t) = expCostE(E_Ind1,E_Ind2,t) + V(E_Ind1,E_Ind2,indL,t)*P_PERTURB;
           end
         end
