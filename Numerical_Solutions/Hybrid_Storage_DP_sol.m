@@ -27,7 +27,7 @@ global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2);
 %SET PROBABILITY DISTRIBUTION for loads... Normal  %<------------------------------- **********
-MU_LOAD=floor(0.5*(MAX_LOAD+MIN_LOAD))-3;
+MU_LOAD=floor(0.5*(MAX_LOAD+MIN_LOAD));
 %Set stdev so less than 1e-4 probability of outside bounds
 SIGMA_LOAD=MAX_LOAD-MIN_LOAD;
 while ( (normpdf(MAX_LOAD+1,MU_LOAD,SIGMA_LOAD)>1e-4 || normpdf(MIN_LOAD-1,MU_LOAD,SIGMA_LOAD)>1e-4) && SIGMA_LOAD>1)
@@ -36,11 +36,11 @@ end
 %If probabilities not summing to within 1e-3 of 1, give error
 probs=normpdf(linspace(MIN_LOAD,MAX_LOAD,MAX_LOAD-MIN_LOAD+1),MU_LOAD,SIGMA_LOAD);
 if sum(probs)<0.999
-   disp('Continuous approximation error!!\n'); 
+   disp('Continuous approximation error!!'); 
 end
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[0.99 0.99]; %Efficiency of charging
+ALPHA_C=[0.99;0.99]; %Efficiency of charging
 ALPHA_D=[0.9;0.95]; %Efficiency of discharging
 BETA=[0.99;0.99];    %Storage efficiency
 K=2;           %Weighting factor for D1^2 cost
@@ -86,7 +86,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
         %For each possible control for that state (at a given iteration and value of w)...
         %Get CONTROLS and optimal COST of next state (Cost-to-go) for all combos of w and u
         expCostE_L(E_Ind1,E_Ind2,indL)=GetCtrlsUnkNextState( E_Ind1,E_Ind2,indL,t );
-                
+
         %NOTE: IF NO PERTURBATION.... CostX_W should just hold cost of next state for the given value of u.
         if(expCostE_L(E_Ind1,E_Ind2,indL)==Inf) %If cannot go to any next state FOR GIVEN PERTURBATION w...
           %fprintf('No next state for given L. L=%d, E1=%d, E2=%d\n',L,E_MIN(1)+(E_Ind1-1),E_MIN(2)+(E_Ind2-1));
@@ -127,3 +127,33 @@ end
 V(V==inf)=-1;
 %Final costs, depending on load
 NetCost=V(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,:,1);
+
+
+%%TESTING: evaluate policy for a random sequence of loads
+%Set up matrices
+D1Opt(1:LAST_ITER)=0; D2Opt(1:LAST_ITER)=0;
+optE1(1:LAST_ITER)=E1_INIT; optE2(1:LAST_ITER)=E2_INIT;
+optV(1:LAST_ITER)=0;
+Load(1:LAST_ITER)=0;
+for t=1:(LAST_ITER-1)
+    %Set state index
+    indE1=optE1(t)-E_MIN(1)+1;
+    indE2=optE2(t)-E_MIN(2)+1;
+    %Create random demand based w/ IID Uniform probability
+    MAX_LOAD_STATE=optE1(t)+optE2(t)-1; %Maximum possible load limited to total energy stored in that state
+    L=randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1;
+    indL=L-MIN_LOAD+1;
+    Load(t)=L;          %Hold value of load (for reference)
+    %Get optimal costs for this sequence of loads
+    optV(t)=V(indE1,indE2,indL,t);
+    %Get costs of other possible states for this state and load??
+    %(For comparison)
+
+    %Get optimal policy for this sequence of loads
+    D1Opt(t)=D1Opt_State(indE1,indE2,indL,t);
+    D2Opt(t)=D2Opt_State(indE1,indE2,indL,t);
+    %Get optimal next state, starting at E_INIT
+    optE1(t+1)=optNextE1(indE1,indE2,indL,t);
+    optE2(t+1)=optNextE2(indE1,indE2,indL,t);
+    %Note: cross-check with optNextStateLtd?
+end
