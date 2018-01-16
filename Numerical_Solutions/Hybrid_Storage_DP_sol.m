@@ -11,7 +11,7 @@ E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 %Recurse for 3 iterations (1,2,3)
-LAST_ITER=3;
+LAST_ITER=10;
 
 
 %NOTE: at end, uOpt will have best control policy, and NetCost will contain total cost of DP operation
@@ -38,6 +38,7 @@ probs=normpdf(linspace(MIN_LOAD,MAX_LOAD,MAX_LOAD-MIN_LOAD+1),MU_LOAD,SIGMA_LOAD
 if sum(probs)<0.999
    disp('Continuous approximation error!!'); 
 end
+MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
 ALPHA_C=[0.99;0.99]; %Efficiency of charging
@@ -99,7 +100,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
       
       %If the no-load case permits a next state (i.e. not going outside bounds for all controls)...
       if(numAdmissibleLoads~=0)
-        %P_PERTURB=1/(numAdmissibleLoads);
+        P_PERTURB=1/(numAdmissibleLoads); %Set load distribution to be uniform, by default
         
         %Try to calculate expected cost of the state, now knowing the admissible loads
         for indL=1:(MAX_LOAD-MIN_LOAD+1)
@@ -108,7 +109,7 @@ for t=(LAST_ITER-1):-1:1                %Start at 2nd-last iteration (time, t), 
             %1) Determine probability of given load value
                 %Map index to value of load
                 L=indL+MIN_LOAD-1;
-            P_PERTURB=normpdf(L,MU_LOAD,SIGMA_LOAD);
+            %P_PERTURB=normpdf(L,MU_LOAD,SIGMA_LOAD);
             %2) Find expectation by adding to running cost, for each value of load...
             expCostE(E_Ind1,E_Ind2,t) = expCostE(E_Ind1,E_Ind2,t) + V(E_Ind1,E_Ind2,indL,t)*P_PERTURB;
           end
@@ -131,17 +132,29 @@ NetCost=V(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,:,1);
 
 %%TESTING: evaluate policy for a random sequence of loads
 %Set up matrices
-D1Opt(1:LAST_ITER)=0; D2Opt(1:LAST_ITER)=0;
-optE1(1:LAST_ITER)=E1_INIT; optE2(1:LAST_ITER)=E2_INIT;
-optV(1:LAST_ITER)=0;
-Load(1:LAST_ITER)=0;
-for t=1:(LAST_ITER-1)
+%D1Opt(1:LAST_ITER)=0; D2Opt(1:LAST_ITER)=0;
+%optE1(1:LAST_ITER)=E1_INIT; optE2(1:LAST_ITER)=E2_INIT;
+optE1(1)=E1_INIT; optE2(1)=E2_INIT;
+%optV(1:LAST_ITER)=0;
+%Load(1:LAST_ITER)=0;
+% Debug counts
+countOOB=0;         %Out of bounds count
+countRepeatZeros=0; %Count of repeated zero loads
+while t<=(LAST_ITER-1)
     %Set state index
     indE1=optE1(t)-E_MIN(1)+1;
     indE2=optE2(t)-E_MIN(2)+1;
     %Create random demand based w/ IID Uniform probability
     MAX_LOAD_STATE=optE1(t)+optE2(t)-1; %Maximum possible load limited to total energy stored in that state
     L=randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1;
+    %If leads to next state guaranteed out of bounds, decrease load
+    while(optNextE1(indE1,indE2,L-MIN_LOAD+1,t)==inf || optNextE2(indE1,indE2,L-MIN_LOAD+1,t)==inf)
+        L=L-1;
+        countOOB=countOOB+1;
+    end
+    if(L==0)
+        countRepeatZeros=countRepeatZeros+1;
+    end
     indL=L-MIN_LOAD+1;
     Load(t)=L;          %Hold value of load (for reference)
     %Get optimal costs for this sequence of loads
@@ -156,4 +169,14 @@ for t=1:(LAST_ITER-1)
     optE1(t+1)=optNextE1(indE1,indE2,indL,t);
     optE2(t+1)=optNextE2(indE1,indE2,indL,t);
     %Note: cross-check with optNextStateLtd?
+    
+    %If counted zero loads too many times, break loop
+    if(countRepeatZeros==MAX_NUM_ZEROS)
+        D1Opt(t+1)=0; D2Opt(t+1)=0;
+        optE1(t+1)=optE1(t); optE2(t+1)=optE2(t);
+        optV(t+1)=V(optE1(t+1)-E_MIN(1)+1,optE2(t+1)-E_MIN(2)+1,indL,t);
+        Load(t+1)=0;
+        t=LAST_ITER;
+    end
+    t=t+1;
 end

@@ -80,7 +80,7 @@ else
     hold off;
     xlabel('Time');
     ylabel('Unit of energy');
-    title('Change in energy stored vs. load');
+    title('Energy stored vs. load');
     legend('E1','E2','Load');
     
     figure
