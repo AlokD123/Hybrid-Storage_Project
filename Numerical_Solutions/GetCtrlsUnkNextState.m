@@ -1,6 +1,7 @@
 function [ expCostE_L ] = GetCtrlsUnkNextState( E_Ind1,E_Ind2,indL,t ) % Input: E1(t),E2(t), and L (particular load for which opt control)
   global MAX_DISCHARGE;global MAX_CHARGE; global E_MAX; global E_MIN; global MIN_LOAD;
   global V; global D1Opt_State; global D2Opt_State; global expCostE; global optNextE1; global optNextE2;
+  global DISCOUNT;
   
     %Map state index to state    %%(TO DO: customize to non-consecutive AND/OR non-integer states)
     E1=E_MIN(1)+(E_Ind1-1);
@@ -41,7 +42,7 @@ function [ expCostE_L ] = GetCtrlsUnkNextState( E_Ind1,E_Ind2,indL,t ) % Input: 
                 tempCostE_L=expCostE(nextE_Ind1,nextE_Ind2,t+1);
                 
                 %Set the lowest TOTAL cost of the current state, for given controls
-                V(E_Ind1,E_Ind2,indL,t)=tempCostE_L+CtrlCost(D1,D2,L);           %<------ TOTAL COST
+                V(E_Ind1,E_Ind2,indL,t)=DISCOUNT*tempCostE_L+CtrlCost(D1,D2,L);           %<------ TOTAL COST, including discount factor for IHDP
                 
                 %Find optimal next state for this state (for reference)
                 optNextE1(E_Ind1,E_Ind2,indL,t)=round(nextE1);

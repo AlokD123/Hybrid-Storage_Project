@@ -12,7 +12,9 @@ E1_INIT=E_MAX(1);
 E2_INIT=E_MAX(2);
 %Recurse for 3 iterations (1,2,3)
 LAST_ITER=10;
-
+%NO discount factor (not inf horizon)
+global DISCOUNT;
+DISCOUNT=1;
 
 %NOTE: at end, uOpt will have best control policy, and NetCost will contain total cost of DP operation
 %ASSUMING FINAL COST = 0
