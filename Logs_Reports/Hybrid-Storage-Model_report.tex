@@ -17,14 +17,14 @@
 	\maketitle
 	
 	\section{Introduction}
-	This model describes the energy flows in a two- storage system. It will be formulated as a dynamic programming problem.
+	This model describes the energy flows in a two-storage system. It will be formulated as a dynamic programming problem.
 	
 	\section{Model}
 	
 	\subsection{Definitions}
 	\begin{itemize}
 		\item Indices\\
-		$i$: discrete time step index\\
+		$t$: discrete time step index\\
 		$j$: storage device number (1: battery, 2: supercapacitor)\\
 		\item Parameters\\
 		$\alpha^{C}$: charging efficiency\\
@@ -45,90 +45,143 @@
 	\subsection{Constraints}
 	\begin{itemize}
 		\item Supply-demand balance: 
-		\begin{equation} \label{eq:BalanceEqn}\left[D_{1}(i)\right] + \left[D_{2}(i) - C_{2}(i)\right] = L(i) \end{equation}
+		\begin{equation} \label{eq:BalanceEqn}\left[D_{1}(t)\right] + \left[D_{2}(t) - C_{2}(t)\right] = L(t) \end{equation}
 						
 		\item Bounds on stored energy: 
-		\begin{equation}E_{j}^{min}\leq E_{j}(i)\leq E_{j}^{max}\end{equation}
+		\begin{equation}E_{j}^{min}\leq E_{j}(t)\leq E_{j}^{max}\end{equation}
 		\item Bounds on charging:
-		\begin{equation}0\leq C_{2}(i)\leq C_{2}^{max}\end{equation}
+		\begin{equation}0\leq C_{2}(t)\leq C_{2}^{max}\end{equation}
 		\item Bounds on discharging:
-		\begin{equation}0\leq D_{j}(i)\leq D_{j}^{max}\end{equation}
+		\begin{equation}0\leq D_{j}(t)\leq D_{j}^{max}\end{equation}
 	\end{itemize}
 
 	\subsection{Recursive State Equations}
-	 The state of the system is the energy in a storage device ($E_{j}(i)$). This evolves according to the charging and discharging of the storage device, which is the control.
+	 The state of the system is the energy in a storage device ($E_{j}(t)$). This evolves according to the charging and discharging of the storage device, which is the control.
 	 
 	 The following recursive equations describe the changes in the state, including due to constant leakage loss:
 	 
-	 \begin{equation}\label{eq:StateEq1}E_{1}(i+1)=\beta_{1}E_{1}(i)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(i)\right] \end{equation}
+	 \begin{equation}\label{eq:StateEq1}E_{1}(t+1)=\beta_{1}E_{1}(t)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(t)\right] \end{equation}
 	 
-	 \begin{equation}\label{eq:StateEq2}E_{2}(i+1)=\beta_{2}E_{2}(i)+\left[\alpha_{2}^{C}C_{2}(i)-\frac{1}{\alpha_{2}^{D}}D_{2}(i)\right]\end{equation}
+	 \begin{equation}\label{eq:StateEq2}E_{2}(t+1)=\beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}C_{2}(t)-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]\end{equation}
 	 
 	 Substituting \eqref{eq:BalanceEqn} into \eqref{eq:StateEq2}, one obtains:
 	 
-	 \begin{equation}\label{eq:DPStateEq2}E_{2}(i+1)=\beta_{2}E_{2}(i)+\left[\alpha_{2}^{C}[D_{1}(i)+D_{2}(i)-L(i)]-\frac{1}{\alpha_{2}^{D}}D_{2}(i)\right]\end{equation}
+	 \begin{equation}\label{eq:DPStateEq2}E_{2}(t+1)=\beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}[D_{1}(t)+D_{2}(t)-L(t)]-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]\end{equation}
 	 
 
 	\subsection{Objective Function}
 	\begin{itemize}
 		\item Minimize charge and discharge rates
 		 for the first storage device (battery):
-		 \begin{equation}J_{rate}=min\left[\sum_{i=0}^{N}K\left[D_{1}(i)\right]^{2}\right]\end{equation}
+		 \begin{equation}J_{rate}=min\left[\sum_{i=0}^{N}K\left[D_{1}(t)\right]^{2}\right]\end{equation}
  		\item Minimize power loss due to energy transfers
 		 \begin{equation}J_{loss}=min\left[\sum_{i=0}^{N}
-		 (1-\alpha_{1}^{D})D_{1}(i)+
-		 (1-\alpha_{2}^{C})C_{2}(i)+
- 		 (1-\alpha_{2}^{D})D_{2}(i)
+		 (1-\alpha_{1}^{D})D_{1}(t)+
+		 (1-\alpha_{2}^{C})C_{2}(t)+
+ 		 (1-\alpha_{2}^{D})D_{2}(t)
 		  \right]\end{equation}
+		  
+		  Substituting \eqref{eq:BalanceEqn}, one obtains:
+		  
+		  \begin{equation}J_{loss}=\mathop{\E}_{L(t)} \Biggl\{min\left[\sum_{i=0}^{N}
+		  (1-\alpha_{1}^{D})D_{1}(t)+
+		  (1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
+		  (1-\alpha_{2}^{D})D_{2}(t)
+		  \right]\Biggr\}\end{equation}
 	\end{itemize}
 	
-	Hence, the cost functions are as follow:
-	  
+	By convexity, the combined cost function is:
+	\begin{equation}J=\mathop{\E}_{L(t)} \Biggl\{min\left[\sum_{i=0}^{N}K\left[D_{1}(t)\right]^{2} + (1-\alpha_{1}^{D})D_{1}(t)+
+	(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
+	(1-\alpha_{2}^{D})D_{2}(t)\right]\Biggr\}\end{equation}
+	where it is chosen to take the expectation after the minimization. This is done so that the net energy discharged (control, $D$) exactly matches the demand, $L$, at all times, and not its expected value.
+	
+	In the general case, for state $x(t)$, control $u(t)$ and random perturbation $w(t)$, the cost function may be expressed as:
+	
+	\begin{equation}J=\mathop{\E}_{L(t)} \Biggl\{\min_{u}\left[\sum_{i=0}^{N}g(x(t),u(t),w(t))\right]\Biggr\}\end{equation}
+	where $g(\cdot)$ is the stage cost.
+
+	This can be re-written in the form of Bellman's equation, which allows the problem to be solved by recursion:
+	\begin{multline}
+	J_{t}[x(t),w(t)]=\min_{u} g(x(t),u(t),w(t)) + \mathop{\E}_{w(t+1)} \{J_{t+1}[f(x(t),u(t),w(t)),w(t+1)]\}
+	\end{multline}
+	Note that by choosing the perturbation $w(t)$ to be a component of the state as well, can determine the optimal control for any arbitrary load at time $t$, in addition to arbitrary state.
+	
+	Based on this formulation, the optimization problems for the battery and supercapacitor are individually as follow:
+	
 	\begin{itemize}
 		  \item Battery storage:\\
 		  \begin{multline}
-		  J_{i}[E_{1}(i),L(i)] = \min_{D_{1},D_{2}}
-		  (1-\alpha_{1}^{D})D_{1}(i) 
-		  	+ K[D_{1}(i)]^{2}
-		  	+(1-\alpha_{2}^{D})[D_{2}(i)]\\	  +(1-\alpha_{2}^{C})[D_{1}(i)+D_{2}(i)-L(i)]
-		  	+\mathop{\mathbb{E}}_{L(i+1)}\{J_{i+1}[f_{1}(E_{1}(i),D_{1}(i)),L(i+1)]\}
+		  J_{t}[E_{1}(t),L(t)] = \min_{D_{1},D_{2}}
+		  (1-\alpha_{1}^{D})D_{1}(t) 
+		  	+ K[D_{1}(t)]^{2}
+		  	+(1-\alpha_{2}^{D})[D_{2}(t)]\\	  +(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]
+		  	+\mathop{\E}_{L(t+1)}\{J_{t+1}[f_{1}(E_{1}(t),D_{1}(t)),L(t+1)]\}
 		  \end{multline}
 		  
 		  where $f_{1}(\cdot)$ is \eqref{eq:StateEq1}, the state equation for the battery.
 		  
 		  \item Supercapacitor storage:\\
 		  \begin{multline}
-		  J_{i}[E_{2}(i),L(i)] = \min_{D_{1},D_{2}}
-		  (1-\alpha_{1}^{D})D_{1}(i) 
-		  	+ K[D_{1}(i)]^{2}
-		  	+(1-\alpha_{2}^{D})[D_{2}(i)]\\	  +(1-\alpha_{2}^{C})[D_{1}(i)+D_{2}(i)-L(i)]
-		  	+\mathop{\mathbb{E}}_{L(i+1)} \{J_{i+1}[f_{2}(E_{2}(i),D_{1}(i),D_{2}(i),L(i)),L(i+1)]\}
+		  J_{t}[E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
+		  (1-\alpha_{1}^{D})D_{1}(t) 
+		  	+ K[D_{1}(t)]^{2}
+		  	+(1-\alpha_{2}^{D})[D_{2}(t)]\\	  +(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]
+		  	+\mathop{\E}_{L(t+1)} \{J_{t+1}[f_{2}(E_{2}(t),D_{1}(t),D_{2}(t),L(t)),L(t+1)]\}
 		  \end{multline}
 		  
 		  where $f_{2}(\cdot)$ is \eqref{eq:DPStateEq2}, the state equation for the supercapacitor.
 		  
-		  \item Combined:\\
-		  \begin{multline}
-		  J_{i}[E_{1}(i),E_{2}(i),L(i)] = \min_{D_{1},D_{2}}
-		  (1-\alpha_{1}^{D})D_{1}(i) 
-			  + K[D_{1}(i)]^{2}\\
-			  +(1-\alpha_{2}^{D})[D_{2}(i)]	  +(1-\alpha_{2}^{C})[D_{1}(i)+D_{2}(i)-L(i)]\\
-			  +\mathop{\mathbb{E}}_{L(i+1)}\{J_{i+1}[f_{1}(E_{1}(i),D_{1}(i)), f_{2}(E_{2}(i),D_{1}(i),D_{2}(i),L(i)), L(i+1)]\}
-		  \end{multline}
-		  
 	\end{itemize}
 
 
+	Combining the above gives the final form of the optimization problem of interest:
+	\begin{multline}
+	J_{t}[E_{1}(t),E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
+	(1-\alpha_{1}^{D})D_{1}(t) 
+	+ K[D_{1}(t)]^{2}\\
+	+(1-\alpha_{2}^{D})[D_{2}(t)]	  +(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]\\
+	+\mathop{\E}_{L(t+1)}\{J_{t+1}[f_{1}(E_{1}(t),D_{1}(t)), f_{2}(E_{2}(t),D_{1}(t),D_{2}(t),L(t)), L(t+1)]\}
+	\end{multline}
+
 	\section{Miscellaneous Notes}
 	Single storage:
-	
 	\begin{multline}
-	J_{i}[E_{2}(i),L(i)] = \min_{D_{1},D_{2}}
-	(1-\alpha_{1}^{D})D_{1}(i) 
-	+ K[D_{1}(i)]^{2}
-	+(1-\alpha_{2}^{C})[D_{1}(i)-L(i)]\\
-	+\mathop{\mathbb{E}}_{L(i+1)} \{J_{i+1}[f_{2}(E_{2}(i),D_{1}(i)),L(i+1)]\}
+	J_{t}[E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
+	(1-\alpha_{1}^{D})D_{1}(t) 
+	+ K[D_{1}(t)]^{2}
+	+(1-\alpha_{2}^{C})[D_{1}(t)-L(t)]\\
+	+\mathop{\E}_{L(t+1)} \{J_{t+1}[f_{2}(E_{2}(t),D_{1}(t)),L(t+1)]\}
 	\end{multline}
+	Iteration costs:
+	\begin{itemize}
+	\item $N^{th}$ stage: \\
+	\begin{equation}
+	J_{N}[x(N),w(N)]=0
+	\end{equation}
+	
+	\item $(N-1)^{th}$ stage: \\
+	\begin{multline}
+	J_{N-1}[x(N-1),w(N-1)]=\min_{u} g(x(N-1),u(N-1),w(N-1))+ \mathop{\E}_{w(N)}\{0\}
+	\end{multline}
+	
+	\item $(N-2)^{th}$ stage: \\
+	\begin{multline}
+	J_{N-2}[x(N-2),w(N-2)]=\min_{u} g(x(N-2),u(N-2),w(N-2))\\
+	+ \mathop{\E}_{w(N-1)} \{
+	g( f(x(N-2),u(N-2),w(N-2)) ,u(N-1),w(N-1))\}
+	\end{multline}
+	
+	\item Initial stage: \\	
+	\begin{multline}
+	J=J_{0}[x(0),w(0)]=\min_{u} g(x(0),u(0),w(0))\\
+	+\left[\sum_{t=0}^{N-1}\mathop{\E}_{w} \{
+	g( f(x(t),u(t),w(t)) ,u(t+1),w(t+1))
+	\}\right]
+	\end{multline}
+	\end{itemize}
+
+	Note that here, $f(\cdot)$ is a general recursive state equation.
 	
 	\bibliographystyle{plain}
 	\bibliography{references}
