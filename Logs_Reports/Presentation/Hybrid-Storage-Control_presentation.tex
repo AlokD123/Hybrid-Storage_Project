@@ -1,0 +1,351 @@
+% Copyright 2004 by Till Tantau <tantau@users.sourceforge.net>.
+%
+% In principle, this file can be redistributed and/or modified under
+% the terms of the GNU Public License, version 2.
+%
+% However, this file is supposed to be a template to be modified
+% for your own needs. For this reason, if you use this file as a
+% template and not specifically distribute it as part of a another
+% package/program, I grant the extra permission to freely copy and
+% modify this file as you see fit and even to delete this copyright
+% notice. 
+
+\documentclass{beamer}
+\makeatletter
+\renewcommand*\env@matrix[1][*\c@MaxMatrixCols c]{%
+	\hskip -\arraycolsep
+	\let\@ifnextchar\new@ifnextchar
+	\array{#1}}
+\makeatother
+%%\usepackage[style=verbose,backend=biber]{biblatex}
+%%\addbibresource{ref.bib}
+\setbeamerfont{footnote}{size=\tiny}
+\beamertemplatenavigationsymbolsempty
+% There are many different themes available for Beamer. A comprehensive
+% list with examples is given here:
+% http://deic.uab.es/~iblanes/beamer_gallery/index_by_theme.html
+% You can uncomment the themes below if you would like to use a different
+% one:
+%\usetheme{AnnArbor}
+%\usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+%\usetheme{Berlin}
+\usetheme{Boadilla}
+%\usetheme{boxes}
+\usepackage{color}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{graphicx}
+%\usepackage{figure}
+%\usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+%\usetheme{default}
+\DeclareMathOperator*{\argmin}{argmin}
+%\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+%\usetheme{Hannover}
+%\usetheme{Ilmenau}
+%\usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+%\usetheme{Montpellier}
+%\usetheme{PaloAlto}
+%\usetheme{Pittsburgh}
+%\usetheme{Rochester}
+%\usetheme{Singapore}
+%\usetheme{Szeged}
+%\usetheme{Warsaw}
+\usepackage{amsmath}
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+
+%\usepackage{soul}
+\usepackage{color}
+
+
+
+
+%Use Tiks to plot graph
+\usepackage{pgf}
+\usepackage{tikz}
+\usetikzlibrary{arrows,automata}
+%figure package
+\usepackage{float}
+\title{}
+
+% A subtitle is optional and this may be deleted
+%\subtitle{ECE1094 Project Presentation}
+
+\author{Zhongbin Huang}
+% - Give the names in the same order as the appear in the paper.
+% - Use the \inst{?} command only if the authors have different
+%   affiliation.
+
+% \institute[Universities of Toronto] % (optional, but mostly needed)
+% {
+%   \inst{1}%
+%   Department of Electrc\\
+%   University of Toronto
+%   \and
+%   \inst{2}%
+%   Department of Theoretical Philosophy\\
+%   University of Elsewhere}
+% - Use the \inst command only if there are several affiliations.
+% - Keep it simple, no one is interested in your street address.
+
+\date{Oct 26, 2017}
+% - Either use conference name or its abbreviation.
+% - Not really informative to the audience, more for people (including
+%   yourself) who are reading the slides online
+
+%\subject{Theoretical Computer Science}
+% This is only inserted into the PDF information catalog. Can be left
+% out. 
+
+% If you have a file called "university-logo-filename.xxx", where xxx
+% is a graphic format that can be processed by latex or pdflatex,
+% resp., then you can add a logo as follows:
+
+% \pgfdeclareimage[height=0.5cm]{university-logo}{university-logo-filename}
+% \logo{\pgfuseimage{university-logo}}
+
+% Delete this, if you do not want the table of contents to pop up at
+% the beginning of each subsection:
+% \AtBeginSubsection[]
+% {
+%   \begin{frame}<beamer>{Outline}
+%     \tableofcontents[currentsection,currentsubsection]
+%   \end{frame}
+% }
+
+% Let's get started
+\begin{document}
+	
+	\begin{frame}
+	\titlepage
+\end{frame}
+
+%\begin{frame}{Outline}
+%\begin{itemize}
+%	\item System and Attack Model
+%	\item Undetectable Attack, Unidentifiable Attack, {\color{red}Structurally Undetectable Attack}
+%	\item An Example Related to My Current Work
+%	\item Monitoring Design
+%\end{itemize}
+%\end{frame}
+ \begin{frame}{Outline}
+   \tableofcontents
+   % You might wish to add the option [pausesections]
+ \end{frame}
+
+% Section and subsections will appear in the presentation overview
+% and table of contents.
+\section{Background}
+
+\section{LTI system model}
+
+\begin{frame}{LTI system model}
+\begin{itemize}
+\item {System and Attack Model %%/footcite{pasqualetti2015control}
+	\begin{equation}
+	\begin{aligned}
+	E\dot x(t) &= Ax(t) +{\color{red}B u(t)} \\
+	y(t)&=Cx(t) + {\color{red}D u(t)}\\
+	\end{aligned}
+	\end{equation}}
+where $A$ is the system matrix, $B$ is the state attack matrix,$C$ is the measurement output matrix, $D$ is measurement attack matrix, $x$ is the system state vector, $y$ is the measurement output vector and $u$ is the attack vector. All the quantities are in proper dimensions.
+\item Define {\color{red}attack set} $K$ as $(B_K,D_K)$, the sparsity pattern.
+\item Q: Is the attack $(B,D,u(t))$ detectable/identifiable from output y(t) ?
+\end{itemize}
+\end{frame}
+\section{Undetectable/Unidentifiable Attack}
+\begin{frame}{Undetectable Attack}
+%{\color{Caution:}} Be very careful when talking about the conterp
+\begin{tikzpicture}
+\begin{scope}[shift={(0cm,0cm)}, fill opacity=1]
+\draw[fill=none, draw = black] (-2,0) circle (3);
+\draw[fill=none, draw = black] (2,0) circle (3);
+%\node at (0,4) (A) {\large\textbf{A}};
+\node at (-2.5,1) [draw, text width=3cm]{Normal Operating Condition\\$y(x_2,0,t)$};
+%\node (example-textwidth-1) [draw, text width=3cm]{example \\ example};
+\node at (2.5,1) [draw, text width=2cm]{Detectable Attacks\\$y(x_1,u_K,t)$};
+\node at (0,-1) [draw, text width=2cm]{Undetectable Attacks};
+\end{scope}
+
+\end{tikzpicture}
+\end{frame}
+
+
+
+\section{Example}
+\begin{frame}{A Numerical Example}
+\begin{itemize}
+\item{Define the following\\
+$A=\begin{bmatrix}[c c c c c c]
+0  & 0  & 0  & 1  & 0  & 0 \\
+0  & 0  & 0  & 0  & 1  & 0 \\
+0  & 0  & 0  & 0  & 0  & 1 \\
+-2 & 1  & 0  & 0  & 0  & 0 \\
+1  & -2 & 1  & 0  & 0  & 0 \\
+0  & 1  & -2 & 0  & 0  & 0 \\
+\end{bmatrix}$,
+$B_K=\begin{bmatrix}[c c]
+0  & 0  \\
+1  & 0  \\
+0  & 0  \\
+0  & 0  \\
+0  & 1  \\
+0  & 0  \\
+\end{bmatrix}$,
+$C=\begin{bmatrix}[c c c c c c]
+1  & 0  & 0  & 0  & 0  & 0 \\
+0  & 0  & 0  & 4  & 0  & 0 
+\end{bmatrix}$, $B=I$, $E=I$.}
+\item {Goal: To design $F$ and make the attack set $K$ structurally detectable with the closed loop system $A+BF$, {\color{red}from output $y$}}.
+\end{itemize}
+\end{frame}
+\begin{frame}{A Numerical Example}
+\begin{itemize}
+\item After some numerical operation, I get
+$A+BF=\begin{bmatrix}[c c c c c c]
+-1.0573  & 0.45130  & 0  & 1  & 0  & 0 \\
+0  & 0  & 0  & 0  & 1  & 0 \\
+0  & 0  & 0  & 0  & 0  & 1 \\
+-2 & 1  & 0  & 0  & -2.769  & 0 \\
+1  & -2 & 1  & 0  & 0  & 0 \\
+0  & 1  & -2 & 0  & 0  & 0 \\
+\end{bmatrix}$
+\end{itemize}
+\end{frame}
+\begin{frame}{A Numerical Example}
+\begin{figure}[!htb]\centering
+\begin{minipage}{0.49\linewidth}
+\scalebox{0.6}{\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=1.8cm, semithick]
+\tikzstyle{every state}=[fill=none,draw=black,text=black,minimum size=1cm]
+
+\node[state]         (X1)                    {$X_1$};
+\node[state]         (X2) [right of=X1]      {$X_2$};
+\node[state]         (X3) [right of=X2]      {$X_3$};
+\node[state]         (X4) [below of=X1]       {$X_4$};
+\node[state]         (X5) [below of=X2]       {$X_5$};
+\node[state]         (X6) [below of=X3]       {$X_6$};
+\node[state]         (Y1) [left of=X1]       {$Y_1$};
+\node[state]         (Y2) [left of=X4]       {$Y_2$};
+\node[state]         (W1) [above right of=X2] {$W_1$};
+\node[state]         (W2) [below right of=X5] {$W_2$};
+\path (X1) edge              node {} (X4)
+edge              node {} (X5)
+edge              node {} (Y1)
+(X2) edge              node {} (X4)
+edge              node {} (X6)
+edge              node {} (X5)
+(X3) edge              node {} (X5)
+edge              node {} (X6)
+(X4) edge              node {} (X1)
+edge              node {} (Y2)
+(X5) edge              node {} (X2)
+(X6) edge              node {} (X3)
+(W1) edge              node {} (X2)
+(W2) edge              node {} (X5);
+\end{tikzpicture}}
+\caption{Graph Representation of the Open-Loop Six Nodes Network, Only One Disjoint Path}
+\end{minipage}
+\begin {minipage}{0.49\linewidth}
+\scalebox{0.6}{\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=1.8cm, semithick]
+\tikzstyle{every state}=[fill=none,draw=black,text=black,minimum size=1cm]
+
+\node[state]         (X1)                    {$X_1$};
+\node[state]         (X2) [right of=X1]      {$X_2$};
+\node[state]         (X3) [right of=X2]      {$X_3$};
+\node[state]         (X4) [below of=X1]       {$X_4$};
+\node[state]         (X5) [below of=X2]       {$X_5$};
+\node[state]         (X6) [below of=X3]       {$X_6$};
+\node[state]         (Y1) [left of=X1]       {$Y_1$};
+\node[state]         (Y2) [left of=X4]       {$Y_2$};
+\node[state]         (W1) [above right of=X2] {$W_1$};
+\node[state]         (W2) [below right of=X5] {$W_2$};
+\path (X1) edge              node {} (X4)
+edge              node {} (X5)
+edge              node {} (Y1)
+(X2) edge              node {} (X4)
+edge              node {} (X6)
+edge              node {} (X5)
+edge              node {} (X1)
+(X3) edge              node {} (X5)
+edge              node {} (X6)
+(X4) edge              node {} (X1)
+edge              node {} (Y2)
+(X5) edge              node {} (X2)
+edge              node {} (X4)
+(X6) edge              node {} (X3)
+(W1) edge              node {} (X2)
+(W2) edge              node {} (X5);
+\end{tikzpicture}}
+\caption{Graph Representation of the Closed-Loop Six Nodes Network, Two Disjoint Paths}
+\end{minipage}
+\end{figure}
+\end{frame}
+
+
+
+\begin{frame}{A Numerical Example}
+\begin{itemize}
+\item From the open-loop transfer matrix, we notice that if making the attack
+$\begin{bmatrix}[c]
+u_1\\
+u_2
+\end{bmatrix}=
+\begin{bmatrix}[c]
+-\frac{1}{s}\\
+1
+\end{bmatrix}
+U(s)$, then the attack cannot be detected from $y$.
+\item Specifically, I made $u_1(t)=-10-10cos(t)$, $u_2(t)=sin(t)$. Let's see the simulation results.
+
+\end{itemize}
+\end{frame}
+\begin{frame}{A Numerical Example}
+\includegraphics[width=4in, height=3in]{fault.eps}
+\end{frame}
+
+
+\section{Monitor Design}
+\begin{frame}{Monitor Design}
+
+If the following holds, 
+\begin{itemize}
+\item $w(0)=x(0)$... {\color{red} if not, asymptotically converging}
+\item $(E, A_D+GC)$ is regular and Hurwitz {\color{blue} modified, $A_D=\text{blkdiag}(A_1, A_2, ...A_N)$}
+\item Must know all regular control input ...{\color{red} assume zero in the paper}
+\item $(E_i,A_i,C_i)$ must be observable...{\color{red}this is very hard to guarantee} {\color{blue} modified}
+\item $(E_i,A_i)$ is regular.. {\color{blue} modified}
+\item $|sE-A|$ does not vanish for all $s$
+\item the initial condition x(0) is consistent ... {\color{red}satisfy the algebraic equation, $Ax(0)+Bu(0)\in Im(E)$}
+\item the unknown attack $u_K(t)$ is sufficiently smooth ... {\color{red} in case of impulsive input}
+\item $\rho((j\omega E-A_D-GC)^-1A_C)<1$ for all $\omega \in R$ ... {\color{blue} extra}
+\item All attacks are detectable
+\end{itemize}
+Then $r(t) = 0$ if and only if $u(t) = 0 $.
+\end{frame}
+
+\begin{frame}{Monitor Design}
+
+How to do?%%/footcite{dorfler2013continuous}
+\begin{itemize}
+\item collect samples of $y_i(t), \forall i$.
+\item set an initial stage $w_i(t) \forall i$.
+\item set $k:=k+1$, compute $w_i^{(k)}(t)$, $t\in[0,T]$, by integrating\\
+$E_i \dot{w}_i^{(k)}(t) = (A_i+G_iC_i)w_i^{(k)}(t) + \sum_{j\neq i}A_{ij}w_j^{(k-1)}(t)- G_iy_i(t)$.
+\item transmit $w_i^{(k)}(t)$ to control center $j$ if $A_{ij}\neq 0$.
+\item update $w_j^{(k)}(t)$ with signal received from control center $j$.
+\end{itemize}
+For sufficient large $k$, all $r_i(t)$ will goes to zero if there is no attack.
+This is just in horizon $[0,T]$, we can have more time horizon.$[T,2T],....$.
+\end{frame}
+
+\end{document}
