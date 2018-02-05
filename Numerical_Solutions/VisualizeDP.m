@@ -76,7 +76,7 @@ else
     %Visualize a possible sequence of loads, as previously found
     figure
     hold on;
-    plot(optE1,'*','MarkerSize',10); plot(optE2,'*','MarkerSize',10); plot(Load,'o','MarkerSize',10);
+    plot(optE1,':*','MarkerSize',10); plot(optE2,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10);
     hold off;
     xlabel('Time');
     ylabel('Unit of energy');
@@ -85,10 +85,11 @@ else
     
     figure
     hold on;
-    plot(D1Opt,'*','MarkerSize',10); plot(D2Opt,'*','MarkerSize',10); plot(Load,'o','MarkerSize',10);
+    plot(D1Opt,':*','MarkerSize',10); plot(D2Opt,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10);
     hold off;
     xlabel('Time');
     ylabel('Unit of energy');
     title('Optimal policy vs. load');
     legend('D1','D2','Load');
+    axis([1 inf 0 max(MAX_DISCHARGE)]);
 end
