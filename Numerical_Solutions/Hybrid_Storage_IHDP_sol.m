@@ -77,8 +77,10 @@ global BOOL_VI_CONV; %Array of booleans indicating convergence for that state (c
 DISCOUNT=0.99;
 BOOL_VI_CONV(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1))=0;
 BOOL_VI_CONV_PREV=BOOL_VI_CONV; %holder variable for previous array, to check if sparsity decreasing
+%Store difference in cost between iterations in a matrix
+diffV(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1))=0;
 
-
+%STEP 1: Obtain optimal policy for infinite horizon case (OFFLINE)
 t=MAX_ITER-1; %Start at 2nd-last iteration (time, t)
 while (  t>0 && ~all(all(all(BOOL_VI_CONV(:,:,:)==1))) )               %Continue backwards until VI converges or reach t=0, whichever first
   BOOL_VI_CONV_PREV=BOOL_VI_CONV; %Store previous iteration of VI convergence array
@@ -116,6 +118,8 @@ while (  t>0 && ~all(all(all(BOOL_VI_CONV(:,:,:)==1))) )               %Continue
           if((V(E_Ind1,E_Ind2,indL,t)-V(E_Ind1,E_Ind2,indL,t+1))<=VI_ERR) %If change is within error...
             BOOL_VI_CONV(E_Ind1,E_Ind2,indL)=1;
           end
+          %Store difference in cost in matrix:
+          diffV(E_Ind1,E_Ind2,indL)=V(E_Ind1,E_Ind2,indL,t)-V(E_Ind1,E_Ind2,indL,t+1);
         end
         
         %VI TEST
@@ -152,6 +156,14 @@ while (  t>0 && ~all(all(all(BOOL_VI_CONV(:,:,:)==1))) )               %Continue
       
     end
   end
+  
+  %VisualizeBool_VI_CONV;
+  %VisualizeOptNextState;
+
+  %Visualize the convergence by decrease in matrix norm of 3D difference matrix
+  norm_array=arrayfun(@(idx) norm(diffV(:,:,idx)), 1:size(diffV,3));
+  norm_diffV(MAX_ITER-t)=norm(norm_array);
+  
   %If closer to convergence...
   if( ~all(all(all( BOOL_VI_CONV(:,:,:)>BOOL_VI_CONV_PREV(:,:,:) ))) )
       fprintf("Closer to convergence @t=%d\n",t);
@@ -163,10 +175,17 @@ V(V==inf)=-1;
 %Final costs, depending on load
 NetCost=V(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,:,1);
 
+%GET INFINITE HORIZON POLICY
+D1Opt_Inf=D1Opt_State(:,:,:,t+1);
+D2Opt_Inf=D2Opt_State(:,:,:,t+1);
+
 %Get offset time index (time index when value iteration converged)
 IND_T_OFFS=t;
+%Restart at last time
+t=t+1;
 
-%%TESTING: evaluate policy for a random sequence of loads
+
+%%STEP 2: evaluate infinite horizon policy for a random sequence of loads (ONLINE)
 %Set up matrices
 optE1(1)=E1_INIT; optE2(1)=E2_INIT;
 % Debug counts
@@ -174,24 +193,36 @@ countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 while t<=(MAX_ITER-1)
     %Set 1-indexed time, with no offset due to VI-stopping
-    t_ind_VI=t-(IND_T_OFFS-1);
+    t_ind_VI=t-(IND_T_OFFS);
     %Set state index
     indE1=optE1(t_ind_VI)-E_MIN(1)+1;
     indE2=optE2(t_ind_VI)-E_MIN(2)+1;
-    %Create random demand based w/ IID Uniform probability
+    %Create random demand from IID Uniform probability sequence
     MAX_LOAD_STATE=optE1(t_ind_VI)+optE2(t_ind_VI)-1; %Maximum possible load limited to total energy stored in that state
     if(MAX_LOAD_STATE==Inf)
         MAX_LOAD_STATE=MAX_LOAD;
     end
-    L=max((randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1),0);
+    L=randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1;
+    %Short form for optimal controls...
+    D1=D1Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
+    D2=D2Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
+    %Calculate the state these values of u and w will lead to, even if impossible...
+        [nextE1,nextE2]=optNextStateLimited(optE1(t_ind_VI),optE2(t_ind_VI),D1,D2,L);
+        
     %If leads to next state guaranteed out of bounds, decrease load
-    while(optNextE1(indE1,indE2,L-MIN_LOAD+1,t)==inf || optNextE2(indE1,indE2,L-MIN_LOAD+1,t)==inf)
-        L=L-1;
+    while(nextE1>E_MAX(1)||nextE1<E_MIN(1)||nextE2>E_MAX(2)||nextE2<E_MIN(2)||(D1+D2-L)<0)
+        L=L-1;%Decrement load
+        %Increment out of bounds count
         countOOB=countOOB+1;
         if(L==-1)
             L=0;
             break;
         end
+        
+        %Calculate next state for new load value
+        D1=D1Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
+        D2=D2Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
+        [nextE1,nextE2]=optNextStateLimited(optE1(t_ind_VI),optE2(t_ind_VI),D1,D2,L);
     end
     if(L==0 && countOOB~=0)
         countRepeatZeros=countRepeatZeros+1;
@@ -203,17 +234,21 @@ while t<=(MAX_ITER-1)
     %Get costs of other possible states for this state and load??
     %(For comparison)
 
-    %Get optimal policy for this sequence of loads
-    D1Opt(t_ind_VI)=D1Opt_State(indE1,indE2,indL,t);
-    D2Opt(t_ind_VI)=D2Opt_State(indE1,indE2,indL,t);
+    %Round next state to nearest int
+    nextE1=round(nextE1);
+    nextE2=round(nextE2);
+    %TO DO: APPLY STATE INTERPOLATION for better accuracy
+    
+    %Get specific control sequence for given load sequence
+    D1Opt(t_ind_VI)=D1;
+    D2Opt(t_ind_VI)=D2;
     %Get optimal next state, starting at E_INIT
-    optE1(t_ind_VI+1)=optNextE1(indE1,indE2,indL,t);
-    optE2(t_ind_VI+1)=optNextE2(indE1,indE2,indL,t);
+    optE1(t_ind_VI+1)=nextE1;
+    optE2(t_ind_VI+1)=nextE2;
     %Note: cross-check with optNextStateLtd?
     
     %If counted zero loads too many times, break loop
     if(countRepeatZeros==MAX_NUM_ZEROS)
-        D1Opt(t_ind_VI+1)=0; D2Opt(t_ind_VI+1)=0;
         optE1(t_ind_VI+1)=optE1(t_ind_VI); optE2(t_ind_VI+1)=optE2(t_ind_VI);
         optV(t_ind_VI+1)=V(optE1(t_ind_VI+1)-E_MIN(1)+1,optE2(t_ind_VI+1)-E_MIN(2)+1,indL,t);
         Load(t_ind_VI+1)=0;
