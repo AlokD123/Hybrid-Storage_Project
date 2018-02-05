@@ -1,5 +1,5 @@
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clear all;
+clearvars -except seqL;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -44,7 +44,7 @@ MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
 ALPHA_C=[0.99;0.99]; %Efficiency of charging
-ALPHA_D=[0.9;0.95]; %Efficiency of discharging
+ALPHA_D=[0.5;0.95]; %Efficiency of discharging
 BETA=[0.99;0.99];    %Storage efficiency
 K=2;           %Weighting factor for D1^2 cost
 PERFECT_EFF=0;
@@ -134,27 +134,29 @@ NetCost=V(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,:,1);
 
 %%TESTING: evaluate policy for a random sequence of loads
 %Set up matrices
-%D1Opt(1:LAST_ITER)=0; D2Opt(1:LAST_ITER)=0;
-%optE1(1:LAST_ITER)=E1_INIT; optE2(1:LAST_ITER)=E2_INIT;
 optE1(1)=E1_INIT; optE2(1)=E2_INIT;
-%optV(1:LAST_ITER)=0;
-%Load(1:LAST_ITER)=0;
-% Debug counts
+%Find total initial storage (for creating sample load sequences)
+TOT_INIT_E=optE1(1)+optE2(1);
+% Count errors, for DEBUGGING
 countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 while t<=(LAST_ITER-1)
     %Set state index
     indE1=optE1(t)-E_MIN(1)+1;
     indE2=optE2(t)-E_MIN(2)+1;
-    %Create random demand based w/ IID Uniform probability
+    %Create random demand in IID Uniform probability sequence
     MAX_LOAD_STATE=optE1(t)+optE2(t)-1; %Maximum possible load limited to total energy stored in that state
-    L=randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1;
+    randL=randi(MAX_LOAD_STATE-MIN_LOAD+1)+MIN_LOAD-1;
+    %Or, use sample sequence of pseudo-random demands
+    %Select between sequences
+    %L=randL;
+    L=seqL(t);
     %If leads to next state guaranteed out of bounds, decrease load
     while(optNextE1(indE1,indE2,L-MIN_LOAD+1,t)==inf || optNextE2(indE1,indE2,L-MIN_LOAD+1,t)==inf)
         L=L-1;
         countOOB=countOOB+1;
     end
-    if(L==0)
+    if(L==0 && countOOB~=0)
         countRepeatZeros=countRepeatZeros+1;
     end
     indL=L-MIN_LOAD+1;
