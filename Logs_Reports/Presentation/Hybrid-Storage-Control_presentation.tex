@@ -1,15 +1,3 @@
-% Copyright 2004 by Till Tantau <tantau@users.sourceforge.net>.
-%
-% In principle, this file can be redistributed and/or modified under
-% the terms of the GNU Public License, version 2.
-%
-% However, this file is supposed to be a template to be modified
-% for your own needs. For this reason, if you use this file as a
-% template and not specifically distribute it as part of a another
-% package/program, I grant the extra permission to freely copy and
-% modify this file as you see fit and even to delete this copyright
-% notice. 
-
 \documentclass{beamer}
 \makeatletter
 \renewcommand*\env@matrix[1][*\c@MaxMatrixCols c]{%
@@ -21,8 +9,7 @@
 %%\addbibresource{ref.bib}
 \setbeamerfont{footnote}{size=\tiny}
 \beamertemplatenavigationsymbolsempty
-% There are many different themes available for Beamer. A comprehensive
-% list with examples is given here:
+% THEMES
 % http://deic.uab.es/~iblanes/beamer_gallery/index_by_theme.html
 % You can uncomment the themes below if you would like to use a different
 % one:
@@ -33,16 +20,11 @@
 %\usetheme{Berlin}
 \usetheme{Boadilla}
 %\usetheme{boxes}
-\usepackage{color}
-\usepackage{tikz}
-\usepackage{caption}
-\usepackage{graphicx}
 %\usepackage{figure}
 %\usetheme{CambridgeUS}
 %\usetheme{Copenhagen}
 %\usetheme{Darmstadt}
 %\usetheme{default}
-\DeclareMathOperator*{\argmin}{argmin}
 %\usetheme{Frankfurt}
 %\usetheme{Goettingen}
 %\usetheme{Hannover}
@@ -59,37 +41,46 @@
 %\usetheme{Singapore}
 %\usetheme{Szeged}
 %\usetheme{Warsaw}
+
+%PACKAGES
+\usepackage{color}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{natbib}
+\usepackage[utf8]{inputenc}
+\usepackage{pgf}
+\usepackage{tikz} %Use Tiks to plot graph
+\usetikzlibrary{arrows,automata}
+%figure package
+\usepackage{float}
+
+
+%START PRESENTATION DETAILS
+\title{}
+
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator{\E}{\mathbb{E}}
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
 
 
-%\usepackage{soul}
-\usepackage{color}
 
-
-
-
-%Use Tiks to plot graph
-\usepackage{pgf}
-\usepackage{tikz}
-\usetikzlibrary{arrows,automata}
-%figure package
-\usepackage{float}
-\title{}
 
 % A subtitle is optional and this may be deleted
-%\subtitle{ECE1094 Project Presentation}
+%\subtitle{}
 
-\author{Zhongbin Huang}
+\author{Alok Deshpande}
 % - Give the names in the same order as the appear in the paper.
 % - Use the \inst{?} command only if the authors have different
 %   affiliation.
 
-% \institute[Universities of Toronto] % (optional, but mostly needed)
+% \institute[University of Toronto] % (optional, but mostly needed)
 % {
 %   \inst{1}%
-%   Department of Electrc\\
+%   Department of Electrical and Computer Engineering\\
 %   University of Toronto
 %   \and
 %   \inst{2}%
@@ -98,12 +89,12 @@
 % - Use the \inst command only if there are several affiliations.
 % - Keep it simple, no one is interested in your street address.
 
-\date{Oct 26, 2017}
+\date{February 7, 2017}
 % - Either use conference name or its abbreviation.
 % - Not really informative to the audience, more for people (including
 %   yourself) who are reading the slides online
 
-%\subject{Theoretical Computer Science}
+%\subject{}
 % This is only inserted into the PDF information catalog. Can be left
 % out. 
 
@@ -123,13 +114,15 @@
 %   \end{frame}
 % }
 
-% Let's get started
+
+%START PRESENTATION
 \begin{document}
 	
 	\begin{frame}
 	\titlepage
 \end{frame}
 
+%Manual outline
 %\begin{frame}{Outline}
 %\begin{itemize}
 %	\item System and Attack Model
@@ -138,48 +131,160 @@
 %	\item Monitoring Design
 %\end{itemize}
 %\end{frame}
- \begin{frame}{Outline}
-   \tableofcontents
-   % You might wish to add the option [pausesections]
- \end{frame}
-
+%--------------------- vs --------------------------
+%AUTOMATED outline
+\begin{frame}{Outline}
+\tableofcontents
+% You might wish to add the option [pausesections]
+\end{frame}
 % Section and subsections will appear in the presentation overview
 % and table of contents.
+
 \section{Background}
+\begin{frame}{Background}
+	\begin{itemize}
+		\item Battery life is critical to EV operation (e.g. driving time)
+		\item Common design choice is hybrid power supply %%%/footcite{Paper 1}
+		\subitem typically battery and supercapacitor
+		\subitem improves battery life
+		\item Reason: each is best suited for specific energy demand (load) profile %%%/footcite{Paper 1}}
+		\subitem Supercapacitor: high power output; limited energy capacity
+		\subitem Battery: opposite
+	\end{itemize}
+\end{frame}
+\begin{frame}{Problem}
+	\begin{itemize}
+		\item Goal: optimal sequence of energy discharges from each storage
+		\item Requirements:
+		\subitem Constraint: net discharge = random demand
+		\subitem Minimize: power transfer costs for each storage device
+		\subitem Minimize: unnecessary energy transfers (losses)
+	\end{itemize}
+\end{frame}
 
-\section{LTI system model}
+\section{Model}
 
-\begin{frame}{LTI system model}
+\begin{frame}{Definitions and Constraints}
 \begin{itemize}
-\item {System and Attack Model %%/footcite{pasqualetti2015control}
-	\begin{equation}
-	\begin{aligned}
-	E\dot x(t) &= Ax(t) +{\color{red}B u(t)} \\
-	y(t)&=Cx(t) + {\color{red}D u(t)}\\
-	\end{aligned}
-	\end{equation}}
-where $A$ is the system matrix, $B$ is the state attack matrix,$C$ is the measurement output matrix, $D$ is measurement attack matrix, $x$ is the system state vector, $y$ is the measurement output vector and $u$ is the attack vector. All the quantities are in proper dimensions.
-\item Define {\color{red}attack set} $K$ as $(B_K,D_K)$, the sparsity pattern.
-\item Q: Is the attack $(B,D,u(t))$ detectable/identifiable from output y(t) ?
+	\item Have separate charging and discharging (most general)
+	\item Account for differing levels of leakage from each storage
+	\item Indices\\
+	$t$: discrete time step index\\
+	$j$: storage device number (1: battery, 2: supercapacitor)\\
+	\item Parameters\\
+	$\alpha^{C}$: charging efficiency\\
+	$\alpha^{D}$: discharging efficiency\\
+	$\beta$: storage efficiency factor (constant)\\
+	$N$: number of steps (DP horizon)\\
+	$K$: cost weighting factor for rate (relative to cost of energy loss)\\
+	\item Variables\\
+	$L$: load energy demand (random)\\
+	$E$: energy state of storage device\\
+	$D$: energy released by discharging (AFTER loss)\\
+	$C$: energy consumed by charging (BEFORE loss)\\
+	$J$: cost function
+	
+	\item Supply-demand balance: 
+	\begin{equation} \label{eq:BalanceEqn}\left[D_{1}(t)\right] + \left[D_{2}(t) - C_{2}(t)\right] = L(t) \end{equation}
+	
+	\item Bounds on stored energy: 
+	\begin{equation}E_{j}^{min}\leq E_{j}(t)\leq E_{j}^{max}\end{equation}
+	\item Bounds on charging:
+	\begin{equation}0\leq C_{2}(t)\leq C_{2}^{max}\end{equation}
+	\item Bounds on discharging:
+	\begin{equation}0\leq D_{j}(t)\leq D_{j}^{max}\end{equation}
 \end{itemize}
 \end{frame}
-\section{Undetectable/Unidentifiable Attack}
-\begin{frame}{Undetectable Attack}
-%{\color{Caution:}} Be very careful when talking about the conterp
-\begin{tikzpicture}
-\begin{scope}[shift={(0cm,0cm)}, fill opacity=1]
-\draw[fill=none, draw = black] (-2,0) circle (3);
-\draw[fill=none, draw = black] (2,0) circle (3);
-%\node at (0,4) (A) {\large\textbf{A}};
-\node at (-2.5,1) [draw, text width=3cm]{Normal Operating Condition\\$y(x_2,0,t)$};
-%\node (example-textwidth-1) [draw, text width=3cm]{example \\ example};
-\node at (2.5,1) [draw, text width=2cm]{Detectable Attacks\\$y(x_1,u_K,t)$};
-\node at (0,-1) [draw, text width=2cm]{Undetectable Attacks};
-\end{scope}
 
-\end{tikzpicture}
+\begin{frame}{Recursive State Equations}
+\begin{itemize}
+	\item Based on common formulation for a single storage %%%/footcite{Paper 3}
+	\item Battery can only supply load or supercapacitor (no charging):
+	\begin{equation}\label{eq:StateEq1}E_{1}(t+1)=\beta_{1}E_{1}(t)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(t)\right] \end{equation}
+	\item Supercapacitor can only supply load, but can be charged by battery:
+	\begin{equation}\label{eq:DPStateEq2}E_{2}(t+1)=\beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}[D_{1}(t)+D_{2}(t)-L(t)]-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]\end{equation}
+	\item PICTURE GOES HERE
+	\includegraphics[width=4in, height=3in]{fault.eps}
+\end{itemize}
 \end{frame}
 
+\begin{frame}{Cost Function}
+\begin{itemize}
+	 \item Minimize discharge rate
+	 for the first storage device (battery):
+	 \begin{equation}J_{rate}=min\left[\sum_{i=0}^{N}K\left[D_{1}(t)\right]^{2}\right]\end{equation}
+	 \subitem Quadratic cost in time penalizes more for high excursions
+ 	 \subitem As done in many %%%/footcite{Hybrid Storage MPC}
+ 	 \subitem Alternatives:
+ 	 \subsubitem Linear in time (very simplistic) %%%/footcite{An LP approach…} %%%/footcite{StorageSizeMartinez}
+ 	 \subsubitem Arbitrarily convex in cycle-domain (too complex) %%%/footcite{Cyclic demand}
+ 	 
+	 \item Minimize power loss due to energy transfers
+	 \begin{equation}J_{loss}=\mathop{\E}_{L(t)} \Biggl\{min\left[\sum_{i=0}^{N}
+	 (1-\alpha_{1}^{D})D_{1}(t)+
+	 (1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
+	 (1-\alpha_{2}^{D})D_{2}(t)
+	 \right]\Biggr\}\end{equation}
+	 \subitem Has "natural" loss weightings
+	 
+	 \item Combined cost function
+	 \begin{equation}J=\mathop{\E}_{\substack{ L(t) \\ \forall t\in{1\dots N} }} \Biggl\{min\left[\sum_{i=0}^{N}K\left[D_{1}(t)\right]^{2} + (1-\alpha_{1}^{D})D_{1}(t)+
+	 (1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
+	 (1-\alpha_{2}^{D})D_{2}(t)\right]\Biggr\}\end{equation}
+	 
+	 This is of the form:
+	 \begin{equation}J=\mathop{\E}_{w(t)} \Biggl\{\min_{u}\left[\sum_{i=0}^{N}g(x(t),u(t),w(t))\right]\Biggr\}\end{equation}
+	 for state $x(t)$, control $u(t)$ and random perturbation $w(t)$. Here, $g(\cdot)$ is the stage cost.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Finite Horizon DP}
+\end{frame}
+
+\section{Finite Horizon DP Solution}
+\begin{frame}{Bellman Equation formulation}
+\begin{itemize}
+	\item Can apply dynamic programming to find sequence of optimal controls ($u*(t)$)
+	\item Reformulate as Bellman’s equation:
+	\begin{multline}
+	J_{t}[x(t),w(t)]=\min_{u} g(x(t),u(t),w(t)) + \mathop{\E}_{w(t+1)} \{J_{t+1}[f(x(t),u(t),w(t)),w(t+1)]\}
+	\end{multline}
+	so, can solve recursively for N iterations %%%/footcite{Bertzekas??}
+	\item In this case:
+	\begin{multline}
+	J_{t}[E_{1}(t),E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
+	(1-\alpha_{1}^{D})D_{1}(t) 
+	+ K[D_{1}(t)]^{2}\\
+	+(1-\alpha_{2}^{D})[D_{2}(t)]	  +(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]\\
+	+\mathop{\E}_{L(t+1)}\{J_{t+1}[f_{1}(E_{1}(t),D_{1}(t)), f_{2}(E_{2}(t),D_{1}(t),D_{2}(t),L(t)), L(t+1)]\}
+	\end{multline}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Solution}
+\begin{itemize}
+	\item Choose terminal cost of 0
+	\subitem assume vehicle reaches destination
+	\subitem hence, assume not fully discharged in <N stages
+	\item Then, costs are $\cdots$
+	\subitem $N^{th}$ stage:
+	\begin{equation}
+	J_{N}[x(N),w(N)]=0
+	\end{equation}		
+	\subitem $(N-1)^{th}$ stage: \\
+	\begin{multline}
+	J_{N-1}[x(N-1),w(N-1)]=\min_{u} g(x(N-1),u(N-1),w(N-1))+ \mathop{\E}_{w(N)}\{0\}
+	\end{multline}
+	\subitem Initial stage: \\	
+	\begin{multline}
+	J=J_{0}[x(0),w(0)]=\min_{u} g(x(0),u(0),w(0))\\
+	+\left[\sum_{t=0}^{N-1}\mathop{\E}_{w(t)} \{
+	g( f(x(t),u(t),w(t)) ,u(t+1),w(t+1))
+	\}\right]
+	\end{multline}
+	where $f(\cdot)$ is the general recursive state equation
+\end{itemize}
+\end{frame}
 
 
 \section{Example}
