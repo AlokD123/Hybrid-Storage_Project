@@ -69,36 +69,36 @@
 	 \begin{equation}\label{eq:DPStateEq2}E_{2}(t+1)=\beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}[D_{1}(t)+D_{2}(t)-L(t)]-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]\end{equation}
 	 
 
-	\subsection{Objective Function}
+	\subsection{Cost Function}
 	\begin{itemize}
-		\item Minimize charge and discharge rates
+		\item Minimize discharge rate
 		 for the first storage device (battery):
 		 \begin{equation}J_{rate}=min\left[\sum_{i=0}^{N}K\left[D_{1}(t)\right]^{2}\right]\end{equation}
+		 This is convex.
  		\item Minimize power loss due to energy transfers
 		 \begin{equation}J_{loss}=min\left[\sum_{i=0}^{N}
 		 (1-\alpha_{1}^{D})D_{1}(t)+
 		 (1-\alpha_{2}^{C})C_{2}(t)+
  		 (1-\alpha_{2}^{D})D_{2}(t)
 		  \right]\end{equation}
-		  
 		  Substituting \eqref{eq:BalanceEqn}, one obtains:
-		  
 		  \begin{equation}J_{loss}=\mathop{\E}_{L(t)} \Biggl\{min\left[\sum_{i=0}^{N}
 		  (1-\alpha_{1}^{D})D_{1}(t)+
 		  (1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
 		  (1-\alpha_{2}^{D})D_{2}(t)
 		  \right]\Biggr\}\end{equation}
+		  This is constrained to be non-negative.
 	\end{itemize}
 	
-	By convexity, the combined cost function is:
-	\begin{equation}J=\mathop{\E}_{L(t)} \Biggl\{min\left[\sum_{i=0}^{N}K\left[D_{1}(t)\right]^{2} + (1-\alpha_{1}^{D})D_{1}(t)+
+	Hence the combined cost function is convex:
+	\begin{equation}J=\mathop{\E}_{\substack{ L(t) \\ \forall t\in{1\dots N} }} \Biggl\{min\left[\sum_{i=0}^{N}K\left[D_{1}(t)\right]^{2} + (1-\alpha_{1}^{D})D_{1}(t)+
 	(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
 	(1-\alpha_{2}^{D})D_{2}(t)\right]\Biggr\}\end{equation}
-	where it is chosen to take the expectation after the minimization. This is done so that the net energy discharged (control, $D$) exactly matches the demand, $L$, at all times, and not its expected value.
+	It is chosen to take the expectation after the minimization. This is done so that the net energy discharged (control, $D$) exactly matches the demand, $L$, at all times, and not its expected value.
 	
 	In the general case, for state $x(t)$, control $u(t)$ and random perturbation $w(t)$, the cost function may be expressed as:
 	
-	\begin{equation}J=\mathop{\E}_{L(t)} \Biggl\{\min_{u}\left[\sum_{i=0}^{N}g(x(t),u(t),w(t))\right]\Biggr\}\end{equation}
+	\begin{equation}J=\mathop{\E}_{w(t)} \Biggl\{\min_{u}\left[\sum_{i=0}^{N}g(x(t),u(t),w(t))\right]\Biggr\}\end{equation}
 	where $g(\cdot)$ is the stage cost.
 
 	This can be re-written in the form of Bellman's equation, which allows the problem to be solved by recursion:
@@ -169,13 +169,13 @@
 	\begin{multline}
 	J_{N-2}[x(N-2),w(N-2)]=\min_{u} g(x(N-2),u(N-2),w(N-2))\\
 	+ \mathop{\E}_{w(N-1)} \{
-	g( f(x(N-2),u(N-2),w(N-2)) ,u(N-1),w(N-1))\}
+	g( f(x(N-2),u(N-2),w(N-2)) ,u(N-1),w(N-1))+0\}
 	\end{multline}
 	
 	\item Initial stage: \\	
 	\begin{multline}
 	J=J_{0}[x(0),w(0)]=\min_{u} g(x(0),u(0),w(0))\\
-	+\left[\sum_{t=0}^{N-1}\mathop{\E}_{w} \{
+	+\left[\sum_{t=0}^{N-1}\mathop{\E}_{w(t)} \{
 	g( f(x(t),u(t),w(t)) ,u(t+1),w(t+1))
 	\}\right]
 	\end{multline}
