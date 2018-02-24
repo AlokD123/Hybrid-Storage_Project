@@ -144,6 +144,37 @@
 	+\mathop{\E}_{L(t+1)}\{J_{t+1}[f_{1}(E_{1}(t),D_{1}(t)), f_{2}(E_{2}(t),D_{1}(t),D_{2}(t),L(t)), L(t+1)]\}
 	\end{multline}
 
+
+
+	\section{Finite Horizon DP}
+	\begin{multline}
+	J_{t}[E_{1}(t),E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
+	(1-\alpha_{1}^{D})D_{1}(t) 
+	+ K[D_{1}(t)]^{2}\\
+	+(1-\alpha_{2}^{D})[D_{2}(t)]	  +(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]\\
+	+\mathop{\E}_{L(t+1)}\{J_{t+1}[f_{1}(E_{1}(t),D_{1}(t)), f_{2}(E_{2}(t),D_{1}(t),D_{2}(t),L(t)), L(t+1)]\}
+	\end{multline}
+	\\
+	s.t. 
+	\begin{itemize}
+		\item Bounds on stored energy: 
+		\begin{math}E_{j}^{min}\leq E_{j}(t)\leq E_{j}^{max}\end{math}
+		\item Bounds on charging:
+		\begin{math}0\leq C_{j}(t)\leq C_{j}^{max}\end{math}
+		\item Bounds on discharging:
+		\begin{math}0\leq D_{j}()\leq D_{j}^{max}\end{math}
+	\end{itemize}
+	where $f_{1}$ and $f_{2}$ are the recursive state equations:\\
+	\begin{itemize}
+		\item \begin{math}f_{1}(E_{1}(t),D_{1}(t))=\beta_{1}E_{1}(t)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(t)\right]\end{math}\\
+		\item \begin{math}f_{2}(E_{2}(t),D_{1}(t),D_{2}(t),L(t))=\beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}[D_{1}(t)+D_{2}(t)-L(t)]-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]\end{math}
+	\end{itemize}
+
+%	\begin{math} \min_{D_{1},D_{2}} [D_{1}+D_{2}-L] \end{math} s.t. \begin{math} constraints \end{math}
+
+	\begin{math} D_{1}(t) + D_{2}(t) = L(t) + C_{2}(t) \geq L(t) \end{math}
+	
+
 	\section{Miscellaneous Notes}
 	Single storage:
 	\begin{multline}
@@ -182,6 +213,7 @@
 	\end{itemize}
 
 	Note that here, $f(\cdot)$ is a general recursive state equation.
+	
 	
 	\bibliographystyle{plain}
 	\bibliography{references}
