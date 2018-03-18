@@ -41,23 +41,22 @@
 \author{Alok Deshpande}
 
 
-\date{February 7, 2017}
+\date{February 7, 2018}
 
-
- \AtBeginSection[]
- {
-   \begin{frame}<beamer>{Outline}
-     \tableofcontents[currentsection,currentsubsection]
-   \end{frame}
- }
+\AtBeginSection[]
+{
+	\begin{frame}<beamer>{Outline}
+	\tableofcontents[currentsection,currentsubsection]
+\end{frame}
+}
 
 
 %START PRESENTATION
 \begin{document}
-	
-	\begin{frame}
-	\titlepage
-	\end{frame}
+
+\begin{frame}
+\titlepage
+\end{frame}
 
 %AUTOMATED outline
 \begin{frame}{Outline}
@@ -69,30 +68,30 @@
 
 \section{Background}
 \begin{frame}{Background}
-	\begin{itemize}
-		\item Battery life is critical to EV operation (e.g. driving time) 
-		\item Common design choice is hybrid power supply \footcite{thounthong2009energy}
-		\begin{itemize}
-			\item typically battery and supercapacitor
-			\item improves battery life
-		\end{itemize}
-		\item Reason: each is best suited for specific energy demand (load) profile \footcite{thounthong2009energy}
-		\begin{itemize}
-			\item Supercapacitor: high power output; limited energy capacity
-			\item Battery: opposite
-		\end{itemize}
-	\end{itemize}
+\begin{itemize}
+\item Battery life is critical to EV operation (e.g. driving time) 
+\item Common design choice is hybrid power supply \footcite{thounthong2009energy}
+\begin{itemize}
+\item typically battery and supercapacitor
+\item improves battery life
+\end{itemize}
+\item Reason: each is best suited for specific energy demand (load) profile \footcite{thounthong2009energy}
+\begin{itemize}
+\item Supercapacitor: high power output; limited energy capacity
+\item Battery: opposite
+\end{itemize}
+\end{itemize}
 \end{frame}
 \begin{frame}{Problem}
-	\begin{itemize}
-		\item Goal: optimal sequence of energy discharges from each storage
-		\item Requirements:
-		\begin{itemize}
-			\item Net discharge = random demand
-			\item Minimize power transfer costs for each storage device
-			\item Minimize unnecessary energy transfers (losses)
-		\end{itemize}
-	\end{itemize}
+\begin{itemize}
+\item Goal: optimal sequence of energy discharges from each storage
+\item Requirements:
+\begin{itemize}
+\item Net discharge = random demand
+\item Minimize power transfer costs for each storage device
+\item Minimize unnecessary energy transfers (losses)
+\end{itemize}
+\end{itemize}
 \end{frame}
 
 \section{Model}
@@ -100,139 +99,148 @@
 \begin{frame}{Definitions}
 Have separate charging and discharging (most general), and differing levels of leakage
 \begin{itemize}
-	\item \textbf{Indices}\\
-	$t$: discrete time step index\\
-	$j$: storage device number (1: battery, 2: supercapacitor)\\
-	\item \textbf{Parameters}\\
-	$\alpha^{C}$: charging efficiency\\
-	$\alpha^{D}$: discharging efficiency\\
-	$\beta$: storage efficiency factor (constant)\\
-	$N$: number of steps (DP horizon)\\
-	$K$: cost weighting factor for rate (relative to cost of energy loss)\\
-	\item \textbf{Variables}\\
-	$L$: load energy demand (random)\\
-	$E$: energy state of storage device\\
-	$D$: energy released by discharging\\
-	$C$: energy consumed by charging\\
-	$J$: cost function
+\item \textbf{Indices}\\
+$t$: discrete time step index\\
+$j$: storage device number (1: battery, 2: supercapacitor)\\
+\item \textbf{Parameters}\\
+$\alpha^{C}$: charging efficiency\\
+$\alpha^{D}$: discharging efficiency\\
+$\beta$: storage efficiency factor (constant)\\
+$N$: number of steps (DP horizon)\\
+$K$: cost weighting factor for rate (relative to cost of energy loss)\\
+\item \textbf{Variables}\\
+$L$: load energy demand (random)\\
+$E$: energy state of storage device\\
+$D$: energy released by discharging\\
+$C$: energy consumed by charging\\
+$J$: cost function
 
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Constraints}
 \begin{itemize}
-	\item Supply-demand balance: 
-	\begin{equation} \label{eq:BalanceEqn}\left[D_{1}(t)\right] + \left[D_{2}(t) - C_{2}(t)\right] = L(t) \end{equation}
-	
-	\item Bounds on stored energy: 
-	\begin{equation}E_{j}^{min}\leq E_{j}(t)\leq E_{j}^{max}\end{equation}
-	\item Bounds on charging:
-	\begin{equation}0\leq C_{j}(t)\leq C_{j}^{max}\end{equation}
-	\item Bounds on discharging:
-	\begin{equation}0\leq D_{j}(t)\leq D_{j}^{max}\end{equation}
+\item Supply-demand balance: 
+\begin{equation} \label{eq:BalanceEqn}\left[D_{1}(t)\right] + \left[D_{2}(t) - C_{2}(t)\right] = L(t) \end{equation}
+
+\item Bounds on stored energy: 
+\begin{equation}E_{j}^{min}\leq E_{j}(t)\leq E_{j}^{max}\end{equation}
+\item Bounds on charging:
+\begin{equation}0\leq C_{j}(t)\leq C_{j}^{max}\end{equation}
+\item Bounds on discharging:
+\begin{equation}0\leq D_{j}(t)\leq D_{j}^{max}\end{equation}
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Recursive State Equations}
 \begin{itemize}
-	\item Based on common formulation for a single storage \footcite{su2013modeling}
-	\item Battery can only supply load or supercapacitor (no charging):
-	\begin{equation}\label{eq:StateEq1}E_{1}(t+1)=\beta_{1}E_{1}(t)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(t)\right] \end{equation}
-	\item Supercapacitor can only supply load, but can be charged by battery:
-	\begin{equation}\label{eq:DPStateEq2}E_{2}(t+1)=\beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}[D_{1}(t)+D_{2}(t)-L(t)]-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]\end{equation}
-	\item ADD PIC OF CHARGE-DISCHARGE HERE!
-	%\includegraphics[width=4in, height=3in]{fault.eps}
+\item Based on common formulation for a single storage \footcite{su2013modeling}
+\item Battery can only supply load or supercapacitor (no charging):
+\begin{equation}\label{eq:StateEq1}E_{1}(t+1)=\beta_{1}E_{1}(t)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(t)\right] \end{equation}
+\item Supercapacitor can only supply load, but can be charged by battery:
+\begin{equation}\label{eq:StateEq2}E_{2}(t+1)=\beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}[D_{1}(t)+D_{2}(t)-L(t)]-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]\end{equation}
+\begin{figure}
+\includegraphics[width=2in, height=1in]{Energy_flows_diagram.PNG}
+\end{figure}
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Cost Function}
-	\begin{itemize}
-	 \item Minimize discharge rate
-	 for the first storage device (battery):
-	 \begin{equation}J_{rate}=min\left[\sum_{t=0}^{N-1}K\left[D_{1}(t)\right]^{2}\right]\end{equation}
-	 \begin{itemize}
-		 \item Quadratic cost in time penalizes more for high excursions
-	 	 \item Common formulation \footcite{bambang2014energy}
-	 	 \item Alternatives:
-	 	 \begin{itemize}
-		 	 \item Linear cost in time (very simplistic) \footcite{bordin2017linear} \footcite{ru2013storage}
-		 	 \item Convex cost in number of cycles (too complex) \footcite{shi2017optimal}
-	 	 \end{itemize}
-   	 \end{itemize}
- 	 
-	 \item Minimize energy loss due to transfers between storages
-	 \begin{multline}
-		 J_{loss}=\mathop{\E}_{L(t)} \Biggl\{min\left[\sum_{t=0}^{N-1}
-		 (1-\alpha_{1}^{D})D_{1}(t)+\\
-		 (1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
-		 (1-\alpha_{2}^{D})D_{2}(t)
-		 \right]\Biggr\}
-	 \end{multline}
-	 %\begin{itemize}
-	%	 \item Has "natural" loss weightings
-	%\end{itemize}
-	 
-	\end{itemize}
+\begin{itemize}
+\item Minimize discharge rate
+for the first storage device (battery):
+\begin{equation}J_{rate}=min\left[\sum_{t=0}^{N-1}K\left[D_{1}(t)\right]^{2}\right]\end{equation}
+\begin{itemize}
+\item Quadratic cost in time penalizes more for high excursions
+\item Common formulation \footcite{bambang2014energy}
+\item Alternatives:
+\begin{itemize}
+\item Linear cost in time (very simplistic) \footcite{bordin2017linear} \footcite{ru2013storage}
+\item Convex cost in number of cycles (too complex) \footcite{shi2017optimal}
+\end{itemize}
+\end{itemize}
+
+\item Minimize energy loss due to transfers between storages
+
+\noindent
+\scalebox{0.7}{
+\begin{equation}
+J_{loss}=\mathop{\E}_{L(t)} \Biggl\{min\left[\sum_{t=0}^{N-1}
+(1-\alpha_{1}^{D})D_{1}(t)+
+(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
+(1-\alpha_{2}^{D})D_{2}(t)
+\right]\Biggr\}
+\end{equation}
+}
+%\begin{itemize}
+%	 \item Has "natural" loss weightings
+%\end{itemize}
+
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Cost Function (cont.)}
-	\begin{itemize}
-		\item Combined cost function
-		\begin{equation}J=\mathop{\E}_{\substack{ L(t) \\ \forall t\in{0\dots N-1} }} \Biggl\{min\left[\sum_{t=0}^{N-1}K\left[D_{1}(t)\right]^{2} + (1-\alpha_{1}^{D})D_{1}(t)+\\
-		(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
-		(1-\alpha_{2}^{D})D_{2}(t)\right]\Biggr\}\end{equation}
-		
-		This is of the form:
-		\begin{equation}J=\mathop{\E}_{w(t)} \Biggl\{\min_{u}\left[\sum_{t=0}^{N-1}g(x(t),u(t),w(t))\right]\Biggr\}\end{equation}
-		for state $x(t)$, control $u(t)$ and random perturbation $w(t)$. Here, $g(\cdot)$ is the stage cost.
-	\end{itemize}
+\begin{itemize}
+\item Combined cost function
+\begin{multline}J=\mathop{\E}_{\substack{ L(t) \\ \forall t\in{0\dots N-1} }} \Biggl\{min\left[\sum_{t=0}^{N-1}K\left[D_{1}(t)\right]^{2} + (1-\alpha_{1}^{D})D_{1}(t)+\\
+(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]+
+(1-\alpha_{2}^{D})D_{2}(t)\right]\Biggr\}
+\end{multline}
+
+This is of the form:
+\begin{equation}J=\mathop{\E}_{w(t)} \Biggl\{\min_{u}\left[\sum_{t=0}^{N-1}g(x(t),u(t),w(t))\right]\Biggr\}\end{equation}
+for state $x(t)$, control $u(t)$ and random perturbation $w(t)$. Here, $g(\cdot)$ is the stage cost.
+\end{itemize}
 \end{frame}
 
 \section{Finite Horizon DP}
 \begin{frame}{Bellman Equation formulation}
 \begin{itemize}
-	\item Can apply dynamic programming to find sequence of optimal controls $u^{*}(t)$
-	\item Reformulate as Bellman’s equation:
-	\begin{multline}
-	J_{t}[x(t),w(t)]=\min_{u} g(x(t),u(t),w(t)) + \\\mathop{\E}_{w(t+1)} \{J_{t+1}[f(x(t),u(t),w(t)),w(t+1)]\}
-	\end{multline}
-	so, can solve recursively for N iterations
-	\item In this case:
-	\begin{multline}
-	J_{t}[E_{1}(t),E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
-	(1-\alpha_{1}^{D})D_{1}(t) 
-	+ K[D_{1}(t)]^{2}\\
-	+(1-\alpha_{2}^{D})[D_{2}(t)]	  +(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]\\
-	+\mathop{\E}_{L(t+1)}\{J_{t+1}[f_{1}(E_{1}(t),D_{1}(t)), f_{2}(E_{2}(t),D_{1}(t),D_{2}(t),L(t)), L(t+1)]\}
-	\end{multline}
+\item Can apply dynamic programming to find sequence of optimal controls $u^{*}(t)$
+\item Reformulate as Bellman’s equation:
+\begin{multline}
+J_{t}[x(t),w(t)]=\min_{u} g(x(t),u(t),w(t)) + \\\mathop{\E}_{w(t+1)} \{J_{t+1}[f(x(t),u(t),w(t)),w(t+1)]\}
+\end{multline}
+so, can solve recursively for N iterations
+\item In this case:
+\begin{multline}
+J_{t}[E_{1}(t),E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
+(1-\alpha_{1}^{D})D_{1}(t) 
++ K[D_{1}(t)]^{2}\\
++(1-\alpha_{2}^{D})[D_{2}(t)]	  +(1-\alpha_{2}^{C})[D_{1}(t)+D_{2}(t)-L(t)]\\
++\mathop{\E}_{L(t+1)}\{J_{t+1}[f_{1}(E_{1}(t),D_{1}(t)), f_{2}(E_{2}(t),D_{1}(t),D_{2}(t),L(t)), L(t+1)]\}
+\end{multline}
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Solution}
 \begin{itemize}
-	\item Choose terminal cost of 0
-	 \begin{itemize}
-		\item assume vehicle reaches destination
-		\item hence, assume not fully discharged in $\textless$N stages
-	 \end{itemize}
-	\item Then, costs are $\cdots$
-	 \begin{itemize}
-		\item $N^{th}$ stage:
-		\begin{equation}
-		J_{N-1}[x(N-1),w(N-1)]=0
-		\end{equation}		
-		\item $(N-1)^{th}$ stage: \\
-		\begin{multline}
-		J_{N-2}[x(N-2),w(N-2)]=\min_{u} g(x(N-2),u(N-2),w(N-2))+\\ \mathop{\E}_{w(N-1)}\{0\}
-		\end{multline}
-		\item Initial stage (where $f(\cdot)$ is the general recursive state equation): \\	
-		\begin{multline}
-		J=J_{0}[x(0),w(0)]=\min_{u} g(x(0),u(0),w(0))\\
-		+\left[\sum_{t=1}^{N-1}\mathop{\E}_{w(t)} \{
-		g( f(x(t-1),u(t-1),w(t-1)) ,u(t),w(t))
-		\}\right]
-		\end{multline}
-	 \end{itemize}
+\item Choose terminal cost of 0
+\begin{itemize}
+\item assume vehicle reaches destination
+\item hence, assume not fully discharged in $\textless$N stages
+\end{itemize}
+\item Then, costs are $\cdots$
+\begin{itemize}
+\item $N^{th}$ stage:
+\begin{equation}
+J_{N-1}[x(N-1),w(N-1)]=0
+\end{equation}		
+\item $(N-1)^{th}$ stage: \\
+%\scalebox{0.8}{
+\begin{multline}
+J_{N-2}[x(N-2),w(N-2)]=\min_{u} g(x(N-2),u(N-2),w(N-2))+\\ \mathop{\E}_{w(N-1)}\{0\}
+\end{multline}
+%	}
+%	\newline
+\item Initial stage (where $f(\cdot)$ is the general recursive state equation): \\	
+\begin{multline}
+J=J_{0}[x(0),w(0)]=\min_{u} g(x(0),u(0),w(0))\\
++\left[\sum_{t=1}^{N-1}\mathop{\E}_{w(t)} \{
+g( f(x(t-1),u(t-1),w(t-1)) ,u(t),w(t))
+\}\right]
+\end{multline}
+\end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -240,40 +248,42 @@ Have separate charging and discharging (most general), and differing levels of l
 \begin{frame}{Sample Numerical Solutions\footnote{E1: battery, E2: supercapacitor}}
 After finding all control policies by iterating backwards ("offline"), ran with sample load sequences to find unique policies "online".\newline\newline
 
-	\begin{minipage}{0.5\textwidth}
-		\begin{figure}
-			\textbf{Constant demand}: battery supplies load
-		 	\includegraphics[width=2.5in,height=1.5in]{FHDP_Constant_Demand.jpg}
-		\end{figure}
-	\end{minipage}\begin{minipage}{0.5\textwidth}
-		\begin{figure}
-			\textbf{Ramp demand}: battery supplies, supercapacitor supplements
-			\includegraphics[width=2.5in, height=1.5in]{FHDP_Ramp_Demand.jpg}
-		\end{figure}
- 	\end{minipage}
- 		
+\begin{minipage}{0.5\textwidth}
+\begin{figure}
+\textbf{Constant demand}: battery supplies load
+\includegraphics[width=2.5in,height=1.5in]{FHDP_Constant_Demand.jpg}
+\end{figure}
+\end{minipage}\begin{minipage}{0.5\textwidth}
+\begin{figure}
+\textbf{Ramp demand}: battery supplies, supercapacitor supplements
+\includegraphics[width=2.5in, height=1.5in]{FHDP_Ramp_Demand.jpg}
+\end{figure}
+\end{minipage}
+
 \end{frame}
 
 \begin{frame}{Sample Numerical Solutions (cont.)}
-	\begin{figure}
-		\textbf{Fluctuating demand}: initially, \textit{still} optimal for battery to supply load
-		\includegraphics[width=2.5in, height=1.5in]{FHDP_Varying_NoEndDemand.jpg}
-		\includegraphics[width=2.5in, height=1.5in]{FHDP_Varying_wEndDemand.jpg}
-	\end{figure}
-	\begin{itemize}
-		\item Unaffected by increased penalization of battery discharge
-		\item Lowest cost for supplying using supercapacitor at \textit{end} of sequence
-		\item Battery is seen to charge supercapacitor
-	\end{itemize}
-\end{frame}
-
-\begin{frame}{Sample Numerical Solutions (cont.)}
-	\textbf{Demand, with decreased battery efficiency}: for lower discharging efficiency (50\%), use supercapacitor more
-	\begin{figure}
-	 	\includegraphics[width=3in, height=1.8in]{FHDP_Varying_LowBattDisEff.jpg}
-	 \end{figure}
+\begin{figure}
+\textbf{Fluctuating demand}: initially, \textit{still} optimal for battery to supply load
+\includegraphics[width=2.5in, height=1.5in]{FHDP_Varying_NoEndDemand.jpg}
+\includegraphics[width=2.5in, height=1.5in]{FHDP_Varying_wEndDemand.jpg}
+\end{figure}
 \begin{itemize}
-	\item \textbf{Other load distributions}: tried normal distribution of demand, instead of uniform (above). Same conclusions.
+\item Lowest cost for supplying using supercapacitor at \textit{end} of sequence
+\begin{itemize}
+\item \textbf{Reason}: when supercapacitor is \textit{symmetrically} efficient, negligible effect of $D_{2}$!
+\end{itemize}
+\item Battery is seen to charge supercapacitor
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Sample Numerical Solutions (cont.)}
+\textbf{Demand, with decreased battery efficiency}: for lower discharging efficiency (50\%), use supercapacitor more
+\begin{figure}
+\includegraphics[width=3in, height=1.8in]{FHDP_Varying_LowBattDisEff.jpg}
+\end{figure}
+\begin{itemize}
+\item \textbf{Other load distributions}: tried normal distribution of demand, instead of uniform (above). Same conclusions.
 \end{itemize}
 \end{frame}
 
@@ -282,158 +292,158 @@ After finding all control policies by iterating backwards ("offline"), ran with 
 \section{Infinite Horizon DP}
 \begin{frame}{Discounted Cost Problem formulation}
 \begin{itemize}
-	\item More appropriate for long duration: Infinite Horizon
-	\item When cost becomes constant over time, problem is complete (constant policy)
-	\item For t$\to\infty$, this will happen for a “discounted” cost-to-go:
-	\begin{multline}
-	J_{0}[x(0),w(0)]=\min_{u} g(x(0),u(0),w(0))\\
-	+\left[\sum_{t=1}^{N-1}\mathop{\E}_{w(t)} \{
-	\alpha^{t}*g( f(x(t-1),u(t-1),w(t-1)) ,u(t),w(t))
-	\}\right]
-	\end{multline}
-	where $0<\alpha<1$ is the discount factor
-	\item In the limit, terms with coefficients $\alpha^{t}$ vanish, so:
-	\begin{multline}
-	J^{*}[x(0),w(0)]=\min_{u} g(x(0),u(0),w(0))\\
-	+\mathop{\E}_{w(t)} \{\alpha J^{*}[x(1),w(1)]
-	\}
-	\end{multline}
-	where $J^{*}$ is the converged cost function
+\item More appropriate for long duration: Infinite Horizon
+\item When cost becomes constant over time, problem is complete (constant policy)
+\item For N$\to\infty$, this will happen for a “discounted” cost-to-go:
+\begin{multline}
+J_{0}[x(0),w(0)]=\min_{u} g(x(0),u(0),w(0))\\
++\left[\sum_{t=1}^{N-1}\mathop{\E}_{w(t)} \{
+\alpha^{t}*g( f(x(t-1),u(t-1),w(t-1)) ,u(t),w(t))
+\}\right]
+\end{multline}
+where $0<\alpha<1$ is the discount factor
+\item In the limit, terms with coefficients $\alpha^{N},N\to\infty$ become negligible, so:
+\begin{multline}
+J^{*}[x(N-2),w(N-2)]=\min_{u} g(x(N-2),u(N-2),w(N-2))\\
++\mathop{\E}_{w(N-1)} \{\alpha J^{*}[f(x(N-2),u(N-2),w(N-2)),w(N-1)]
+\}
+\end{multline}
+where $J^{*}$ is the converged cost function
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Cost convergence}
 \begin{itemize}
-	\item Even after a limited number of iterations, the cost starts to converge
-	\item The cost is said to have converged after N iterations when:
-	\begin{equation}
-		\norm{J[x(N),w(N)]-J[x(N+1),w(N+1)]} < \epsilon
-	\end{equation}
-	\item Example, based on numerical solution:
+\item Even after a limited number of iterations, the cost starts to converge
+\item The cost is said to have converged after N iterations when:
+\begin{equation}
+\norm{J[x(N),w(N)]-J[x(N+1),w(N+1)]} < \epsilon
+\end{equation}
+\item Example, based on numerical solution:
 \end{itemize}
 \begin{figure}
-	\includegraphics[width=3in, height=1.8in]{Convergence_of_cost.jpg}
-	\caption{Convergence, for $\epsilon=10$}
+\includegraphics[width=3in, height=1.8in]{Convergence_of_cost.jpg}
+\caption{Convergence, for $\epsilon=10$}
 \end{figure}
 \end{frame}
 
 \begin{frame}{Value Iteration solution}
 \begin{itemize}
-	\item The infinite-horizon policy  ($\pi^{*}=\{u^{*}\}$) can be approximated in N iterations
-	\begin{itemize}
-		\item $\pi^{*}$ is set of optimal controls after N iterations
-	\end{itemize}
-	\item Follow two-step process to determine control sequence:
-	\begin{enumerate}
-		\item Find $\pi^{*}$ at time N (running "offline")
-		\item Apply the policy for T additional iterations to apply the specific control sequence from $\pi^{*}$ (in response to a real-time load sequence)
-	\end{enumerate}
-	\item This is "Value Iteration"
+\item The infinite-horizon policy  ($\pi^{*}=\{u^{*}\}$) can be approximated in N iterations
+\begin{itemize}
+\item $\pi^{*}$ is set of optimal controls after N iterations
+\end{itemize}
+\item Follow two-step process to determine control sequence:
+\begin{enumerate}
+\item Find $\pi^{*}$ at time N (running "offline")
+\item Apply the policy for T additional iterations to apply the specific control sequence from $\pi^{*}$ (in response to a real-time load sequence)
+\end{enumerate}
+\item This is "Value Iteration"
 \end{itemize}
 \end{frame}
 
 \section{IHDP Results}
 \begin{frame}{Sample Numerical Solutions\footnote{E1: battery, E2: supercapacitor}}
-	\begin{minipage}{0.5\textwidth}
-		\begin{figure}
-			\textbf{Constant demand}: battery supplies load
-			\includegraphics[width=2.5in,height=1.5in]{IHDP_Constant_Demand.jpg}
-		\end{figure}
-	\end{minipage}\begin{minipage}{0.5\textwidth}
-		\begin{figure}
-			\textbf{Ramp demand}: battery supplies, supercapacitor supplements
-			\includegraphics[width=2.5in, height=1.5in]{IHDP_Ramp_Demand.jpg}
-		\end{figure}
-	\end{minipage}
+\begin{minipage}{0.5\textwidth}
+\begin{figure}
+\textbf{Constant demand}: battery supplies load
+\includegraphics[width=2.5in,height=1.5in]{IHDP_Constant_Demand.jpg}
+\end{figure}
+\end{minipage}\begin{minipage}{0.5\textwidth}
+\begin{figure}
+\textbf{Ramp demand}: battery supplies, supercapacitor supplements
+\includegraphics[width=2.5in, height=1.5in]{IHDP_Ramp_Demand.JPG}
+\end{figure}
+\end{minipage}
 \end{frame}
 
 \begin{frame}{Sample Numerical Solutions (cont.)}
 \textbf{Fluctuating demand}: supercapacitor is used after initially using the battery
-	\begin{figure}
-		\includegraphics[width=3in, height=1.8in]{IHDP_Varying_Demand1.jpg}
-		%\includegraphics[width=2.5in, height=1.5in]{IHDP_Varying_Demand2.jpg}
-	\end{figure}
-	
-	\begin{itemize}
-		\item \textbf{Overall}: same conclusions as FHDP
-	\end{itemize}
-	%\item In some cases, supercapacitor is never used
+\begin{figure}
+\includegraphics[width=3in, height=1.8in]{IHDP_Varying_Demand1.jpg}
+%\includegraphics[width=2.5in, height=1.5in]{IHDP_Varying_Demand2.jpg}
+\end{figure}
+
+\begin{itemize}
+\item \textbf{Overall}: same conclusions as FHDP
+\end{itemize}
+%\item In some cases, supercapacitor is never used
 \end{frame}
 
 \section{Issue with Exact DP}
 \begin{frame}{Dimensionality Issue}
 \begin{itemize}
-	\item When finding policy, need to calculate cost for \textit{every} combination of discrete state components
-	\begin{itemize}
-		\item For $M$ states of $E_{1}$, $N$ states of $E_{2}$, $P$ states of $L$, have $M \times N \times P$ combinations
-		\item This can be very large!
-	\end{itemize}
-	\item Testing program run time (with P=M+N):
+\item When finding policy, need to calculate cost for \textit{every} combination of discrete state components
+\begin{itemize}
+\item For $M$ states of $E_{1}$, $N$ states of $E_{2}$, $P$ states of $L$, have $M \times N \times P$ combinations
+\item This can be very large!
+\end{itemize}
+\item Testing program run time (with P=M+N):
 
-	\begin{minipage}{0.3\textwidth}
-		\begin{figure}
-			\includegraphics[width=1.3in, height=0.5in]{Convergence_Time_Test1.JPG}
-			\caption{M=10,\\N=5}
-		\end{figure}
-	\end{minipage}
-	\begin{minipage}{0.3\textwidth}
-		\begin{figure}
-			\includegraphics[width=1.3in, height=0.5in]{Convergence_Time_Test2.JPG}
-			\caption{M=20,\\N=10}
-		\end{figure}
-	\end{minipage}
-	\begin{minipage}{0.3\textwidth}
-		\begin{figure}
-			\includegraphics[width=1.3in, height=0.5in]{Convergence_Time_Test3.JPG}
-			\caption{M=30,\\N=15}
-		\end{figure}
-	\end{minipage}
+\begin{minipage}{0.3\textwidth}
+\begin{figure}
+\includegraphics[width=1.3in, height=0.5in]{Convergence_Time_Test1.JPG}
+\caption{M=10,\\N=5}
+\end{figure}
+\end{minipage}
+\begin{minipage}{0.3\textwidth}
+\begin{figure}
+\includegraphics[width=1.3in, height=0.5in]{Convergence_Time_Test2.JPG}
+\caption{M=20,\\N=10}
+\end{figure}
+\end{minipage}
+\begin{minipage}{0.3\textwidth}
+\begin{figure}
+\includegraphics[width=1.3in, height=0.5in]{Convergence_Time_Test3.JPG}
+\caption{M=30,\\N=15}
+\end{figure}
+\end{minipage}
 
-	\item Do not use exact DP!
+\item Do not use exact DP!
 \end{itemize}
 \end{frame}
 
 \section{Alternatives and Future Work}
 \begin{frame}{Alternative: Approximative DP}
 \begin{itemize}
-	\item Possible cost at each state, $J(\textbf{x})$ forms a 3D matrix
-	\item Goal: avoid having to recompute cost each time
-	\item Approximate the cost structure\footcite{bertsekas1995dynamic} by “fitting” $J(\textbf{x})$ to basis functions in matrix $\Phi$,  with linear weightings in vector $\textbf{r}$:
-	\begin{equation}
-		J(\textbf{x})\approx\Phi\textbf{r}
-	\end{equation}
-	Here $\textbf{x}=(E_{1},E_{2},L)$ and
-	\begin{math}
-		\Phi_{i}=[f(E_{1}),g(E_{2}),h(L),\cdots]
-	\end{math}
-	in the $i^{th}$ row of $\Phi$
-	\item The functions $f(\cdot), g(\cdot), h(\cdot), \cdots$ are basis functions to be determined
-	\item Extrapolate to find costs in other states
+\item Possible cost at each state, $J(\textbf{x})$ forms a 3D matrix
+\item Goal: avoid having to recompute cost each time
+\item Approximate the cost structure\footcite{bertsekas1995dynamic} by “fitting” $J(\textbf{x})$ to basis functions in matrix $\Phi$,  with linear weightings in vector $\textbf{r}$:
+\begin{equation}
+J(\textbf{x})\approx\Phi\textbf{r}
+\end{equation}
+Here $\textbf{x}=(E_{1},E_{2},L)$ and
+\begin{math}
+\Phi_{i}=[f(E_{1}),g(E_{2}),h(L),\cdots]
+\end{math}
+in the $i^{th}$ row of $\Phi$
+\item The functions $f(\cdot), g(\cdot), h(\cdot), \cdots$ are basis functions to be determined
+\item Extrapolate to find costs in other states
 
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Approximative DP (cont.)}
-	\begin{figure}
-		\includegraphics[width=4.5in, height=2.7in]{ValueFunc_Surfaces_EX.jpg}
-		\caption{Illustration of Cost Matrices (3 iterations)}
-	\end{figure}
+\begin{figure}
+\includegraphics[width=4.5in, height=2.7in]{ValueFunc_Surfaces_EX.jpg}
+\caption{Illustration of Cost Matrices (3 iterations)}
+\end{figure}
 \end{frame}
 
 
 \begin{frame}{Conclusion and Future Work}
-	\begin{itemize}
-		\item DP can be applied to determine an optimal control policy for two complementary storage devices
-		\item Model for single-storage case extended to two storages
-		\item If probability distribution for load and starting state are known, can determine optimal policy in real-time
-		\item To simulate a real driving duration, solve the infinite horizon problem
-		\item Future work:
-		\begin{itemize}
-			\item Find basis functions for ADP
-			\item “Round” states that fall outside discretization
-			\item Regenerative braking
-		\end{itemize}
-		
-	\end{itemize}
+\begin{itemize}
+\item DP can be applied to determine an optimal control policy for two complementary storage devices
+\item Model for single-storage case extended to two storages
+\item If probability distribution for load and starting state are known, can determine optimal policy in real-time
+\item To simulate a real driving duration, solve the infinite horizon problem
+\item Future work:
+\begin{itemize}
+\item Find basis functions for ADP
+\item “Round” states that fall outside discretization
+\item Regenerative braking
+\end{itemize}
+
+\end{itemize}
 \end{frame}
 \end{document}
