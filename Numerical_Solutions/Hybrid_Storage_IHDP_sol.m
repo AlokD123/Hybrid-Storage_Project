@@ -1,11 +1,11 @@
 %IHDP solution (Value Iteration) for Hybrid Storage optimization
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clear all;
+clearvars -except seqL;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
+E_MAX=[30;15]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
@@ -20,12 +20,12 @@ E2_INIT=E_MAX(2);
 %Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[30;15]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2);
-%SET PROBABILITY DISTRIBUTION for loads... Normal  %<------------------------------- **********
+%SET PROBABILITY DISTRIBUTION for loads... Normal  %<------------------------------- Unused**********
 MU_LOAD=floor(0.5*(MAX_LOAD+MIN_LOAD));
 %Set stdev so less than 1e-4 probability of outside bounds
 SIGMA_LOAD=MAX_LOAD-MIN_LOAD;
@@ -46,7 +46,7 @@ BETA=[0.99;0.99];    %Storage efficiency
 K=2;           %Weighting factor for D1^2 cost
 PERFECT_EFF=0;
 %Recurse for <=MAX_ITER iterations, even if not reached stopping condition for VI
-MAX_ITER=10;
+MAX_ITER=50;
 
 %DP Setup... with duplication for each control input
 global V; global D1Opt_State; global D2Opt_State; global expCostE;
@@ -202,7 +202,11 @@ while t<=(MAX_ITER-1)
     if(MAX_LOAD_STATE==Inf)
         MAX_LOAD_STATE=MAX_LOAD;
     end
-    L=randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1;
+    randL=randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1;
+    %Or, use sample sequence of pseudo-random demands
+    %Select between sequences
+    %L=randL;
+    L=min(t_ind_VI,MAX_LOAD_STATE);%seqL(t);%
     %Short form for optimal controls...
     D1=D1Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
     D2=D2Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
