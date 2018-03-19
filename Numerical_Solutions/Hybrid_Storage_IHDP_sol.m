@@ -5,7 +5,7 @@ clearvars -except seqL;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[30;15]; %Maximum energy to be stored (upper bound)
+E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
@@ -20,7 +20,7 @@ E2_INIT=E_MAX(2);
 %Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[30;15]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected

@@ -64,6 +64,8 @@ Id = kron(eye(M*N1*N2),v);
 PFId=zeros(M*N1*N2,M*N1*N2,P1*P2);  %PFId-matrices, product of P, F, and Id (one for each value of 1<=p<=P)
 g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of 1<=p<=P)
 
+
+%PART A: SET UP MATRICES
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
     for D2=0:MAX_DISCHARGE(2)
@@ -220,24 +222,15 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
     end
   end
   
-  %Optimization
   
-  
-%   %%%%% EXTRA... Not needed?
-%   
-% %Add to vector of FULL states, (E1,E2,L).... Will map
-% %1-1 to vector of costs
-% FullState_Ind_Vec=[FullState_Ind_Vec;E_Ind1,E_Ind2,indL];
-%   
-%   %Find probability for each possible value of perturbation (w)
-%   %NOTE: this is a perturbation at the NEXT time (leading to an expected cost-to-go at the CURRENT time)
-%   for indNextL=1:(MAX_LOAD-MIN_LOAD+1)
-%       %Map index to value of load
-%       NextL=indNextL+MIN_LOAD-1;
-%       P(indNextL,indL,)              %% NOTE: using wj instead of f(xi,u,wj) in conditional probability because not need for next state indexing (load indexing is equivalent)
-%       %Pi=[Pi ];
-%   end
-% 
-%   
-% %Add to vector of energy states, (E1,E2)
-% E_Ind_Vec=[E_Ind_Vec;E_Ind1,E_Ind2];
+  %PART B: OPTIMIZATION
+  %Create LP matrices and vectors
+  %Run optimization problem
+  cvx_begin
+    variable cost(n)
+    minimize( -1*sum(cost) )
+    subject to
+        for p=1:P1*P2
+            (eye(length(PFId))-DISCOUNT*PFId(:,:,p))*cost <= g(:,p)
+        end
+  cvx_end
