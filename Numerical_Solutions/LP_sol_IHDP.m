@@ -85,9 +85,9 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                 if(D1>E1 || D2>E2)  %If discharge too high for state, no constraints
                     nextE_Ind_Vect=[nextE_Ind_Vect;-1*ones(M,1)]; %No next state index
                     P_fullmtx(E_Ind,:)=0; %No probable next state
-%                     for indL=1:M    %Ignore constraints
-%                         g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=inf; 
-%                     end
+                    for indL=1:M    %Ignore constraints
+                        g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=inf; 
+                    end
                 else
                     %For each perturbation at the CURRENT time
                     for indL=1:(MAX_LOAD-MIN_LOAD+1)
@@ -140,12 +140,12 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
 
                             %STEP 4
                             %Create p-th vector g, for constraint
-                            %g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=CtrlCost(D1,D2,L); %Cost of stage is given by CtrlCost
+                            g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=CtrlCost(D1,D2,L); %Cost of stage is given by CtrlCost
 
                         else %Else if infeasible next state...
                             %Set 0 probability (for given control)
                             P_fullmtx(E_Ind,indL)=0;
-                            %g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=inf; %Ignore constraint
+                            g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=inf; %Ignore constraint
                         end
                     end
 
