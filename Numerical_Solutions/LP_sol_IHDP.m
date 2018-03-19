@@ -79,16 +79,16 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                 E1=E_MIN(1)+(E_Ind1-1);
                 E2=E_MIN(2)+(E_Ind2-1);
                 
+                %Get index of current state energies in vector of state energies
+                E_Ind=(E_Ind1-1)*N2+E_Ind2;
+                
                 if(D1>E1 || D2>E2)  %If discharge too high for state, no constraints
                     nextE_Ind_Vect=[nextE_Ind_Vect;-1*ones(M,1)]; %No next state index
-                    P_fullmtx(:,:)=0; %No probable next state
+                    P_fullmtx(E_Ind,:)=0; %No probable next state
 %                     for indL=1:M    %Ignore constraints
 %                         g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=inf; 
 %                     end
                 else
-                    %Get index of current state energies in vector of state energies
-                    E_Ind=(E_Ind1-1)*N2+E_Ind2;
-
                     %For each perturbation at the CURRENT time
                     for indL=1:(MAX_LOAD-MIN_LOAD+1)
                         %Map index to value of load
@@ -212,7 +212,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
     %Reset matrices/vectors
     nextE_Ind_Vect=[];
     numAdmissibleLoads=0;
-    F=zeros(M^2*N1*N2,M*N1*N2);
+    F=zeros(M^2*N1*N2,M^2*N1*N2);
     P_fullmtx=zeros(N1*N2,M);
     P=zeros(M*N1*N2,M^2*N1*N2);
     dup_nextE_Ind_Vect=[];
