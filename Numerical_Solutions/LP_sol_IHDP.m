@@ -88,7 +88,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                     nextE_Ind_Vect=[nextE_Ind_Vect;-1*ones(M,1)]; %No next state index
                     P_fullmtx(E_Ind,:)=0; %No probable next state
                     for indL=1:M    %Ignore constraints
-                        g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=inf; 
+                        g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=-1; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
                     end
                 else
                     %For each perturbation at the CURRENT time
@@ -111,7 +111,6 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                                   nextE_Ind1=round(nextE1-E_MIN(1)+1);
                                   nextE_Ind2=round(nextE2-E_MIN(2)+1); 
 
-                                  %%NEW
                                   %STEP 2
                                   %Get index of next state energies in vector of state energies
                                   nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
@@ -147,7 +146,8 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                         else %Else if infeasible next state...
                             %Set 0 probability (for given control)
                             P_fullmtx(E_Ind,indL)=0;
-                            g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=inf; %Ignore constraint
+                            %Ignore constraint
+                            g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=-1; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
                         end
                     end
 
@@ -188,6 +188,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
             %^^ General next state mapping condition. 1 if mapping.
             if (Cond &&(~boolRowFull)) %Full condition. If generally mapping and not full, set mapping (fill 1).
                 F(r,c)=1; 
+                boolRowFull=1;
             end
         end
         
@@ -227,7 +228,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
   %Create LP matrices and vectors
   %Run optimization problem
   cvx_begin
-    variable cost(n)
+    variable cost(length(PFId))
     minimize( -1*sum(cost) )
     subject to
         for p=1:P1*P2
