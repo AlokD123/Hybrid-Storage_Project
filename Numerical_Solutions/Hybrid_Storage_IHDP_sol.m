@@ -70,7 +70,7 @@ expCostE(:,:,MAX_ITER)=V(:,:,1,MAX_ITER);
 
 %IHDP w/ VALUE ITERATION
 %Stopping condition...(Cost of current state)-(Cost of next state) <= VI_ERR
-VI_ERR=1;
+VI_ERR=0.01;
 %Discounted infinite horizon problem
 global DISCOUNT; %Discount factor
 global BOOL_VI_CONV; %Array of booleans indicating convergence for that state (combination of components)
@@ -173,7 +173,7 @@ end
 %Replace infinite costs with -1%
 V(V==inf)=-1;
 %Final costs, depending on load
-NetCost=V(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,:,1);
+NetCost=V(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,:,t+1);
 
 %GET INFINITE HORIZON POLICY
 D1Opt_Inf=D1Opt_State(:,:,:,t+1);
