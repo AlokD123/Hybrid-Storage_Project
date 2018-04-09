@@ -272,7 +272,7 @@
 	%With these assumptions, and ...
 	With $w$ being a part of the state, the above LP can be expressed as:
 	
-	\begin{equation}
+	\begin{equation} \label{eq:prelimLP}
 	\min_{\boldsymbol{\lambda(x,w)}} \sum_{\forall x \in X,\forall w \in W} -\lambda(x,w)
 	\end{equation}
 	
@@ -293,7 +293,7 @@
 	
 	This is the LP to be solved to determine the converged cost in IHDP. In the context of the hybrid storage problem, $x=(E_{1},E_{2})$ and $w=L$.
 	
-	The LP can be expressed most succinctly in matrix form as:
+	The problem can be expressed most succinctly in matrix form as:
 	
 	\begin{equation}
 	\min_{\boldsymbol{\lambda_{t}}} -\boldsymbol{1}_{1\times NM} \boldsymbol{\lambda_{t}}
@@ -315,10 +315,124 @@
 		\item matrix $P$ is a block diagonal  matrix containing the conditioned probabilities of next state demand. $dim(P)=NMP\times NM^{2}P$
 		
 		\item \boldsymbol{$g$} contains stage cost for each combination of state, control, and current demand. $dim(g)=NMP\times 1$
+		
 	\end{itemize}
 	
+	This form cannot yet be solved because there are two cost vectors. One may reduce this to a single decision variable by relating the next state cost to the current state cost.
 	
+	Firstly, one can consider just the subset of costs associated with the $p^{th}$ control. This is done because each of the sets of linear inequalities in \eqref{eq:prelimLP} ($\forall i,j$) is of the same form, so the full matrix formulation will consist just of the concatenation of the individual matrix equations. For the $p^{th}$ control, the $p^{th}$ set of linear inequalities can be expressed in the form:
+	\begin{gather}
+	\begin{bmatrix}
+	& \lambda_{1}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{MN}
+	\end{bmatrix}
+	-
+	\alpha
+	\begin{bmatrix}
+	P(w_{1}|z_{a}) \hdots  P(w_{M}|z_{a})  \\
+	& P(w_{1}|z_{b}) \hdots  P(w_{M}|z_{b}) \\
+	& & \ddots
+	\end{bmatrix}
+	\begin{bmatrix}
+	& \lambda_{a,1}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{a,M}\\
+	& \lambda_{b,1}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{b,M}\\
+	& \vdotswithin\\
+	\end{bmatrix}
+	\end{gather}
 	
+	Here, $z=(x,u,w)$ and the subscripts a and b are used to denote the indices of next possible states (i,j). (Linear indexing is used.)
+	Critically, $1\leq a \leq MN $ and $1\leq b \leq MN $, meaning that the next states lie in the same state space as the current states. This implies that it is possible to bijectively map the next state costs $\lambda_{t+1}$ to the current state costs $\lambda_{t}$. A sample rearrangement matrix equation could then take the following form:
+	\begin{gather}
+	\begin{bmatrix}
+	& \lambda_{a,1}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{a,M}\\
+	& \lambda_{b,1}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{b,M}\\
+	& \vdotswithin\\
+	\end{bmatrix}
+	=
+	\begin{bmatrix}
+	\bold{0} & \hdots & \bold{0} & \bold{I} & \bold{0} & \hdots & \bold{0} \\
+	\bold{0} & \bold{I} & \bold{0} & \bold{0} & \hdots & \hdots & \bold{0} \\
+	& & & \vdotswithin\\
+	\end{bmatrix}
+	\begin{bmatrix}
+	& \lambda_{1}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{1}\\
+	& \lambda_{b}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{b}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{a}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{a}\\
+	& \vdotswithin\\
+	\end{bmatrix}
+	\end{gather}
+	
+	One can define $F$ to be the centre (rearrangement) matrix. Furthermore, the vector on the right can be formed from the current cost vector $\lambda_{t}$ as:
+	\begin{gather}
+	\begin{bmatrix}
+	& \lambda_{1}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{1}\\
+	& \lambda_{b}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{b}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{a}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{a}\\
+	& \vdotswithin\\
+	\end{bmatrix}
+	=
+	\begin{bmatrix}
+	\bold{1}  \\
+	& \bold{1} \\
+	& & \ddots
+	\end{bmatrix}
+	\begin{bmatrix}
+	& \lambda_{1}\\
+	& \vdotswithin\\
+	& \\
+	& \lambda_{MN}
+	\end{bmatrix}
+	\end{gather}
+	
+	The central matrix can be termed $Id$.
+	
+	Hence, the system in \label{eq:prelimLP} can be written as the following LP:
+	
+	\begin{equation}
+	\min_{\boldsymbol{\lambda_{t}}} -\boldsymbol{1}_{1\times NM} \boldsymbol{\lambda_{t}}
+	\end{equation}
+	
+	s.t.
+	
+	\begin{displaymath} 
+	(I-\alpha PFId)\boldsymbol{\lambda_{t}} \preceq \boldsymbol{g}
+	\end{displaymath}
 	
 	\section{Dual LP Problem}
 	The above LP does not allow for determining the optimal policy upon convergence, so it is necessary to reformulate it as a minimization over some function of the optimal policy. This can be done by taking the dual of the LP, as shown in \cite{4220813}.
