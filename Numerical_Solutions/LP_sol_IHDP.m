@@ -1,6 +1,6 @@
 %LP solution of IHDP (Value Iteration) for Hybrid Storage optimization
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars
+clearvars -except X;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -45,6 +45,7 @@ N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
+INF_COST=100000000; %Cost of infeasible states (arbitrary sentinel value)
 
 %Initialization
 %E_Ind_Vec=[];%FullState_Ind_Vec=[];
@@ -88,7 +89,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                     nextE_Ind_Vect=[nextE_Ind_Vect;-1*ones(M,1)]; %No next state index
                     P_fullmtx(E_Ind,:)=0; %No probable next state
                     for indL=1:M    %Ignore constraints
-                        g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=-1; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
+                        g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=INF_COST; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
                     end
                 else
                     %For each perturbation at the CURRENT time
@@ -147,7 +148,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                             %Set 0 probability (for given control)
                             P_fullmtx(E_Ind,indL)=0;
                             %Ignore constraint
-                            g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=-1; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
+                            g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=INF_COST; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
                         end
                     end
 
@@ -225,13 +226,55 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
   
   
   %PART B: OPTIMIZATION
-  %Create LP matrices and vectors
-  %Run optimization problem
+  %Created LP matrices and vectors.
+  %Run optimization problem, and find primal as well as dual.
   cvx_begin
+    grbControl.LPMETHOD = 1; % Use dual simplex method
     variable cost(length(PFId))
+    dual variables d{P1*P2}
     minimize( -1*sum(cost) )
     subject to
         for p=1:P1*P2
-            (eye(length(PFId))-DISCOUNT*PFId(:,:,p))*cost <= g(:,p)
+            d{p} : (eye(length(PFId))-DISCOUNT*PFId(:,:,p))*cost <= g(:,p)
         end
   cvx_end
+  %Get vector of optimal dual from cell array form
+  optD = cell2mat(d);
+  
+  %Format cost vector into E1xE2 matrices (M matrices, for each value of load)
+    for(i1=0:M*N2:M*N2*(N1-1))
+        for(j=0:M-1)
+          for(ind=(1+i1+j):M:(M*(N2-1)+i1+(j+1)))
+              if(mod(ind,M*N2)==0)
+                ind2=(M*N2-1-j)/M+1;
+              else
+                ind2=(mod(ind,M*N2)-1-j)/M+1;
+              end
+              ConvCosts(i1/(M*N2)+1,ind2,j+1)=cost(ind);
+          end
+        end
+    end
+    
+    %PART C: STATIONARY POLICY
+    %Create vector of probabilities marginalized over control applied (denominator)
+    d_state=zeros(N1*N2*M,1);
+    for(iij=1:N1*N2*M)
+       for(p=1:P1*P2)
+           d_state(iij)=d_state(iij)+optD(iij+N1*N2*M*(p-1)); %Sum over control values
+       end 
+    end
+    %Create vector with vector d_state duplicated P1*P2 times and appended
+    %(to allow for dividing each probability by marginalized value)
+    dup_ones=ones(P1*P2,1);
+    d_state_dup=kron(dup_ones,d_state);
+    %Divide to get stationary probabilities vector
+    pi=optD./d_state_dup;
+    
+    
+  %Quantify difference between costs and expected matrix of IHDP costs
+  Diff=X-ConvCosts; %Matrix of differences
+  Diff(Diff==Inf)=0; %Ignore infinite differences (correct)
+  %Use 2-norm to quantify difference
+  norm_array=arrayfun(@(idx) norm(Diff(:,:,idx),1), 1:size(Diff,3));
+  TotalDiff=norm(norm_array,1);
+  disp('Net difference is'); TotalDiff
