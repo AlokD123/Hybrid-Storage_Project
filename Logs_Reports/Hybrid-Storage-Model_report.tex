@@ -12,8 +12,8 @@
 \usepackage{mathtools}
 \usepackage{bm}
 
-\usepackage[backend=biber]{biblatex}
-\addbibresource{references.bib}
+%\usepackage[backend=biber]{biblatex}
+%\addbibresource{references.bib}
 
 \DeclareMathOperator{\E}{\mathbb{E}}
 
@@ -147,7 +147,6 @@
 		
 	\end{itemize}
 	
-	
 	Combining the above gives the final form of the optimization problem of interest:
 	\begin{multline}
 	J_{t}[E_{1}(t),E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
@@ -160,7 +159,7 @@
 	
 	
 	\section{Finite Horizon DP}
-	\begin{multline}
+	\begin{multline} \label{eq:FHDP_eq}
 	J_{t}[E_{1}(t),E_{2}(t),L(t)] = \min_{D_{1},D_{2}}
 	(1-\alpha_{1}^{D})D_{1}(t) 
 	+ K[D_{1}(t)]^{2}\\
@@ -188,6 +187,7 @@
 	\begin{math} D_{1}(t) + D_{2}(t) = L(t) + C_{2}(t) \geq L(t) \end{math}
 	
 	
+	
 	\section{Infinite Horizon DP}
 	\begin{multline}
 	J^{*}[x(N-2),w(N-2)]=\min_{u} g(D_{1}(N-2),D_{1}(N-2),L(N-2))\\
@@ -196,6 +196,8 @@
 	\end{multline}
 	subject to the same constraints as above.\\\\
 	Here $J^{*}$ is the converged cost function and $0<\alpha<1$ is the discount factor. In the limit, terms with coefficients $\alpha^{N},N\to\infty$ become negligible.
+	
+	
 	
 	
 	\section{Linear Programming formulation of IHDP}
@@ -249,13 +251,26 @@
 	p_{i,j}(u_{p})=P(w_{k} | f(x_{i},u_{p},w_{j}),x_{i},u_{p},w_{j})
 	\end{displaymath}
 	
-	For now, assume the perturbations are IID, so:
+	%OLD
+	%For now, assume the perturbations are IID, so:
 	
+	%\begin{displaymath} 
+	%	p_{i,j}(u_{p})\approx P(w_{k} | f(x_{i},u_{p},w_{j}),x_{i},u_{p})
+	%\end{displaymath}\\
+	
+	%As well, the next perturbation is assumed to only be dependent on the current %state through the next state, so:
+	
+	%\begin{displaymath} 
+	%	p_{i,j}(u_{p})\approx P(w_{k} | f(x_{i},u_{p},w_{j}))
+	%\end{displaymath}\\
+	
+	This can be written just in terms of the current state as:
 	\begin{displaymath} 
-	p_{i,j}(u_{p})\approx P(w_{k} | f(x_{i},u_{p},w_{j}),x_{i},u_{p})
-	\end{displaymath}\\
+	p_{i,j}(u_{p})=P(w_{k} | x_{i},u_{p},w_{j})
+	\end{displaymath}
 	
-	With this assumption, and $w$ being a part of the state, the above LP can be expressed as:
+	%With these assumptions, and ...
+	With $w$ being a part of the state, the above LP can be expressed as:
 	
 	\begin{equation}
 	\min_{\boldsymbol{\lambda(x,w)}} \sum_{\forall x \in X,\forall w \in W} -\lambda(x,w)
@@ -263,10 +278,17 @@
 	
 	s.t. $\forall x \in X,\forall w \in W$:
 	
+	%OLD
+	%\begin{align*}
+	%\lambda(x_{i},w_{j})-\alpha\sum_{k=1}^{M}P(w_{k} | %f(x_{i},u_{1},w_{j}))\lambda(f(x_{i},u_{1},w_{j}),w_{k}) &\leq %g(x_{i},u_{1},w_{j}) \\
+	%&\vdots\\
+	%\lambda(x_{i},w_{j})-\alpha\sum_{k=1}^{M}P(w_{k} | %f(x_{i},u_{P},w_{j}))\lambda(f(x_{i},u_{P},w_{j}),w_{k}) &\leq %g(x_{i},u_{P},w_{j})
+	%\end{align*}
+	
 	\begin{align*}
-	\lambda(x_{i},w_{j})-\alpha\sum_{k=1}^{M}P(w_{k} | f(x_{i},u_{1},w_{j}),x_{i},u_{1})\lambda(f(x_{i},u_{1},w_{j}),w_{k}) &\leq g(x_{i},u_{1},w_{j}) \\
+	\lambda(x_{i},w_{j})-\alpha\sum_{k=1}^{M}P(w_{k} | x_{i},u_{1},w_{j})\lambda(f(x_{i},u_{1},w_{j}),w_{k}) &\leq g(x_{i},u_{1},w_{j}) \\
 	&\vdots\\
-	\lambda(x_{i},w_{j})-\alpha\sum_{k=1}^{M}P(w_{k} | f(x_{i},u_{P},w_{j}),x_{i},u_{P})\lambda(f(x_{i},u_{P},w_{j}),w_{k}) &\leq g(x_{i},u_{P},w_{j})
+	\lambda(x_{i},w_{j})-\alpha\sum_{k=1}^{M}P(w_{k} | x_{i},u_{P},w_{j})\lambda(f(x_{i},u_{P},w_{j}),w_{k}) &\leq g(x_{i},u_{P},w_{j})
 	\end{align*}
 	
 	This is the LP to be solved to determine the converged cost in IHDP. In the context of the hybrid storage problem, $x=(E_{1},E_{2})$ and $w=L$.
@@ -274,7 +296,7 @@
 	The LP can be expressed most succinctly in matrix form as:
 	
 	\begin{equation}
-	\min_{\boldsymbol{\lambda_{t}}} -\boldsymbol{1}_{1\times NMP} \boldsymbol{\lambda_{t}}
+	\min_{\boldsymbol{\lambda_{t}}} -\boldsymbol{1}_{1\times NM} \boldsymbol{\lambda_{t}}
 	\end{equation}
 	
 	s.t.
@@ -288,12 +310,14 @@
 	\begin{itemize}
 		\item \boldsymbol{$\lambda_{t}$} contains P repeated vectors $\lambda(x,w)$. $dim(\lambda_{t})=NMP\times 1$
 		
-		\item \boldsymbol{$\lambda_{t+1}$} contains costs for all combinations of next states and next demands. $dim(\lambda_{t+1})=N^{2}MP\times 1$
+		\item \boldsymbol{$\lambda_{t+1}$} contains costs for all combinations of next states and next demands. $dim(\lambda_{t+1})=NM^{2}P\times 1$
 		
-		\item matrix $P$ is a block diagonal  matrix containing the conditioned probabilities of next state demand. $dim(P)=NMP\times N^{2}MP$
+		\item matrix $P$ is a block diagonal  matrix containing the conditioned probabilities of next state demand. $dim(P)=NMP\times NM^{2}P$
 		
-		\item \boldsymbol{g} contains stage cost for each combination of state, control applied, and current demand. $dim(g)=NMP\times 1$
+		\item \boldsymbol{$g$} contains stage cost for each combination of state, control, and current demand. $dim(g)=NMP\times 1$
 	\end{itemize}
+	
+	
 	
 	
 	\section{Dual LP Problem}
@@ -324,6 +348,68 @@
 	\end{equation}
 	
 	Note that when the vertices of the constraints are used, the matrix $\pi$ is purely deterministic\cite{MDPs}. (This is to say that it only indicates optimal controls with certainty.)
+	
+	
+	
+	
+	\section{Post-Decision Variables}
+	Let $y_{1}=f_{1}(E_{1},D_{1})$ and $y_{2}=f_{2}(E_{2},D_{1},D_{2},L)$, where $f_{1}(\cdot)$ and $f_{2}(\cdot)$ are the state equations, respectively:
+	
+	\begin{displaymath}
+	E_{1}(t+1)=\beta_{1}E_{1}(t)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(t)\right]
+	\end{displaymath}
+	
+	\begin{displaymath}
+	E_{2}(t+1)=\beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}[D_{1}(t)+D_{2}(t)-L(t)]-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]
+	\end{displaymath}
+	
+	We can use this to re-write the FHDP problem in \eqref{eq:FHDP_eq} as:
+	
+	\begin{multline}
+	J_{t}[E_{1}(t),E_{2}(t),L(t)] =
+	\frac{\alpha_{2}^{C}+\alpha_{2}^{D} -2}{\alpha_{2}^{C}-\frac{1}{\alpha_{1}^{D}}}(\beta_{2}E_{2}(t)+\beta_{1}\alpha_{2}^{C}\alpha_{1}^{D}E_{1}(t))\\
+	+\min_{y_{1},y_{2},D_{1}}
+	(1-\alpha_{1}^{D})D_{1}(t) + K[D_{1}(t)]^{2} +(1-\alpha_{2}^{C})[D_{1}(t)-L(t)]\\
+	-\frac{\alpha_{2}^{C}+\alpha_{2}^{D} -2}{\alpha_{2}^{C}-\frac{1}{\alpha_{1}^{D}}}\left[y_{2}(t)+\alpha_{2}^{C}\alpha_{1}^{D}y_{1}(t)+\alpha_{2}^{C}L(t)\right]\\
+	+\mathop{\E}_{L(t+1)}\{J_{t+1}[y_{1}(t),y_{2}(t),L(t+1)]\}
+	\end{multline}
+	s.t. $\forall j \in \{1,2\}$
+	\begin{itemize}
+		\item Bounds on stored energy: 
+		\begin{math}E_{j}^{min}\leq E_{j}(t)\leq E_{j}^{max}\end{math}
+		\item Bounds on next state energy (post-decision variable):
+		\begin{math}E_{j}^{min}\leq y_{j}(t)\leq E_{j}^{max}\end{math}
+		\item Bounds on discharging:
+		\begin{math}0\leq D_{j}(t)\leq D_{j}^{max}\end{math}
+		\item Battery state equation:
+		\begin{math}y_{1}=f_{1}(E_{1},D_{1})\end{math}
+		\item Supercapacitor state equation:
+		\begin{math}y_{2}=f_{2}(E_{2},D_{1},D_{2},L)\end{math}
+	\end{itemize}
+	
+	The minimization is of the form:
+	\begin{displaymath}
+	\min_{y_{1},y_{2},D_{1}} f(y_{1}(t),y_{2}(t),D_{1}(t),L(t)) + \mathop{\E}_{L(t+1)}\{J_{t+1}[y_{1}(t),y_{2}(t),L(t+1)]\}
+	\end{displaymath}
+	
+	Since the state ($E_{j}$) is not in the minimization, one would hope to ensure that its bounds are made redundant simply by only evaluating costs for states in the range \begin{math}E_{j}^{min}\leq E_{j}(t)\leq E_{j}^{max}\end{math}.
+	
+	This could be done by ensuring that the constraints on $y_{j}$ and $D_{j}$ would automatically correspond to states within this range.
+	
+	Considering the constraints on $y_{j}$, these automatically set constraints on $E_{j}$ and $D_{j}$:
+	\begin{displaymath}E_{1}^{min}\leq f_{1}(E_{1},D_{1})\leq E_{1}^{max}\end{displaymath}
+	\begin{displaymath}E_{2}^{min}\leq f_{2}(E_{2},D_{1},D_{2},L)\leq E_{2}^{max}\end{displaymath}
+	
+	Substituting for $f_{1}(\cdot)$ and $f_{2}(\cdot)$:
+	\begin{displaymath}E_{1}^{min}\leq \beta_{1}E_{1}(t)+\left[-\frac{1}{\alpha_{1}^{D}}D_{1}(t)\right]\leq E_{1}^{max}\end{displaymath}
+	\begin{displaymath}E_{2}^{min}\leq \beta_{2}E_{2}(t)+\left[\alpha_{2}^{C}[D_{1}(t)+D_{2}(t)-L(t)]-\frac{1}{\alpha_{2}^{D}}D_{2}(t)\right]\leq E_{2}^{max}\end{displaymath}
+	
+	In the first constraint, one sees that it is possible to bound the control $D_{1}$ in by the variable bound of the state $E_{1}$.
+	
+	However, the control $D_{2}$ in the second constraint is not \textit{independently} defined for this minimization, and so the constraint on state $E_{2}$ cannot be made redundant.
+	
+	Therefore, Post-Decision Variables \textit{cannot} be used to reduce the number of discretized states for this problem.
+	
 	
 	
 	\section{Miscellaneous Notes}
@@ -369,5 +455,5 @@
 	%\bibliographystyle{plain}
 	%\bibliography{references}
 	
-	\printbibliography
+	%\printbibliography
 \end{document}
