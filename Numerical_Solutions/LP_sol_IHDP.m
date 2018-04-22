@@ -1,6 +1,6 @@
 %LP solution of IHDP (Value Iteration) for Hybrid Storage optimization
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X;
+clearvars -except X V;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -36,6 +36,7 @@ PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
 global DISCOUNT; %Discount factor
+%DISCOUNT=[];
 DISCOUNT=0.99;
 
 
@@ -45,7 +46,7 @@ N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
-INF_COST=100000000; %Cost of infeasible states (arbitrary sentinel value)
+INF_COST=100; %Cost of infeasible states (arbitrary sentinel value)
 
 %Initialization
 %E_Ind_Vec=[];%FullState_Ind_Vec=[];
@@ -272,7 +273,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
     
     
   %Quantify difference between costs and expected matrix of IHDP costs
-  Diff=X-ConvCosts; %Matrix of differences
+  Diff=X-ConvCosts; %Matrix of differences. X comes from Value Iteration
   Diff(Diff==Inf)=0; %Ignore infinite differences (correct)
   %Use 2-norm to quantify difference
   norm_array=arrayfun(@(idx) norm(Diff(:,:,idx),1), 1:size(Diff,3));
