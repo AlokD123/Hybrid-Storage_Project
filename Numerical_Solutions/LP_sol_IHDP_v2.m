@@ -36,6 +36,7 @@ PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
 global DISCOUNT; %Discount factor
+DISCOUNT=[];
 DISCOUNT=0.99;
 
 
@@ -45,24 +46,24 @@ N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
-INF_COST=1e5; %Cost of infeasible states (arbitrary sentinel value)
+INF_COST=100; %Cost of infeasible states (arbitrary sentinel value)
 
 %Initialization
 %E_Ind_Vec=[];%FullState_Ind_Vec=[];
 nextE_Ind_Vect=[]; %Vector of next state energies
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
 
-F=zeros(M^2*N1*N2,M^2*N1*N2);       %Transition matrix, to get next states
+F=zeros(M*N1*N2,M*N1*N2);         %Transition matrix, to get next states
 
 P_fullmtx=zeros(N1*N2,M);         %Full matrix of load probabilities given state
-P=zeros(M*N1*N2,M^2*N1*N2);       %P matrix, containing probabilties of next states 
+P=zeros(M*N1*N2,M*N1*N2);         %P matrix, containing probabilties of next states 
 
 %Create "identity" matrix, duplicating elements of state energy vector, for
 %mapping current energy state to combination of new state and next load
-v=ones(M,1); %Vector of ones along diagonal, which is repeated to repeat values of state
-Id = kron(eye(M*N1*N2),v);
+%v=ones(M,1); %Vector of ones along diagonal, which is repeated to repeat values of state
+%Id = kron(eye(M*N1*N2),v);
 
-PFId=zeros(M*N1*N2,M*N1*N2,P1*P2);  %PFId-matrices, product of P, F, and Id (one for each value of 1<=p<=P)
+PF=zeros(M*N1*N2,M*N1*N2,P1*P2);  %PF-matrices, product of P and F (one for each value of 1<=p<=P)
 g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of 1<=p<=P)
 
 
@@ -169,27 +170,27 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
     %STEP 5
     %Create duplicated next state index vector, to determine next state for
     %each random perturbation, @ each SINGLE current energy state
-    dup_nextE_Ind_Vect=[];
-    for i=1:length(nextE_Ind_Vect)
-        dup_nextE_Ind_Vect=[dup_nextE_Ind_Vect;repmat(nextE_Ind_Vect(i),M,1)];%Repeat each new state index M times
-    end
+%     dup_nextE_Ind_Vect=[];
+%     for i=1:length(nextE_Ind_Vect)
+%         dup_nextE_Ind_Vect=[dup_nextE_Ind_Vect;repmat(nextE_Ind_Vect(i),M,1)];%Repeat each new state index M times
+%     end
     
     %Construct F matrix
-    for r=1:M^2*N1*N2
+    for r=1:M*N1*N2
       boolRowFull=0; %Flag to achieve 1 element per row of F. Set flag off initially.
-      indDupVect=r; %Get index for next element in dup_nextE_Ind_Vect to check as r-th row, since next state index is constant for all elements in row
+      indNextE=r; %Get index for next element in nextE_Ind_Vect to check as r-th row, since next state index is constant for all elements in row
       
-      for c=1:M^2*N1*N2
-        if(dup_nextE_Ind_Vect(indDupVect)==-1) %If find infeasible next state...
+      for c=1:M*N1*N2
+        if(nextE_Ind_Vect(indNextE)==-1) %If find infeasible next state...
             F(r,c)=0; %Do not consider state
         else  %Else, fill in row with 1's so as to map state to next state
             if (mod(r,M)==0) %Special case for mod function w/ 1-indexing
-                Cond=(c==(dup_nextE_Ind_Vect(indDupVect))*M);                          %<----------------------- TO CHECK!!
+                Cond=(c==(nextE_Ind_Vect(indNextE))*M);                          %<----------------------- TO CHECK!!
             else
-                Cond=(c==((dup_nextE_Ind_Vect(indDupVect)-1)*M+mod(r,M)));             %<----------------------- TO CHECK!!
+                Cond=(c==((nextE_Ind_Vect(indNextE)-1)*M+mod(r,M)));             %<----------------------- TO CHECK!!
             end
             %^^ General next state mapping condition. 1 if mapping.
-            if (Cond &&(~boolRowFull)) %Full condition. If generally mapping and not full, set mapping (fill 1).
+            if (Cond &&(~boolRowFull)) %Full condition. If generally mapping and still not filled, fill in with 1.
                 F(r,c)=1; 
                 boolRowFull=1;
             end
@@ -201,27 +202,26 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
     %STEP 6
     %Create P matrix: take select rows corresponding to components in nextE_Ind_Vect
     for r=1:M*N1*N2
-        c=(r-1)*M+1; %Get column number of next row of probabilities (given state)
         Ind_nextE=nextE_Ind_Vect(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
         
         if(Ind_nextE==-1) %If find infeasible next state...
-            P(r,c:(c+M-1))=zeros(1,M); %Fill in row r with 0's
-        else
-            P(r,c:(c+M-1))=P_fullmtx(Ind_nextE,:); %Else, fill in row r with probabilities associated with Ind_nextE-th row of P_fullmtx
+            P(r,:)=0; %Fill in FULL row r with 0's (NO FEASIBLE NEXT STATE, for any combo (Ind_nextE,indNextL)
+        else              %Else, if feasible....
+            c=(Ind_nextE-1)*M+1; %Set column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
+            P(r,c:(c+M-1))=P_fullmtx(Ind_nextE,:); %Fill in row r with probabilities associated with Ind_nextE-th row of P_fullmtx
         end
     end
     
-    %Multiply to get p-th PFId matrix
-    PFId(:,:,p)=P*F*Id;
+    %Multiply to get p-th PF matrix
+    PF(:,:,p)=P*F;
 
     
     %Reset matrices/vectors
     nextE_Ind_Vect=[];
     numAdmissibleLoads=0;
-    F=zeros(M^2*N1*N2,M^2*N1*N2);
+    F=zeros(M*N1*N2,M*N1*N2);
     P_fullmtx=zeros(N1*N2,M);
-    P=zeros(M*N1*N2,M^2*N1*N2);
-    dup_nextE_Ind_Vect=[];
+    P=zeros(M*N1*N2,M*N1*N2);
     
     end
   end
@@ -232,12 +232,12 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
   %Run optimization problem, and find primal as well as dual.
   cvx_begin
     grbControl.LPMETHOD = 1; % Use dual simplex method
-    variable cost(length(PFId))
+    variable cost(length(PF))
     dual variables d{P1*P2}
     maximize( sum(cost) )
     subject to
         for p=1:P1*P2
-            d{p} : (eye(length(PFId))-DISCOUNT*PFId(:,:,p))*cost <= g(:,p)
+            d{p} : (eye(length(PF))-DISCOUNT*PF(:,:,p))*cost <= g(:,p)
         end
   cvx_end
   %Get vector of optimal dual from cell array form
