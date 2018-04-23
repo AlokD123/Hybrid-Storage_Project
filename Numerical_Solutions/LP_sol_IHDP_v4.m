@@ -46,6 +46,7 @@ N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
+INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 
 %Initialization
 %E_Ind_Vec=[];%FullState_Ind_Vec=[];
