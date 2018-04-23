@@ -53,21 +53,19 @@ INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 nextE_Ind_Vect=[]; %Vector of next state energies
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
 
-F=zeros(M*N1*N2,M*N1*N2);         %Transition matrix, to get next states
+%F=zeros(M*N1*N2,M*N1*N2);         %Transition matrix, to get next states
 
-P_fullmtx=zeros(N1*N2,M);         %Full matrix of load probabilities given state
-P=zeros(M*N1*N2,M*N1*N2);         %P matrix, containing probabilties of next states 
+%P_fullmtx=zeros(N1*N2,M);         %Full matrix of load probabilities given state
+%P=zeros(M*N1*N2,M*N1*N2);         %P matrix, containing probabilties of next states 
 
-%Create "identity" matrix, duplicating elements of state energy vector, for
-%mapping current energy state to combination of new state and next load
-%v=ones(M,1); %Vector of ones along diagonal, which is repeated to repeat values of state
-%Id = kron(eye(M*N1*N2),v);
 
-PF=zeros(M*N1*N2,M*N1*N2,P1*P2);  %PF-matrices, product of P and F (one for each value of 1<=p<=P)
-g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of 1<=p<=P)
+%PF=zeros(M*N1*N2,M*N1*N2,P1*P2);  %PF-matrices, product of P and F (one for each value of 1<=p<=P)
+%g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of 1<=p<=P)
 
 
 %PART A: SET UP MATRICES
+
+%FIRST PASS: list only feasible states
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
     for D2=0:MAX_DISCHARGE(2)
@@ -82,15 +80,111 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                 %Map state index to state
                 E1=E_MIN(1)+(E_Ind1-1);
                 E2=E_MIN(2)+(E_Ind2-1);
+               
                 
-                %Get index of current state energies in vector of state energies
-                E_Ind=(E_Ind1-1)*N2+E_Ind2;
-                %Add state energy index to vector of state energies
-                %E_Ind_Vect=[E_Ind_Vect;nextE_Ind];
+                if(D1>E1 || D2>E2)  %If discharge too high for state, do not add to list of feasible states for this set of controls
+
+                else
+                    %Get index of current state energies in vector of state energies
+                    FeasE_Ind=(E_Ind1-1)*N2+E_Ind2;
+                    %Add feasible state energy indices to list, for later
+                    %iteration
+                    FeasE_Ind_Vect(p)=[FeasE_Ind_Vect(p);FeasE_Ind];
+                    
+                    %For each perturbation at the CURRENT time
+                    for indL=1:(MAX_LOAD-MIN_LOAD+1)
+                        %Map index to value of load
+                        L=indL+MIN_LOAD-1;
+
+                        %STEP 1
+                        %Calculate the state this value of w will lead to, even if
+                        %impossible...
+                        [nextE1,nextE2]=optNextStateLimited(E1,E2,D1,D2,L);
+
+                        %If next state is amongst those achievable with a given perturbance....
+                        if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
+                            if(nextE2<=E_MAX(2) && nextE2>=E_MIN(2))
+                                %IF meeting following conditions: (C_MAX and C_MIN)
+                                %1) net supply (discharging) never below demand, 2) not charging cap. too quickly
+                                if(~((D1+D2-L)<0||(D1+D2-L)>MAX_CHARGE(2)))
+                                  
+                                    
+                                  %Map state to state index, to find cost of next state based on its index
+                                  nextE_Ind1=round(nextE1-E_MIN(1)+1);
+                                  nextE_Ind2=round(nextE2-E_MIN(2)+1); 
+
+                                  %STEP 2
+                                  %Get index of next state energies in vector of state energies
+                                  nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
+                                else
+                                  %If no feasible state for this combination of (E1,E2) and L...
+                                  nextE_Ind=-1; %Flag next state as impossible
+                                end
+                            else
+                                %If no feasible state for this combination of (E1,E2) and L...
+                                nextE_Ind=-1; %Flag next state as impossible
+                            end
+                        else
+                            %If no feasible state for this combination of (E1,E2) and L...
+                            nextE_Ind=-1; %Flag next state as impossible
+                        end
+
+                        %Add next state energy index to vector of next state energies
+                        nextE_Ind_Vect=[nextE_Ind_Vect;nextE_Ind];
+
+                        %STEP 3
+                        %Create full probability matrix
+                        %SET DISTRIBUTION: UNIFORM <------------------------------------------- ************
+                        if(nextE_Ind~=-1) %If this state leads to a feasible next state...
+                            %Put sentinel value to indicate as such (for given control)
+                            P_fullmtx(FeasE_Ind,indL)=2;
+                            %If load admissible, increment count of admissible loads
+                            numAdmissibleLoads=numAdmissibleLoads+1;
+
+                            %STEP 4
+                            %Create p-th vector g, for constraint
+                            g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=CtrlCost(D1,D2,L); %Cost of stage is given by CtrlCost
+
+                        else %Else if infeasible next state...
+                            %Set 0 probability (for given control)
+                            P_fullmtx(FeasE_Ind,indL)=0;
+                            %Ignore constraint
+                            g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=INF_COST; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
+                        end
+                    end
+
+                    %Fill in row of full matrix with UNIFORM DISTR. values, after finding number of feasible load values
+                    for indL=1:(MAX_LOAD-MIN_LOAD+1)
+                        if(P_fullmtx(FeasE_Ind,indL)==2)
+                           P_fullmtx(FeasE_Ind,indL)=1/numAdmissibleLoads; %Uniform probability
+                        end
+                    end
+                    %Reset feasible loads count, for subsequent energy state
+                    numAdmissibleLoads=0;
+                end
+            end
+        end
+    end
+  end
+  
+%SECOND PASS: list all states
+
+%For each possible control...
+  for D1=0:MAX_DISCHARGE(1)
+    for D2=0:MAX_DISCHARGE(2)
+        
+        %For each state at an iteration...
+        for E_Ind1=
+            for E_Ind2=
+                %Map state index to state
+                E1=E_MIN(1)+(E_Ind1-1);
+                E2=E_MIN(2)+(E_Ind2-1);
+                
+                
                 
                 if(D1>E1 || D2>E2)  %If discharge too high for state, no constraints
                     nextE_Ind_Vect=[nextE_Ind_Vect;-1*ones(M,1)]; %No next state index
-                    P_fullmtx(E_Ind,:)=0; %No probable next state
+                    P_fullmtx(FeasE_Ind,:)=0; %No probable next state
                     for indL=1:M    %Ignore constraints
                         g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=INF_COST; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
                     end
@@ -139,7 +233,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
                         %SET DISTRIBUTION: UNIFORM <------------------------------------------- ************
                         if(nextE_Ind~=-1) %If this state leads to a feasible next state...
                             %Put sentinel value to indicate as such (for given control)
-                            P_fullmtx(E_Ind,indL)=2;
+                            P_fullmtx(FeasE_Ind,indL)=2;
                             %If load admissible, increment count of admissible loads
                             numAdmissibleLoads=numAdmissibleLoads+1;
 
@@ -149,7 +243,7 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
 
                         else %Else if infeasible next state...
                             %Set 0 probability (for given control)
-                            P_fullmtx(E_Ind,indL)=0;
+                            P_fullmtx(FeasE_Ind,indL)=0;
                             %Ignore constraint
                             g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=INF_COST; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
                         end
@@ -157,8 +251,8 @@ g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of
 
                     %Fill in row of full matrix with UNIFORM DISTR. values, after finding number of feasible load values
                     for indL=1:(MAX_LOAD-MIN_LOAD+1)
-                        if(P_fullmtx(E_Ind,indL)==2)
-                           P_fullmtx(E_Ind,indL)=1/numAdmissibleLoads; %Uniform probability
+                        if(P_fullmtx(FeasE_Ind,indL)==2)
+                           P_fullmtx(FeasE_Ind,indL)=1/numAdmissibleLoads; %Uniform probability
                         end
                     end
                     %Reset feasible loads count, for subsequent energy state
