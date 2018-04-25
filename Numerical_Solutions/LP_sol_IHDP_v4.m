@@ -49,7 +49,7 @@ P2=MAX_DISCHARGE(2)+1;
 INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 
 %Initialization
-E_Ind_Vect=[];      %Vector of current state energies
+E_Ind_Vect_p=[];      %Vector of current state energies
 nextE_Ind_Vect=[]; %Vector of next state energies
 %FullState_Ind_Vec=[];
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
@@ -75,6 +75,8 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
         p=D2_Ind+P2*(D1_Ind-1);
         
         indCount=0; %Index for feasible state #, for a given value of p
+        %Index for row in E-state matrix
+        %rowInd_Emtx=p-1; %Reset when restarting from top to add more states for next value of p
         
         %For each state at an iteration...
         for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
@@ -93,6 +95,8 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 %                         g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=INF_COST; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
 %                     end
                 else
+                    %Index row in E-state indices mtx (for feasible E-state) same as VALUE of E-state index
+                    rowInd_Emtx = E_Ind;
                     %For each perturbation at the CURRENT time
                     for indL=1:(MAX_LOAD-MIN_LOAD+1)
                         %Map index to value of load
@@ -113,17 +117,19 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
                                   indCount=indCount+1; %... and use as an index
                                     
                                   %STEP 1
-                                  %Add state energy index to vector of state energies
-                                  E_Ind_Vect=[E_Ind_Vect;E_Ind];
+                                  %Add state energy index to vector of FEASIBLE state energies for current value of p (D1,D2 combo)
+                                  E_Ind_Vect_p=[E_Ind_Vect_p;E_Ind];
+                                  %Add state energy index to matrix of ALL FEASIBLE energies
+                                  E_Ind_MtxALL(rowInd_Emtx,indL)=E_Ind;
                                     
                                   %Map state to state index, to find cost of next state based on its index
                                   nextE_Ind1=round(nextE1-E_MIN(1)+1);
                                   nextE_Ind2=round(nextE2-E_MIN(2)+1); 
 
                                   %STEP 2
-                                  %Get index of next state energies in vector of state energies
+                                  %Get index of next state energy in vector of state energies
                                   nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
-                                  %Add next state energy index to vector of next state energies
+                                  %Add next state energy index to vector of FEASIBLE next state energies
                                   nextE_Ind_Vect=[nextE_Ind_Vect;nextE_Ind];
                                   
                                   %Add indL to list of FEASIBLE loads for this combination of u and x
@@ -166,9 +172,9 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
                     end
 
                     %Fill in row of full matrix with UNIFORM DISTR. values, after finding number of feasible load values
-                    for indL=indL_Feas
-                        if(P_fullmtx(E_Ind,indL)==2)
-                           P_fullmtx(E_Ind,indL)=1/numAdmissibleLoads; %Uniform probability
+                    for indL_Vect=indL_Feas
+                        if(P_fullmtx(E_Ind,indL_Vect)==2)
+                           P_fullmtx(E_Ind,indL_Vect)=1/numAdmissibleLoads; %Uniform probability
                         end
                     end
                     %Reset feasible loads count, for subsequent energy state
@@ -179,7 +185,8 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
             end
         end
     
-    g{p}=gVec_p';    
+    g{p}=gVec_p';
+    E_Ind_Vect{p}=E_Ind_Vect_p;
         
     %STEP 5
     %Construct F matrix
@@ -222,7 +229,7 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
     
     %STEP 6
     %Create P matrix: select rows corresponding to components in nextE_Ind_Vect
-    for r=1:length(E_Ind_Vect)
+    for r=1:length(E_Ind_Vect_p)
         Ind_nextE=nextE_Ind_Vect(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
         
         %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
@@ -245,7 +252,7 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
     
     %Reset matrices/vectors
     nextE_Ind_Vect=[];
-    E_Ind_Vect=[];
+    E_Ind_Vect_p=[];
     
     numAdmissibleLoads=0;
     
@@ -256,19 +263,49 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
     end
   end
   
+  
+  %STEP : Construct vector of ALL FEASIBLE energies
+  E_Ind_VectALL=[];
+  for row=1:size(E_Ind_MtxALL,1)
+      nnzRow=nnz(E_Ind_MtxALL(row,:));
+      E_Ind_Mtx_nzRow=E_Ind_MtxALL(row,1:nnzRow);
+      E_Ind_VectALL=[E_Ind_VectALL; E_Ind_Mtx_nzRow'];
+  end
+  
+  %STEP : Construct each F matrix
+  for p=1:P1*P2
+      E_Ind_Vect_p=E_Ind_Vect{p};
+      %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
+      row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
+      
+      %Go through E-state index vector for current value of p...
+      for r=1:length(E_Ind_Vect_p)
+          while(E_Ind_VectALL(row)~=E_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
+              row=row+1;    %Continue
+          end
+          F_p(r,row)=1; %Once reached, map
+          row=row+1;  %Start at next column in F next time (continuously increasing)
+      end
+      %Add extra zeros at end to ensure dimensions of F_p and E_Ind_VectALL match
+      F_p(:,row:length(E_Ind_VectALL))=0;
+      
+      F{p}=F_p;
+      F_p=[]; %Reset
+  end
+  
   c;
   %PART B: OPTIMIZATION
   %Created LP matrices and vectors.
   %Run optimization problem, and find primal as well as dual.
   cvx_begin
     grbControl.LPMETHOD = 1; % Use dual simplex method
-    variable cost(length(PF)) %%%<-------------------------------------------- HOW TO DEAL WITH VARIABLE LENGTH COST, length(PF{p})??
+    variable cost(length(E_Ind_VectALL))
     dual variables d{P1*P2}
     maximize( sum(cost) )
     subject to
         for p=1:P1*P2
             %d{p} : (eye(length(PF))-DISCOUNT*PF(:,:,p))*cost <= g(:,p)
-            d{p} : (eye(length(PF{p}))-DISCOUNT*PF{p})*cost <= g{p} %<-------- HOW TO ENSURE PF{p} is SQUARE for ALL p???
+            d{p} : (eye(length(PF{p}))-DISCOUNT*PF{p})*F{p}*cost <= g{p} %<-------- HOW TO ENSURE PF{p} is SQUARE for ALL p???
         end
   cvx_end
   %Get vector of optimal dual from cell array form
