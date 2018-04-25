@@ -1,36 +1,37 @@
-boolSingleSequence=0;
-clear Costs_DP;
+clear ERRORS_LP;
+INFCOST=max(max(max(ConvCosts)));
+ERRORS_LP=Costs(:,:,:)-ConvCosts(:,:,:);
+%ERRORS_LP(abs(ERRORS_LP)>(INFCOST-0.1))=0;
+%ERRORS_LP=ERRORS_LP./ConvCosts;
 
-if(~boolSingleSequence)
+ERRORS_LP(ERRORS_LP==Inf)=+100;
+ERRORS_LP(ERRORS_LP~=+100)=0;
+
+ERRORS_LP(end+1,:,:)=0;
+ERRORS_LP(:,end+1,:)=0;
+
+if(1)
     %Visualize all possible policies
-    E_Ind1=1:(E_MAX(1)-E_MIN(1)+1);
-    E_Ind2=1:(E_MAX(2)-E_MIN(2)+1);
+    E_Ind1=1:(E_MAX(1)-E_MIN(1)+2);
+    E_Ind2=1:(E_MAX(2)-E_MIN(2)+2);
     indL=1:(MAX_LOAD-MIN_LOAD+1);
 
-    ti=0;tf=MAX_ITER-1;
+    %ti=0;tf=MAX_ITER-1;
 
     figure
     %%% Layered-Surfaces Visualization %%%%
-    for t=ti:tf
-        subplot(1,MAX_ITER-1,t+1)
-        Costs_DP(:,:,:)=V(:,:,:,t+1);
+    for t=1:1
+        %subplot(1,1,t+1)
         for ind=1:length(indL)
-            if(ind==1)
-                Costs_DP(end+1,:,:)=INF;
-                Costs_DP(:,end+1,:)=INF;
-            else
-                Costs_DP(end,:,:)=INF;
-                Costs_DP(:,end,:)=INF;
-            end
-            cost=X(:,:,ind);
+            abserror=ERRORS_LP(:,:,ind);
             Z=(ind-1)*ones(length(E_Ind1),length(E_Ind2));
-            surf(E_Ind2-1,E_Ind1-1,Z,cost)
+            surf(E_Ind2-1,E_Ind1-1,Z,abserror)
             hold on
         end
         colorbar
-        title(colorbar,'Cost')
-        xlabel('E2');ylabel('E1');zlabel('L');
-        title(['Value function at t=',num2str(t)]);
+        title(colorbar,'Error (+100 indicates infeasible)')
+        xlabel('Supercapacitor Energy (E2)');ylabel('Battery Energy (E1)');zlabel('Demand (L)');
+        title(['Percent Error between Costs in IHDP and Reduced LP']);
     end
 
 %     hold off;
@@ -82,24 +83,4 @@ if(~boolSingleSequence)
     % xlabel('E2');ylabel('E1');zlabel('L');
     % title('Cost');
     
-else
-    %Visualize a possible sequence of loads, as previously found
-    figure
-    hold on;
-    plot(optE1,':*','MarkerSize',10); plot(optE2,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10);
-    hold off;
-    xlabel('Time');
-    ylabel('Unit of energy');
-    title('Energy stored vs. load');
-    legend('E1','E2','Load');
-    
-    figure
-    hold on;
-    plot(D1Opt,':*','MarkerSize',10); plot(D2Opt,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10);
-    hold off;
-    xlabel('Time');
-    ylabel('Unit of energy');
-    title('Optimal policy vs. load');
-    legend('D1','D2','Load');
-    axis([1 inf 0 max(MAX_DISCHARGE)]);
 end

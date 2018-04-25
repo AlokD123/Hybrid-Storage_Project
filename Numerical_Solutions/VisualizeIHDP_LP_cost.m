@@ -1,36 +1,36 @@
 boolSingleSequence=0;
-clear Costs_DP;
+INFCOST=100;
+
+clear Costs_LP;
+Costs_LP=ConvCosts;
+
+Costs_LP(end+1,:,:)=INFCOST;
+Costs_LP(:,end+1,:)=INFCOST;
+
 
 if(~boolSingleSequence)
     %Visualize all possible policies
-    E_Ind1=1:(E_MAX(1)-E_MIN(1)+1);
-    E_Ind2=1:(E_MAX(2)-E_MIN(2)+1);
+    E_Ind1=1:(E_MAX(1)-E_MIN(1)+2);
+    E_Ind2=1:(E_MAX(2)-E_MIN(2)+2);
     indL=1:(MAX_LOAD-MIN_LOAD+1);
 
-    ti=0;tf=MAX_ITER-1;
+    %ti=0;tf=MAX_ITER-1;
 
     figure
     %%% Layered-Surfaces Visualization %%%%
-    for t=ti:tf
-        subplot(1,MAX_ITER-1,t+1)
-        Costs_DP(:,:,:)=V(:,:,:,t+1);
+    for t=1:1
+        %subplot(1,1,t+1)
         for ind=1:length(indL)
-            if(ind==1)
-                Costs_DP(end+1,:,:)=INF;
-                Costs_DP(:,end+1,:)=INF;
-            else
-                Costs_DP(end,:,:)=INF;
-                Costs_DP(:,end,:)=INF;
-            end
-            cost=X(:,:,ind);
+            cost=Costs_LP(:,:,ind);
+            cost(cost==INFCOST)=-100; %Replace all with infeasible costs for plotting
             Z=(ind-1)*ones(length(E_Ind1),length(E_Ind2));
             surf(E_Ind2-1,E_Ind1-1,Z,cost)
             hold on
         end
         colorbar
         title(colorbar,'Cost')
-        xlabel('E2');ylabel('E1');zlabel('L');
-        title(['Value function at t=',num2str(t)]);
+        xlabel('Supercapacitor Energy (E2)');ylabel('Battery Energy (E1)');zlabel('Demand (L)');
+        title(['Costs of State in LP form of IHDP']);
     end
 
 %     hold off;

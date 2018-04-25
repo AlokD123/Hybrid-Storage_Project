@@ -57,6 +57,7 @@ D1Opt_State(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD
 D2Opt_State(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1),1:MAX_ITER)=0;
 %final cost is 0, for all possible states and values of "load"
 V(:,:,:,MAX_ITER)=0;
+expCostE=[];
 
 %optNextE will hold optimal NEXT state at state E with load L (at iteration t)... FOR REFERENCE
 global optNextE1; global optNextE2;
@@ -191,7 +192,9 @@ optE1(1)=E1_INIT; optE2(1)=E2_INIT;
 % Debug counts
 countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
+%seqL=ones(50-38,1);
 while t<=(MAX_ITER-1)
+    %t
     %Set 1-indexed time, with no offset due to VI-stopping
     t_ind_VI=t-(IND_T_OFFS);
     %Set state index
@@ -206,7 +209,8 @@ while t<=(MAX_ITER-1)
     %Or, use sample sequence of pseudo-random demands
     %Select between sequences
     %L=randL;
-    L=min(t_ind_VI,MAX_LOAD_STATE);%seqL(t);%
+    L= seqL(50-t-1);
+    %L=min(t_ind_VI,MAX_LOAD_STATE); 
     %Short form for optimal controls...
     D1=D1Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
     D2=D2Opt_Inf(indE1,indE2,L-MIN_LOAD+1);

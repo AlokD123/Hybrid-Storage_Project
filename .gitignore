@@ -45,3 +45,32 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+Logs_Reports/Debugging_results.txt
+*.txt
+*.asv
+*.asv
+*.asv
+*.fig
+*.asv
+*.aux
+*.pdf
+*.pptx
+*.png
+*.jpg
+*.csv
+*.xlsx
+*.mat
+*.aux
+Logs_Reports/Hybrid-Storage-Model_report.bbl
+*.aux
+Logs_Reports/Hybrid-Storage-Model_report.pdf
+*.gz
+*.bbl
+Logs_Reports/Presentation/Hybrid-Storage-Control_presentation.bcf
+*.blg
+Logs_Reports/Presentation/Hybrid-Storage-Control_presentation.nav
+*.out
+Logs_Reports/Presentation/Hybrid-Storage-Control_presentation.run.xml
+*.snm
+Logs_Reports/Presentation/Hybrid-Storage-Control_presentation.toc
+*.asv

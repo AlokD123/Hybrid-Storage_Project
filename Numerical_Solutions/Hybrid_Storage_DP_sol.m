@@ -3,7 +3,7 @@ clearvars -except seqL;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[20;10]; %Maximum energy to be stored (upper bound)
+E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
@@ -23,7 +23,7 @@ DISCOUNT=1;
 %Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[20;10]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -51,6 +51,7 @@ PERFECT_EFF=1;
 
 %DP Setup... with duplication for each control input
 global V; global D1Opt_State; global D2Opt_State; global expCostE;
+V=[]; D1Opt_State=[]; D2Opt_State=[]; expCostE=[];
 %COST MATRIX....V(:,k) holds the cost of the kth iteration for each possible state
 V(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1),1:LAST_ITER) = Inf;       %1 matrix b/c 1 cost function
 %uOptState holds the optimal control U for each state, and for all iterations
@@ -61,6 +62,7 @@ V(:,:,:,LAST_ITER)=0;
 
 %optNextE will hold optimal NEXT state at state E with load L (at iteration t)... FOR REFERENCE
 global optNextE1; global optNextE2;
+optNextE1=[]; optNextE2=[];
 optNextE1(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1),1:LAST_ITER)=Inf;
 optNextE2(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1),1:LAST_ITER)=Inf;
 
@@ -150,6 +152,7 @@ while t<=(LAST_ITER-1)
     %Or, use sample sequence of pseudo-random demands
     %Select between sequences
     %L=randL;
+    seqL=ones(LAST_ITER);
     L=seqL(t);
     %If leads to next state guaranteed out of bounds, decrease load
     while(optNextE1(indE1,indE2,L-MIN_LOAD+1,t)==inf || optNextE2(indE1,indE2,L-MIN_LOAD+1,t)==inf)
