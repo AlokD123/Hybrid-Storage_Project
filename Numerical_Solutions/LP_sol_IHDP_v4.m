@@ -142,7 +142,7 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
                                   
                                   %STEP
                                   %Create augmented vector containing  current E-states, AND ALSO next E-states ONLY for load=0
-                                  if(length(nextE_Ind_Vect_p)==1) %If first state being added...
+                                  if(length(nextE_Ind_Vect_p)==1 && E_Ind==nextE_Ind) %If first state being added, and not differing...
                                       aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
                                   else                            %ALL OTHER CASES
                                       if(above_E_Ind==E_Ind) %If repeating E_Ind...
@@ -161,7 +161,7 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
                                           end
                                           aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add regular state index at end, as usual
                                           %boolUpdTemp=1; %Resume updating temp
-                                          unrepNextE_Inds=[]; %Restart list of unrepeated nextE_Ind values
+                                          unrepNextE_Inds=nextE_Ind; %Restart list of unrepeated nextE_Ind values
                                       end
                                   end
                                   above_E_Ind=E_Ind; %Update "above" E_ind value to current position
@@ -230,6 +230,13 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
                 P_fullmtx(rowNum,:)=[1, zeros(1,size(P_fullmtx,2)-1)];
             end
         end
+    
+    %At end of p-th value cycle, if remaining unadded states, add to end
+    for unrepI=unrepNextE_Inds'
+        if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
+            aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI]; %Insert in between
+        end
+    end
         
     unrepNextE_Inds=[]; %Restart list of unrepeated nextE_Ind values
         
