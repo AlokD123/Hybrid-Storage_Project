@@ -50,7 +50,8 @@ INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 
 %Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
-nextE_Ind_Vect_p=[]; %Vector of next state energies
+nextE_Ind_Vect_p=[];  %Vector of next state energies
+aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
 %FullState_Ind_Vec=[];
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
 
@@ -78,6 +79,9 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
         indCount=0; %Index for feasible state #, for a given value of p
         %Index for row in E-state matrix
         %rowInd_Emtx=p-1; %Reset when restarting from top to add more states for next value of p
+        
+        %Flag for updating the last stored nextE_Ind value (see below)
+        boolUpdTemp=1; 
         
         %For each state at an iteration...
         for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
@@ -136,7 +140,7 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
                                   
                                   %STEP 
                                   %Create augmented vector containing  current E-states, AND ALSO next E-states ONLY for load=0
-                                  if(E_Ind==nextE_Ind) %If current E-state same as next E-state...
+                                  if(E_Ind==nextE_Ind && boolUpdTemp) %If current E-state same as next E-state AND don't have any stored state to insert
                                       aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add to augmented vector
                                   else %Else...
                                       if(above_E_Ind==E_Ind) %If repeating E_Ind...
@@ -148,12 +152,12 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
                                           aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add CURRENT E-state to augmented vector
                                       else
                                           %Else, if adding new E_Ind value (not repeating for load)
-                                          if ~any(nnz(E_Ind_Vect_p==nextE_Ind)) %If next state NOT in state space of current E-states...
-                                              aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; nextE_Ind; E_Ind]; %Insert next E-state in between
-                                              boolUpdTemp=1; %Resume updating temp
+                                          if ~any(nnz(E_Ind_Vect_p==temp)) %If stored state NOT in state space of current E-states...
+                                              aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; temp; E_Ind]; %Insert next E-state in between
                                           else
                                               aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Otherwise, just add
                                           end
+                                          boolUpdTemp=1; %Resume updating temp
                                       end
                                   end
                                   above_E_Ind=E_Ind; %Update "above" E_ind value to current position
@@ -255,6 +259,7 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
     E_Ind_Vect_p=[];
+    aug_nextE_Ind_Vect_p=[];
     
     numAdmissibleLoads=0;
     
