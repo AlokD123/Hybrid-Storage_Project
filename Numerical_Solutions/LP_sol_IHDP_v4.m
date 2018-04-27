@@ -50,7 +50,7 @@ INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 
 %Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
-nextE_Ind_Vect=[]; %Vector of next state energies
+nextE_Ind_Vect_p=[]; %Vector of next state energies
 %FullState_Ind_Vec=[];
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
 
@@ -62,6 +62,7 @@ numAdmissibleLoads=0; %Count number of admissible load values for a given energy
 %PF=zeros(M*N1*N2,M*N1*N2,P1*P2);  %PF-matrices, product of P and F (one for each value of 1<=p<=P)
 %g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of 1<=p<=P)
 PF={};
+P=[];
 
 indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 
@@ -130,7 +131,34 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
                                   %Get index of next state energy in vector of state energies
                                   nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
                                   %Add next state energy index to vector of FEASIBLE next state energies
-                                  nextE_Ind_Vect=[nextE_Ind_Vect;nextE_Ind];
+                                  nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
+                                  
+                                  
+                                  %STEP 
+                                  %Create augmented vector containing  current E-states, AND ALSO next E-states ONLY for load=0
+                                  if(E_Ind==nextE_Ind) %If current E-state same as next E-state...
+                                      aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add to augmented vector
+                                  else %Else...
+                                      if(above_E_Ind==E_Ind) %If repeating E_Ind...
+                                          if(boolUpdTemp) 
+                                            temp=nextE_Ind; %Store nextE_Ind value for later <-------- ASSUMPTION: next state currently infeasible is right after new feasible current state
+                                            boolUpdTemp=0; %Don't update temp until added this state to aug vector
+                                          end
+                                          %Continue as is
+                                          aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add CURRENT E-state to augmented vector
+                                      else
+                                          %Else, if adding new E_Ind value (not repeating for load)
+                                          if ~any(nnz(E_Ind_Vect_p==nextE_Ind)) %If next state NOT in state space of current E-states...
+                                              aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; nextE_Ind; E_Ind]; %Insert next E-state in between
+                                              boolUpdTemp=1; %Resume updating temp
+                                          else
+                                              aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Otherwise, just add
+                                          end
+                                      end
+                                  end
+                                  above_E_Ind=E_Ind; %Update "above" E_ind value to current position
+                                  
+                                  
                                   
                                   %Add indL to list of FEASIBLE loads for this combination of u and x
                                   indL_Feas=[indL_Feas;indL];
@@ -185,56 +213,30 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
             end
         end
     
+        %For P_fullmtx entries with no feasible CURRENT state, take NEXT
+        %state to be feasible in the no-load case(i.e. P(wk=1|lambda_inf)=1)
+        if(~isempty(P_fullmtx(all(P_fullmtx==0,2),:)))
+            emptyRows=all(P_fullmtx==0,2);
+            for rowNum=find(emptyRows==1)'
+                P_fullmtx(rowNum,:)=[1, zeros(1,size(P_fullmtx,2)-1)];
+            end
+        end
+        
+        
     g{p}=gVec_p';
     E_Ind_Vect{p}=E_Ind_Vect_p;
-        
-    %STEP 5
-    %Construct F matrix
-%     for r=1:length(nextE_Ind_Vect)
-%       boolRowFull=0; %Flag to achieve 1 element per row of F. Set flag off initially.
-%       indNextE=r; %Get index for next element in nextE_Ind_Vect to check as r-th row, since next state index is constant for all elements in row
-%       
-% %       for c=1:M*N1*N2
-% %         if(nextE_Ind_Vect(indNextE)==-1) %If find infeasible next state... NOT POSSIBLE
-% %             %F(r,c)=0; %Do not consider state
-% %         else  %Fill in row with 1's so as to map state to next state
-% %             if (mod(r,M)==0) %Special case for mod function w/ 1-indexing
-% %                 Cond=(c==(nextE_Ind_Vect(indNextE))*M);                          %<----------------------- TO CHECK!!
-% %             else
-% %                 Cond=(c==((nextE_Ind_Vect(indNextE)-1)*M+mod(r,M)));             %<----------------------- TO CHECK!!
-% %             end
-% %             %^^ General next state mapping condition. 1 if mapping.
-% %             if (Cond &&(~boolRowFull)) %Full condition. If generally mapping and still not filled, fill in with 1.
-% %                 F(r,c)=1; 
-% %                 boolRowFull=1;
-% %             end
-% %         end
-% %         
-% %       end
-% 
-%         %Get index for column as next state #, since mapping current state (linear in row) to next
-%         %Next state # = Next E-state value + Offset for demand
-%         %1) Get offset
-%         repNxtEState=nnz(nextE_Ind_Vect(1:indNextE-1)==nextE_Ind_Vect(indNextE)); %Count number of repeated entries of next E-state (one for each load possible)
-%         offs=repNxtEState+1; %Current demand # in next state vector (offset)
-%         %2) Get c
-%         c=nextE_Ind_Vect(indNextE)+offs-1;
-%         
-%         %Complete mapping
-%         F(r,c)=1;
-%     end
-%     %To complete F, set other elements in F to 0
-%     F(F~=1)=0;
-
+    nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
+    aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
+    
+    
     
     %STEP 6
     %Create P matrix: select rows corresponding to components in nextE_Ind_Vect
     for r=1:length(E_Ind_Vect_p)
-        Ind_nextE=nextE_Ind_Vect(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
+        Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
         
         %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
-        %Get from position of FIRST Ind_nextE in nextE_Ind_Vect
-        c=find(nextE_Ind_Vect==Ind_nextE,1);
+        c=find(aug_nextE_Ind_Vect_p==Ind_nextE,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
         
         %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
         nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
@@ -251,12 +253,12 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 
     
     %Reset matrices/vectors
-    nextE_Ind_Vect=[];
+    nextE_Ind_Vect_p=[];
     E_Ind_Vect_p=[];
     
     numAdmissibleLoads=0;
     
-    F=[];           %zeros(M*N1*N2,M*N1*N2);
+    %F=[];           %zeros(M*N1*N2,M*N1*N2);
     P_fullmtx=[];   %zeros(N1*N2,M);
     P=[];           %zeros(M*N1*N2,M*N1*N2);
     
@@ -272,25 +274,53 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
       E_Ind_VectALL=[E_Ind_VectALL; E_Ind_Mtx_nzRow'];
   end
   
+  
   %STEP : Construct each F matrix
   for p=1:P1*P2
-      E_Ind_Vect_p=E_Ind_Vect{p};
+      aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
       row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
       
-      %Go through E-state index vector for current value of p...
-      for r=1:length(E_Ind_Vect_p)
-          while(E_Ind_VectALL(row)~=E_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
+      %Go through next E-state index vector for current value of p...
+      for r=1:length(aug_nextE_Ind_Vect_p)
+          %If next state is currently infeasible...
+          if aug_nextE_Ind_Vect_p(r)<E_Ind_VectALL(row) %(i.e. NOT continuously increasing in augmented vector)
+             row=1; %Restart from beginning of E_Ind_VectALL to find the state <---------------------------------- ASSUMING ONLY 1 new currently infeasible state!
+          end
+          while(E_Ind_VectALL(row)~=aug_nextE_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
               row=row+1;    %Continue
           end
           F_p(r,row)=1; %Once reached, map
-          row=row+1;  %Start at next column in F next time (continuously increasing)
+          row=row+1;  %Start at next column in F next time <----------------------------------------------------- ASSUMING continuously increasing in augmented vector!!!
       end
       %Add extra zeros at end to ensure dimensions of F_p and E_Ind_VectALL match
       F_p(:,row:length(E_Ind_VectALL))=0;
       
       F{p}=F_p;
       F_p=[]; %Reset
+      
+      PF{p} = PF{p}*F{p}; %Finish PF matrices
+  end
+  
+  %STEP : Construct each G matrix
+  for p=1:P1*P2
+      E_Ind_Vect_p=E_Ind_Vect{p};
+      %Index COLUMN of G matrix by ROW number of E_Ind_VectALL
+      row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
+      
+      %Go through E-state index vector for current value of p...
+      for r=1:length(E_Ind_Vect_p)
+          while(E_Ind_VectALL(row)~=E_Ind_Vect_p(r)) %While not reached mapping column in G (ONLY 1 per row)...
+              row=row+1;    %Continue
+          end
+          G_p(r,row)=1; %Once reached, map
+          row=row+1;  %Start at next column in G next time (continuously increasing)
+      end
+      %Add extra zeros at end to ensure dimensions of G_p and E_Ind_VectALL match
+      G_p(:,row:length(E_Ind_VectALL))=0;
+      
+      G{p}=G_p;
+      G_p=[]; %Reset
   end
   
   c;
@@ -305,7 +335,7 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
     subject to
         for p=1:P1*P2
             %d{p} : (eye(length(PF))-DISCOUNT*PF(:,:,p))*cost <= g(:,p)
-            d{p} : (eye(length(PF{p}))-DISCOUNT*PF{p})*F{p}*cost <= g{p} %<-------- HOW TO ENSURE PF{p} is SQUARE for ALL p???
+            d{p} : (G{p}-DISCOUNT*PF{p})*cost <= g{p} %<-------- HOW TO ENSURE PF{p} is SQUARE for ALL p???
         end
   cvx_end
   %Get vector of optimal dual from cell array form
