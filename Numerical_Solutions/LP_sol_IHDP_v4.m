@@ -315,13 +315,22 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
           F_p(r,row)=1; %Once reached, map
           row=row+1;  %Start at next column in F next time <----------------------------------------------------- ASSUMING continuously increasing in augmented vector!!!
       end
-      %Add extra zeros at end to ensure dimensions of F_p and E_Ind_VectALL match
-      F_p(:,row:length(E_Ind_VectALL))=0;
+      
+      if isempty(F_p)   %If empty, ignore
+         F_p=0;
+      else      %IN MOST CASES...
+        %Add extra zeros at end to ensure dimensions of F_p and E_Ind_VectALL match
+        F_p(:,row:length(E_Ind_VectALL))=0;
+      end
       
       F{p}=F_p;
       F_p=[]; %Reset
       
-      PF{p} = PF{p}*F{p}; %Finish PF matrices
+      if isempty(PF{p}) %If no next state..
+          PF{p}=0;  %Ignore constraint
+      else      %IN MOST CASES...
+         PF{p} = PF{p}*F{p}; %Finish PF matrices 
+      end
   end
   
   %STEP : Construct each G matrix
@@ -338,8 +347,13 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
           G_p(r,row)=1; %Once reached, map
           row=row+1;  %Start at next column in G next time (continuously increasing)
       end
-      %Add extra zeros at end to ensure dimensions of G_p and E_Ind_VectALL match
-      G_p(:,row:length(E_Ind_VectALL))=0;
+      
+      if isempty(G_p)   %If empty, ignore constraint
+         G_p=0;
+      else      %IN MOST CASES...
+        %Add extra zeros at end to ensure dimensions of G_p and E_Ind_VectALL match
+        G_p(:,row:length(E_Ind_VectALL))=0;
+      end
       
       G{p}=G_p;
       G_p=[]; %Reset
