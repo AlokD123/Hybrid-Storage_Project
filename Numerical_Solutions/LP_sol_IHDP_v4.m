@@ -67,6 +67,8 @@ P=[];
 
 indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 
+unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
+
 %PART A: SET UP MATRICES
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
@@ -81,7 +83,7 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
         %rowInd_Emtx=p-1; %Reset when restarting from top to add more states for next value of p
         
         %Flag for updating the last stored nextE_Ind value (see below)
-        boolUpdTemp=1; 
+        %boolUpdTemp=1; 
         
         %For each state at an iteration...
         for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
@@ -138,26 +140,28 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
                                   nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
                                   
                                   
-                                  %STEP 
+                                  %STEP
                                   %Create augmented vector containing  current E-states, AND ALSO next E-states ONLY for load=0
-                                  if(E_Ind==nextE_Ind && boolUpdTemp) %If current E-state same as next E-state AND don't have any stored state to insert
-                                      aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add to augmented vector
-                                  else %Else...
+                                  if(length(nextE_Ind_Vect_p)==1) %If first state being added...
+                                      aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
+                                  else                            %ALL OTHER CASES
                                       if(above_E_Ind==E_Ind) %If repeating E_Ind...
-                                          if(boolUpdTemp) 
-                                            temp=nextE_Ind; %Store nextE_Ind value for later <-------- ASSUMPTION: next state currently infeasible is right after new feasible current state
-                                            boolUpdTemp=0; %Don't update temp until added this state to aug vector
-                                          end
-                                          %Continue as is
-                                          aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add CURRENT E-state to augmented vector
+                                          %if(boolUpdTemp) 
+                                          unrepNextE_Inds=[unrepNextE_Inds; nextE_Ind]; %Store nextE_Ind value for later (whether currently infeasible OR POSSIBLY NOT)
+                                            %boolUpdTemp=0; %Don't update temp until added this state to aug vector
+                                          %end
+                                          aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Just add CURRENT E-state to augmented vector
                                       else
-                                          %Else, if adding new E_Ind value (not repeating for load)
-                                          if ~any(nnz(E_Ind_Vect_p==temp)) %If stored state NOT in state space of current E-states...
-                                              aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; temp; E_Ind]; %Insert next E-state in between
-                                          else
-                                              aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Otherwise, just add
+                                          %Else, if adding new E_Ind value (not repeating for load)...
+                                          %For each next state not (/not yet) in aug_nextE_Ind_Vect_p...
+                                          for unrepI=unrepNextE_Inds'
+                                              if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
+                                                aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI]; %Insert in between
+                                              end
                                           end
-                                          boolUpdTemp=1; %Resume updating temp
+                                          aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add regular state index at end, as usual
+                                          %boolUpdTemp=1; %Resume updating temp
+                                          unrepNextE_Inds=[]; %Restart list of unrepeated nextE_Ind values
                                       end
                                   end
                                   above_E_Ind=E_Ind; %Update "above" E_ind value to current position
@@ -178,6 +182,7 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
                             %If no feasible state for this combination of (E1,E2) and L...
                             nextE_Ind=-1; %Flag next state as impossible
                         end
+                        
 
                         %STEP 3
                         %Create full probability matrix
@@ -226,6 +231,7 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
             end
         end
         
+    unrepNextE_Inds=[]; %Restart list of unrepeated nextE_Ind values
         
     g{p}=gVec_p';
     E_Ind_Vect{p}=E_Ind_Vect_p;
