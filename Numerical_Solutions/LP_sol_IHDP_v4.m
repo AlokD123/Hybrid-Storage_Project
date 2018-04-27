@@ -141,7 +141,8 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
                                   
                                   
                                   %STEP
-                                  %Create augmented vector containing  current E-states, AND ALSO next E-states ONLY for load=0
+                                  %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
+                                  %ONLY for load=0 
                                   if(length(nextE_Ind_Vect_p)==1 && E_Ind==nextE_Ind) %If first state being added, and not differing...
                                       aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
                                   else                            %ALL OTHER CASES
@@ -237,7 +238,10 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
             aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI]; %Insert in between
         end
     end
-        
+    %Also, exclude from the augmented vector states that are nextly infeasible
+    nextlyInfE=~ismember(aug_nextE_Ind_Vect_p,nextE_Ind_Vect_p);
+    aug_nextE_Ind_Vect_p(nextlyInfE)=[];
+    
     unrepNextE_Inds=[]; %Restart list of unrepeated nextE_Ind values
         
     g{p}=gVec_p';
