@@ -242,14 +242,8 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
     nextlyInfE=~ismember(aug_nextE_Ind_Vect_p,nextE_Ind_Vect_p);
     aug_nextE_Ind_Vect_p(nextlyInfE)=[];
     
-    unrepNextE_Inds=[]; %Restart list of unrepeated nextE_Ind values
-        
-    g{p}=gVec_p';
-    E_Ind_Vect{p}=E_Ind_Vect_p;
-    nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
-    aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
-    
-    
+    %At end of p-th cycle, restart list of unrepeated nextE_Ind values
+    unrepNextE_Inds=[];
     
     %STEP 6
     %Create P matrix: select rows corresponding to components in nextE_Ind_Vect
@@ -268,15 +262,23 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
         P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
         
     end
-    
+        
     %Multiply to get p-th PF matrix
     PF{end+1}=P;
 
+    
+    %Store vector data in cell array
+    g{p}=gVec_p';
+    E_Ind_Vect{p}=E_Ind_Vect_p;
+    nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
+    aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
+    
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
     E_Ind_Vect_p=[];
     aug_nextE_Ind_Vect_p=[];
+    gVec_p=[];
     
     numAdmissibleLoads=0;
     
@@ -359,6 +361,13 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
       G_p=[]; %Reset
   end
   
+  %Set g=zeros for empty g vectors
+  for p=1:P1*P2
+    if isempty(g{p})
+       g{p}=zeros(length(E_Ind_VectALL),1);
+    end
+  end
+  
   c;
   %PART B: OPTIMIZATION
   %Created LP matrices and vectors.
@@ -371,16 +380,16 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
     subject to
         for p=1:P1*P2
             %d{p} : (eye(length(PF))-DISCOUNT*PF(:,:,p))*cost <= g(:,p)
-            d{p} : (G{p}-DISCOUNT*PF{p})*cost <= g{p} %<-------- HOW TO ENSURE PF{p} is SQUARE for ALL p???
+            d{p} : (G{p}-DISCOUNT*PF{p})*cost <= g{p}
         end
   cvx_end
   %Get vector of optimal dual from cell array form
   optD = cell2mat(d);
   
   %Format cost vector into E1xE2 matrices (M matrices, for each value of load)
-    for(i1=0:M*N2:M*N2*(N1-1))
-        for(j=0:M-1)
-          for(ind=(1+i1+j):M:(M*(N2-1)+i1+(j+1)))
+    for i1=0:M*N2:M*N2*(N1-1)
+        for j=0:M-1
+          for ind=(1+i1+j):M:(M*(N2-1)+i1+(j+1))
               if(mod(ind,M*N2)==0)
                 ind2=(M*N2-1-j)/M+1;
               else
