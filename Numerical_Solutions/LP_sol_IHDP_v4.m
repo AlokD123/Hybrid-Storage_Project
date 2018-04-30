@@ -113,6 +113,9 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
                         %Calculate the state these values of u and w will lead to, even if
                         %impossible...
                         [nextE1,nextE2]=optNextStateLimited(E1,E2,D1,D2,L);
+%                         if(D1==5)
+%                            nextE1=0; 
+%                         end
 
                         %If next state is amongst those achievable with a given perturbance....
                         if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
@@ -322,7 +325,7 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
          F_p=0;
       else      %IN MOST CASES...
         %Add extra zeros at end to ensure dimensions of F_p and E_Ind_VectALL match
-        F_p(:,row:length(E_Ind_VectALL))=0;
+        F_p(:,(size(F_p,2)+1):length(E_Ind_VectALL))=0;
       end
       
       F{p}=F_p;
@@ -354,7 +357,7 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
          G_p=0;
       else      %IN MOST CASES...
         %Add extra zeros at end to ensure dimensions of G_p and E_Ind_VectALL match
-        G_p(:,row:length(E_Ind_VectALL))=0;
+        G_p(:,(size(G_p,2)+1):length(E_Ind_VectALL))=0;
       end
       
       G{p}=G_p;
