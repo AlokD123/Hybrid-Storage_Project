@@ -405,16 +405,13 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
   cvx_begin
     grbControl.LPMETHOD = 1; % Use dual simplex method
     variable cost(size(Q,2))
-    dual variables d{P1*P2}
+    dual variables d
     maximize( sum(cost) )
     subject to
-        for p=1:P1*P2
-            %d{p} : (eye(length(PF))-DISCOUNT*PF(:,:,p))*cost <= g(:,p)
-            d{p} : (G{p}-DISCOUNT*PF{p})*cost <= g{p}
-        end
+        d : Q*cost <= b
   cvx_end
-  %Get vector of optimal dual from cell array form
-  optD = cell2mat(d);
+  %Get vector of optimal dual
+  optD = d;
   
   %Format cost vector into E1xE2 matrices (M matrices, for each value of load)
     for i1=0:M*N2:M*N2*(N1-1)
