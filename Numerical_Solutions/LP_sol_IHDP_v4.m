@@ -69,6 +69,8 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 
 unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
 
+Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
+
 %PART A: SET UP MATRICES
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
@@ -104,7 +106,11 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
                 else
                     %Index row in E-state indices mtx (for feasible E-state) same as VALUE of E-state index
                     rowInd_Emtx = E_Ind;
-                    %For each perturbation at the CURRENT time
+                    %Determine MINIMUM required load for high discharge, to
+                    %not overflow E2 (one for each E-state)
+                    Lmin_p=[Lmin_p  ;  max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0)]; %Calculate Lmin and append
+                    
+                    %For each perturbation at the CURRENT time...
                     for indL=1:(MAX_LOAD-MIN_LOAD+1)
                         %Map index to value of load
                         L=indL+MIN_LOAD-1;
@@ -275,13 +281,14 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
     E_Ind_Vect{p}=E_Ind_Vect_p;
     nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
     aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
-    
+    Lmin{p}=Lmin_p;
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
     E_Ind_Vect_p=[];
     aug_nextE_Ind_Vect_p=[];
     gVec_p=[];
+    Lmin_p=[];
     
     numAdmissibleLoads=0;
     
@@ -371,13 +378,33 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
     end
   end
   
-  c;
-  %PART B: OPTIMIZATION
+  %% CORRECTED MATRICES (REMAINING infeasible states removed)
+  %1) Coefficients
+  %Create full 'A' matrices for coefficients (A=G-alpha*PF)
+  for p=1:P1*P2
+    A{p}=G{p}-DISCOUNT*PF{p};
+  end
+  %Adjoin A matrices to form Q
+  Q=[];
+  for p=1:P1*P2
+    Q=[Q;A{p}];
+  end
+  %Remove empty columns of Q
+  Q(:,~any(Q,1))=[];
+  
+  %2) Constants
+  %Create full 'b' vector for constants
+  b=[];
+  for p=1:P1*P2
+    b=[b;g{p}];
+  end
+  
+  %% PART B: OPTIMIZATION
   %Created LP matrices and vectors.
   %Run optimization problem, and find primal as well as dual.
   cvx_begin
     grbControl.LPMETHOD = 1; % Use dual simplex method
-    variable cost(length(E_Ind_VectALL))
+    variable cost(size(Q,2))
     dual variables d{P1*P2}
     maximize( sum(cost) )
     subject to
@@ -403,7 +430,7 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
         end
     end
     
-    %PART C: STATIONARY POLICY
+    %% PART C: STATIONARY POLICY
     %Create vector of probabilities marginalized over control applied (denominator)
     d_state=zeros(N1*N2*M,1);
     for(iij=1:N1*N2*M)
