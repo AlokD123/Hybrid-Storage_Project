@@ -113,9 +113,9 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
                         %Calculate the state these values of u and w will lead to, even if
                         %impossible...
                         [nextE1,nextE2]=optNextStateLimited(E1,E2,D1,D2,L);
-%                         if(D1==5)
-%                            nextE1=0; 
-%                         end
+                        if(D1==5) %<---------------------------------------------------------------------------- SOL#2 for excess discharge: saturate state!!!!!!!!!!!!!!
+                           nextE1=0; 
+                        end
 
                         %If next state is amongst those achievable with a given perturbance....
                         if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
@@ -312,13 +312,13 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
       for r=1:length(aug_nextE_Ind_Vect_p)
           %If next state is currently infeasible...
           if aug_nextE_Ind_Vect_p(r)<E_Ind_VectALL(row) %(i.e. NOT continuously increasing in augmented vector)
-             row=1; %Restart from beginning of E_Ind_VectALL to find the state <---------------------------------- ASSUMING ONLY 1 new currently infeasible state!
+             row=1; %Restart from beginning of E_Ind_VectALL to find the state <----- ASSUMING ONLY 1 distinc new currently infeasible state!
           end
           while(E_Ind_VectALL(row)~=aug_nextE_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
               row=row+1;    %Continue
           end
           F_p(r,row)=1; %Once reached, map
-          row=row+1;  %Start at next column in F next time <----------------------------------------------------- ASSUMING continuously increasing in augmented vector!!!
+          row=row+1;  %Start at next column in F next time <-------- Assuming continuously increasing in augmented vector (fixed above)
       end
       
       if isempty(F_p)   %If empty, ignore
