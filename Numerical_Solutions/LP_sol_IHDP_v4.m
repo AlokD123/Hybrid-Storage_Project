@@ -70,8 +70,9 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
 
 Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
+Lmin_offs_p=[]; %Vector of minimum load offsets to each E-state, TO CORRECTLY MAP F AND G matrices
 
-%PART A: SET UP MATRICES
+%% PART A: SET UP MATRICES
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
     for D2=0:MAX_DISCHARGE(2)
@@ -108,7 +109,8 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
                     rowInd_Emtx = E_Ind;
                     %Determine MINIMUM required load for high discharge, to
                     %not overflow E2 (one for each E-state)
-                    Lmin_p=[Lmin_p  ;  max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0)]; %Calculate Lmin and append
+                    minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin
+                    Lmin_p=[Lmin_p; minL]; %Create vector
                     
                     %For each perturbation at the CURRENT time...
                     for indL=1:(MAX_LOAD-MIN_LOAD+1)
@@ -119,7 +121,7 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
                         %Calculate the state these values of u and w will lead to, even if
                         %impossible...
                         [nextE1,nextE2]=optNextStateLimited(E1,E2,D1,D2,L);
-                        if(D1==5) %<---------------------------------------------------------------------------- SOL#2 for excess discharge: saturate state!!!!!!!!!!!!!!
+                        if(D1==MAX_DISCHARGE(1)) %<---------------------------------------------------------------------------- SOL#2 for excess discharge: saturate state!!!!!!!!!!!!!!
                            nextE1=0; 
                         end
 
@@ -131,7 +133,7 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
                                 if(~((D1+D2-L)<0||(D1+D2-L)>MAX_CHARGE(2)))
                                   %Count the number of feasible states for a given set of controls (D1,D2)
                                   indCount=indCount+1; %... and use as an index
-                                    
+                                  
                                   %STEP 1
                                   %Add state energy index to vector of FEASIBLE state energies for current value of p (D1,D2 combo)
                                   E_Ind_Vect_p=[E_Ind_Vect_p;E_Ind];
@@ -177,9 +179,12 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
                                   above_E_Ind=E_Ind; %Update "above" E_ind value to current position
                                   
                                   
-                                  
+                                  %STEP
                                   %Add indL to list of FEASIBLE loads for this combination of u and x
                                   indL_Feas=[indL_Feas;indL];
+                                  %Create vector of minimum load values for each E-state, WITH repeats (to add OFFSETS in F and G matrices)
+                                  Lmin_offs_p=[Lmin_offs_p;minL];
+                                  
                                 else
                                   %If no feasible state for this combination of (E1,E2) and L...
                                   nextE_Ind=-1; %Flag next state as impossible
@@ -205,16 +210,10 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
 
                             %STEP 4
                             %Create p-th vector g, for constraint
-                            %g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=CtrlCost(D1,D2,L);
-                            %g(indCount,p)=CtrlCost(D1,D2,L);
                             gVec_p(indCount)=CtrlCost(D1,D2,L); %Cost of stage is given by CtrlCost
 
                         else %Else if infeasible next state...
                             %DO NOTHING
-                            %Set 0 probability (for given control)
-                            %P_fullmtx(E_Ind,indL)=0;
-                            %Ignore constraint
-                            %g(indL+M*(E_Ind2-1+N2*(E_Ind1-1)),p)=INF_COST; %Because probability of transition is zero, have set constraint to ARBITRARY sentinel value
                         end
                     end
 
@@ -282,6 +281,7 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
     nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
     aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
     Lmin{p}=Lmin_p;
+    Lmin_offs{p}=Lmin_offs_p;
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
@@ -289,6 +289,7 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
     aug_nextE_Ind_Vect_p=[];
     gVec_p=[];
     Lmin_p=[];
+    Lmin_offs_p=[];
     
     numAdmissibleLoads=0;
     
@@ -348,13 +349,29 @@ Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
   %STEP : Construct each G matrix
   for p=1:P1*P2
       E_Ind_Vect_p=E_Ind_Vect{p};
+      Lmin_offs_p=Lmin_offs{p};
       %Index COLUMN of G matrix by ROW number of E_Ind_VectALL
       row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
       
       %Go through E-state index vector for current value of p...
       for r=1:length(E_Ind_Vect_p)
+          %Find distinct new E-state
+          if(r==1)
+              boolNewEState=1;
+          else
+              if(E_Ind_Vect_p(r)~=E_Ind_Vect_p(r-1))
+                 boolNewEState=1;
+              else
+                  boolNewEState=0;
+              end
+          end
           while(E_Ind_VectALL(row)~=E_Ind_Vect_p(r)) %While not reached mapping column in G (ONLY 1 per row)...
               row=row+1;    %Continue
+          end
+          if(boolNewEState==1)  %Only if distinct new state...
+              row=row+Lmin_offs_p(r); %Add minimum load offset to first state #
+          else
+              %Otherwise, do nothing because already starting from offset
           end
           G_p(r,row)=1; %Once reached, map
           row=row+1;  %Start at next column in G next time (continuously increasing)
