@@ -63,6 +63,7 @@ numAdmissibleLoads=0; %Count number of admissible load values for a given energy
 %PF=zeros(M*N1*N2,M*N1*N2,P1*P2);  %PF-matrices, product of P and F (one for each value of 1<=p<=P)
 %g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of 1<=p<=P)
 PF={};
+P_mtx={};
 P=[];
 
 indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
@@ -71,7 +72,7 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
 
 Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
 Lmin_offs_p=[]; %Vector of minimum load offsets for each E-state, to create CORRECT MAPPING in G matrix
-aug_Lmin_offs_p=[]; %Same, but for next E-states (augmented vector), for F matrix mapping
+%aug_Lmin_offs_p=[]; %Same, but for next E-states (augmented vector), for F matrix mapping
 
 boolDiffNxtState=0; %Flag to indicate different next state different, so don't add current E-state
 
@@ -155,7 +156,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                                   %ONLY for load=0 
                                   if(length(nextE_Ind_Vect_p)==1 && E_Ind==nextE_Ind) %If first state being added, and not differing...
                                       aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
-                                      aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Create vector of minimum load values for each nextE-state, WITH repeats (to add OFFSETS in F matrix)
+                                      %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Create vector of minimum load values for each nextE-state, WITH repeats (to add OFFSETS in F matrix)
                                   else                            %ALL OTHER CASES
                                       if(above_E_Ind==E_Ind) %If repeating E_Ind...
                                           %if(boolUpdTemp) 
@@ -164,7 +165,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                                           %end
                                           if (boolDiffNxtState==0) %If same next state INITIALLY (i.e. for current E-state with load=0)
                                             aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Just add CURRENT E-state to augmented vector
-                                            aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
+                                            %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
                                           else
                                               %Don't add
                                           end
@@ -177,15 +178,15 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                                                     %^--------------ASSUMPTION: E_Ind_Vect_p contains x times, since nextEIndVect increasing in value up to unrepI, and EIndVect(i)>=nextEIndVect(i)
                                                     %Insert in between (x times)
                                                    aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
-                                                   E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
-                                                   unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
-                                                   aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
+                                                   %E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
+                                                   %unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
+                                                   %aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
                                                 end
                                               end
                                           end
                                           if (E_Ind==nextE_Ind) %IF should include current E-state (because amongst next E-states)...
                                             aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add regular state index at end, as usual
-                                            aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
+                                            %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
                                             boolDiffNxtState=0;
                                           else
                                              boolDiffNxtState=1;
@@ -264,9 +265,9 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
         for i=1:max(nnz(E_Ind_Vect_p==unrepI),1) %Determine x, number of times to insert (number of loads, at least including load=0)
             %Insert in between (x times)
            aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
-           E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
-           unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
-           aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
+           %E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
+           %unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
+           %aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
         end
       end
     end
@@ -296,8 +297,9 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
         
     end
         
-    %Multiply to get p-th PF matrix
+    %Store in p-th PF matrix, as well as in own P_mtx
     PF{end+1}=P;
+    P_mtx{end+1}=P;
 
     
     %Store vector data in cell array
@@ -307,7 +309,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
     Lmin{p}=Lmin_p;
     Lmin_offs{p}=Lmin_offs_p;
-    aug_Lmin_offs{p}=aug_Lmin_offs_p;
+    %aug_Lmin_offs{p}=aug_Lmin_offs_p;
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
@@ -316,7 +318,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     gVec_p=[];
     Lmin_p=[];
     Lmin_offs_p=[];
-    aug_Lmin_offs_p=[];
+    %aug_Lmin_offs_p=[];
     
     numAdmissibleLoads=0;
     
@@ -340,7 +342,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
   %STEP : Construct each F matrix
   for p=1:P1*P2
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
-      aug_Lmin_offs_p=aug_Lmin_offs{p};
+      %aug_Lmin_offs_p=aug_Lmin_offs{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
       row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
       
@@ -366,11 +368,11 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
               row=row+1;    %Continue
           end
           
-          if(boolNewNextEState==1)  %Only if distinct new next state in next state (augmented) vector...
-              row=row+aug_Lmin_offs_p(r); %Add minimum load offset to the first state #
-          else
-              %Otherwise, do nothing because already starting from offset
-          end
+%           if(boolNewNextEState==1)  %Only if distinct new next state in next state (augmented) vector...
+%               row=row+aug_Lmin_offs_p(r); %Add minimum load offset to the first state #
+%           else
+%               %Otherwise, do nothing because already starting from offset
+%           end
           
           F_p(r,row)=1; %Once reached, map
           row=row+1;  %Start at next column in F next time <-------- Assuming continuously increasing in augmented vector (fixed above)
