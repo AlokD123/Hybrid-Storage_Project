@@ -72,6 +72,8 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
 Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
 Lmin_offs_p=[]; %Vector of minimum load offsets to each E-state, TO CORRECTLY MAP F AND G matrices
 
+boolDiffNxtState=0; %Flag to indicate different next state different, so don't add current E-state
+
 %% PART A: SET UP MATRICES
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
@@ -162,16 +164,29 @@ Lmin_offs_p=[]; %Vector of minimum load offsets to each E-state, TO CORRECTLY MA
                                           unrepNextE_Inds=[unrepNextE_Inds; nextE_Ind]; %Store nextE_Ind value for later (whether currently infeasible OR POSSIBLY NOT)
                                             %boolUpdTemp=0; %Don't update temp until added this state to aug vector
                                           %end
-                                          aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Just add CURRENT E-state to augmented vector
+                                          if (boolDiffNxtState==0) %If same next state INITIALLY (i.e. for current E-state with load=0)
+                                            aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Just add CURRENT E-state to augmented vector
+                                          else
+                                              %Don't add
+                                          end
                                       else
                                           %Else, if adding new E_Ind value (not repeating for load)...
                                           %For each next state not (/not yet) in aug_nextE_Ind_Vect_p...
                                           for unrepI=unrepNextE_Inds'
                                               if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
-                                                aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI]; %Insert in between
+                                                for i=1:max(nnz(E_Ind_Vect_p==unrepI),1) %Determine x, number of times to insert (number of loads, at least including load=0)
+                                                    %^--------------ASSUMPTION: E_Ind_Vect_p contains x times, since nextEIndVect increasing in value up to unrepI, and EIndVect(i)>=nextEIndVect(i)
+                                                    %Insert in between (x times)
+                                                   aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
+                                                end
                                               end
                                           end
-                                          aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add regular state index at end, as usual
+                                          if (E_Ind==nextE_Ind) %IF should include current E-state (because amongst next E-states)...
+                                            aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add regular state index at end, as usual
+                                            boolDiffNxtState=0;
+                                          else
+                                             boolDiffNxtState=1;
+                                          end
                                           %boolUpdTemp=1; %Resume updating temp
                                           unrepNextE_Inds=nextE_Ind; %Restart list of unrepeated nextE_Ind values
                                       end
@@ -406,8 +421,11 @@ Lmin_offs_p=[]; %Vector of minimum load offsets to each E-state, TO CORRECTLY MA
   for p=1:P1*P2
     Q=[Q;A{p}];
   end
-  %Remove empty columns of Q
-  Q(:,~any(Q,1))=[];
+  %If empty columns in Q...
+  if (~all(any(Q,1)))
+      disp('ERROR!!!!!'); %ERROR
+     Q(:,~any(Q,1))=[]; %Remove, for now 
+  end
   
   %2) Constants
   %Create full 'b' vector for constants
