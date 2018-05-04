@@ -138,7 +138,9 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                                   %Add state energy index to vector of FEASIBLE state energies for current value of p (D1,D2 combo)
                                   E_Ind_Vect_p=[E_Ind_Vect_p;E_Ind];
                                   %Add state energy index to matrix of ALL FEASIBLE energies
+                                  %DO NOT RESET at end. Will overwrite with same values (and add) each time, which is ok.
                                   E_Ind_MtxALL(rowInd_Emtx,indL)=E_Ind;
+                                  E_Ind_Mtx_p(rowInd_Emtx,indL)=E_Ind;
                                     
                                   %Map state to state index, to find cost of next state based on its index
                                   nextE_Ind1=round(nextE1-E_MIN(1)+1);
@@ -310,6 +312,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     Lmin{p}=Lmin_p;
     Lmin_offs{p}=Lmin_offs_p;
     %aug_Lmin_offs{p}=aug_Lmin_offs_p;
+    E_Ind_Mtx{p}=E_Ind_Mtx_p;
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
@@ -319,6 +322,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     Lmin_p=[];
     Lmin_offs_p=[];
     %aug_Lmin_offs_p=[];
+    E_Ind_Mtx_p=[];
     
     numAdmissibleLoads=0;
     
