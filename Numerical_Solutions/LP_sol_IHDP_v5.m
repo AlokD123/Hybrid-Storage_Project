@@ -54,13 +54,6 @@ nextE_Ind_Vect_p=[];  %Vector of next state energies
 aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
 
-%F=zeros(M*N1*N2,M*N1*N2);         %Transition matrix, to get next states
-
-%P_fullmtx=zeros(N1*N2,M);         %Full matrix of load probabilities given state
-%P=zeros(M*N1*N2,M*N1*N2);         %P matrix, containing probabilties of next states 
-
-%PF=zeros(M*N1*N2,M*N1*N2,P1*P2);  %PF-matrices, product of P and F (one for each value of 1<=p<=P)
-%g=zeros(M*N1*N2,P1*P2);           %stage cost (g) vectors (one for each value of 1<=p<=P)
 PF={};
 P_mtx={};
 P=[];
@@ -71,7 +64,6 @@ unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
 
 Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
 Lmin_offs_p=[]; %Vector of minimum load offsets for each E-state, to create CORRECT MAPPING in G matrix
-%aug_Lmin_offs_p=[]; %Same, but for next E-states (augmented vector), for F matrix mapping
 
 boolDiffNxtState=0; %Flag to indicate different next state different, so don't add current E-state
 
@@ -85,11 +77,6 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
         p=D2_Ind+P2*(D1_Ind-1);
         
         indCount=0; %Index for feasible state #, for a given value of p
-        %Index for row in E-state matrix
-        %rowInd_Emtx=p-1; %Reset when restarting from top to add more states for next value of p
-        
-        %Flag for updating the last stored nextE_Ind value (see below)
-        %boolUpdTemp=1; 
         
         %For each state at an iteration...
         for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
@@ -153,48 +140,48 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                                   
                                   
                                   
-                                  if(length(nextE_Ind_Vect_p)==1 && E_Ind==nextE_Ind) %If first state being added, and not differing...
-                                      aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
-                                      %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Create vector of minimum load values for each nextE-state, WITH repeats (to add OFFSETS in F matrix)
-                                  else                            %ALL OTHER CASES
-                                      if(above_E_Ind==E_Ind) %If repeating E_Ind...
-                                          %if(boolUpdTemp) 
-                                          unrepNextE_Inds=[unrepNextE_Inds; nextE_Ind]; %Store nextE_Ind value for later (whether currently infeasible OR POSSIBLY NOT)
-                                            %boolUpdTemp=0; %Don't update temp until added this state to aug vector
-                                          %end
-                                          if (boolDiffNxtState==0) %If same next state INITIALLY (i.e. for current E-state with load=0)
-                                            aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Just add CURRENT E-state to augmented vector
-                                            %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
-                                          else
-                                              %Don't add
-                                          end
-                                      else
-                                          %Else, if adding new E_Ind value (not repeating for load)...
-                                          %For each next state not (/not yet) in aug_nextE_Ind_Vect_p...
-                                          for unrepI=unrepNextE_Inds'
-                                              if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
-                                                for i=1:max(nnz(E_Ind_Vect_p==unrepI),1) %Determine x, number of times to insert (number of loads, at least including load=0)
-                                                    %^--------------ASSUMPTION: E_Ind_Vect_p contains x times, since nextEIndVect increasing in value up to unrepI, and EIndVect(i)>=nextEIndVect(i)
-                                                    %Insert in between (x times)
-                                                   aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
-                                                   %E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
-                                                   %unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
-                                                   %aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
-                                                end
-                                              end
-                                          end
-                                          if (E_Ind==nextE_Ind) %IF should include current E-state (because amongst next E-states)...
-                                            aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add regular state index at end, as usual
-                                            %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
-                                            boolDiffNxtState=0;
-                                          else
-                                             boolDiffNxtState=1;
-                                          end
-                                          %boolUpdTemp=1; %Resume updating temp
-                                          unrepNextE_Inds=nextE_Ind; %Restart list of unrepeated nextE_Ind values
-                                      end
-                                  end
-                                  above_E_Ind=E_Ind; %Update "above" E_ind value to current position
+%                                   if(length(nextE_Ind_Vect_p)==1 && E_Ind==nextE_Ind) %If first state being added, and not differing...
+%                                       aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
+%                                       %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Create vector of minimum load values for each nextE-state, WITH repeats (to add OFFSETS in F matrix)
+%                                   else                            %ALL OTHER CASES
+%                                       if(above_E_Ind==E_Ind) %If repeating E_Ind...
+%                                           %if(boolUpdTemp) 
+%                                           unrepNextE_Inds=[unrepNextE_Inds; nextE_Ind]; %Store nextE_Ind value for later (whether currently infeasible OR POSSIBLY NOT)
+%                                             %boolUpdTemp=0; %Don't update temp until added this state to aug vector
+%                                           %end
+%                                           if (boolDiffNxtState==0) %If same next state INITIALLY (i.e. for current E-state with load=0)
+%                                             aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Just add CURRENT E-state to augmented vector
+%                                             %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
+%                                           else
+%                                               %Don't add
+%                                           end
+%                                       else
+%                                           %Else, if adding new E_Ind value (not repeating for load)...
+%                                           %For each next state not (/not yet) in aug_nextE_Ind_Vect_p...
+%                                           for unrepI=unrepNextE_Inds'
+%                                               if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
+%                                                 for i=1:max(nnz(E_Ind_Vect_p==unrepI),1) %Determine x, number of times to insert (number of loads, at least including load=0)
+%                                                     %^--------------ASSUMPTION: E_Ind_Vect_p contains x times, since nextEIndVect increasing in value up to unrepI, and EIndVect(i)>=nextEIndVect(i)
+%                                                     %Insert in between (x times)
+%                                                    aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
+%                                                    %E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
+%                                                    %unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
+%                                                    %aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
+%                                                 end
+%                                               end
+%                                           end
+%                                           if (E_Ind==nextE_Ind) %IF should include current E-state (because amongst next E-states)...
+%                                             aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add regular state index at end, as usual
+%                                             %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
+%                                             boolDiffNxtState=0;
+%                                           else
+%                                              boolDiffNxtState=1;
+%                                           end
+%                                           %boolUpdTemp=1; %Resume updating temp
+%                                           unrepNextE_Inds=nextE_Ind; %Restart list of unrepeated nextE_Ind values
+%                                       end
+%                                   end
+%                                   above_E_Ind=E_Ind; %Update "above" E_ind value to current position
                                   
                                   
                                   %STEP
@@ -233,18 +220,18 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
             end
         end
     
-    %At end of p-th value cycle, if remaining unadded states, add to end
-    for unrepI=unrepNextE_Inds'
-      if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
-        for i=1:max(nnz(E_Ind_Vect_p==unrepI),1) %Determine x, number of times to insert (number of loads, at least including load=0)
-            %Insert in between (x times)
-           aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
-           %E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
-           %unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
-           %aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
-        end
-      end
-    end
+%     %At end of p-th value cycle, if remaining unadded states, add to end
+%     for unrepI=unrepNextE_Inds'
+%       if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
+%         for i=1:max(nnz(E_Ind_Vect_p==unrepI),1) %Determine x, number of times to insert (number of loads, at least including load=0)
+%             %Insert in between (x times)
+%            aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
+%            %E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
+%            %unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
+%            %aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
+%         end
+%       end
+%     end
         
     %At end of p-th cycle, restart list of unrepeated nextE_Ind values
     unrepNextE_Inds=[];
@@ -364,12 +351,6 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
           while(E_Ind_VectALL(row)~=aug_nextE_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
               row=row+1;    %Continue
           end
-          
-%           if(boolNewNextEState==1)  %Only if distinct new next state in next state (augmented) vector...
-%               row=row+aug_Lmin_offs_p(r); %Add minimum load offset to the first state #
-%           else
-%               %Otherwise, do nothing because already starting from offset
-%           end
           
           F_p(r,row)=1; %Once reached, map
           row=row+1;  %Start at next column in F next time <-------- Assuming continuously increasing in augmented vector (fixed above)
