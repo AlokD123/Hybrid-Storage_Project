@@ -52,7 +52,6 @@ INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 E_Ind_Vect_p=[];      %Vector of current state energies
 nextE_Ind_Vect_p=[];  %Vector of next state energies
 aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
-%FullState_Ind_Vec=[];
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
 
 %F=zeros(M*N1*N2,M*N1*N2);         %Transition matrix, to get next states
@@ -253,11 +252,20 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
 
     %STEP
     %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
+    augVectRow=1; %Index row in new augmented vector
+    for r=1:length(nextE_Ind_Vect_p) %For each next E-state WITH CURRENT CONTROL COMBO (p)
+        %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
+        numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
+        %Add given E-state to augmented vector that many times (for each load)
+        aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1))=nextE_Ind_Vect_p(r);
+    end
     
     %Also, exclude from the augmented vector states that are nextly infeasible
     nextlyInfE=~ismember(aug_nextE_Ind_Vect_p,nextE_Ind_Vect_p);
     aug_nextE_Ind_Vect_p(nextlyInfE)=[];
     Lmin_offs_p(nextlyInfE)=[];
+    
+    
     
     %Store vector data in cell array
     g{p}=gVec_p';
@@ -267,7 +275,6 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     Lmin{p}=Lmin_p;
     Lmin_offs{p}=Lmin_offs_p;
     %aug_Lmin_offs{p}=aug_Lmin_offs_p;
-    E_Ind_Mtx{p}=E_Ind_Mtx_p;
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
@@ -277,7 +284,6 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     Lmin_p=[];
     Lmin_offs_p=[];
     %aug_Lmin_offs_p=[];
-    E_Ind_Mtx_p=[];
     
     numAdmissibleLoads=0;
     
