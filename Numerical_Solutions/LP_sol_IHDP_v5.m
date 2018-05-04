@@ -281,26 +281,6 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     %At end of p-th cycle, restart list of unrepeated nextE_Ind values
     unrepNextE_Inds=[];
     
-    %STEP 6
-    %Create P matrix: select rows corresponding to components in nextE_Ind_Vect
-    for r=1:length(E_Ind_Vect_p)
-        Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
-        
-        %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
-        c=find(aug_nextE_Ind_Vect_p==Ind_nextE,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
-        
-        %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
-        nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
-        %Get said non-zero probabilities
-        prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
-        
-        %Fill in row r with said probabilities
-        P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
-        
-    end
-        
-    %Store in p-th PF matrix, as well as in own P_mtx
-    PF{end+1}=P;
     P_mtx{end+1}=P;
 
     
@@ -326,10 +306,6 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     
     numAdmissibleLoads=0;
     
-    %F=[];           %zeros(M*N1*N2,M*N1*N2);
-    P_fullmtx=[];   %zeros(N1*N2,M);
-    P=[];           %zeros(M*N1*N2,M*N1*N2);
-    
     end
   end
   
@@ -342,6 +318,34 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
       E_Ind_VectALL=[E_Ind_VectALL; E_Ind_Mtx_nzRow'];
   end
   
+  %STEP 6
+  %Create P matrix: select rows corresponding to components in nextE_Ind_Vect
+  %(Doing after P_fullmtx completed)
+  for p=1:P1*P2
+    E_Ind_Vect_p=E_Ind_Vect{p};
+    nextE_Ind_Vect_p=nextE_Ind_Vect{p};
+    aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
+    
+    for r=1:length(E_Ind_Vect_p)
+        Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
+        
+        %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
+        c=find(aug_nextE_Ind_Vect_p==Ind_nextE,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
+        
+        %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
+        nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
+        %Get said non-zero probabilities
+        prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
+        
+        %Fill in row r with said probabilities
+        P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
+    end
+        
+    %Store in p-th PF matrix, as well as in own P_mtx
+    PF{end+1}=P; 
+    %RESET
+    P=[];
+  end
   
   %STEP : Construct each F matrix
   for p=1:P1*P2
