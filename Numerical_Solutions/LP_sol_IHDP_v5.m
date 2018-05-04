@@ -155,7 +155,6 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                                   
                                   %STEP
                                   %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
-                                  %ONLY for load=0 
                                   if(length(nextE_Ind_Vect_p)==1 && E_Ind==nextE_Ind) %If first state being added, and not differing...
                                       aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
                                       %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Create vector of minimum load values for each nextE-state, WITH repeats (to add OFFSETS in F matrix)
@@ -233,15 +232,6 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                     %Reset list of feasible loads (next state)
                     indL_Feas=[];
                 end
-            end
-        end
-    
-        %For P_fullmtx entries with no feasible CURRENT state, take NEXT
-        %state to be feasible in the no-load case(i.e. P(wk=1|lambda_inf)=1)
-        if(~isempty(P_fullmtx(all(P_fullmtx==0,2),:)))
-            emptyRows=all(P_fullmtx==0,2);
-            for rowNum=find(emptyRows==1)'
-                P_fullmtx(rowNum,:)=[1, zeros(1,size(P_fullmtx,2)-1)];
             end
         end
     
