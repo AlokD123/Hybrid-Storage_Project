@@ -286,12 +286,22 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
     %(Note: doing after E_Ind_VectALL complete)
     augVectRow=1; %Index row in new augmented vector
-    for r=1:length(nextE_Ind_Vect_p) %For each next E-state WITH CURRENT CONTROL COMBO (p)
-        %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
-        numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
-        %Add given E-state to augmented vector that many times (for each load)
-        aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
-        augVectRow=augVectRow+numRepNextE; %Start adding at end next time
+    r=1; %Start from beginning
+    while r<(length(nextE_Ind_Vect_p)+1) %For each next E-state WITH CURRENT CONTROL COMBO (p)
+        if (r~=1) %...IN MOST CASES
+            %If next E-state already counted once, do not double-count...
+            while r<(length(nextE_Ind_Vect_p)+1) && nnz(nextE_Ind_Vect_p(1:r-1)==nextE_Ind_Vect_p(r))
+                r=r+1; %Skip to next unrepeated E-state
+            end
+        end
+        if(r~=(length(nextE_Ind_Vect_p)+1))
+            %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
+            numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
+            %Add given E-state to augmented vector that many times (for each load)
+            aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
+            augVectRow=augVectRow+numRepNextE; %Start adding at end next time 
+        end
+        r=r+1; %Manually increment index in while loop
     end
     
     %Also, exclude from the augmented vector states that are nextly infeasible
@@ -344,16 +354,16 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
              row=1; %Restart from beginning of E_Ind_VectALL to find the state <----- ASSUMING ONLY 1 distinct new currently infeasible state!
           end
           
-          %Find distinct new nextE-state
-          if(r==1)
-              boolNewNextEState=1;
-          else
-              if(aug_nextE_Ind_Vect_p(r)~=aug_nextE_Ind_Vect_p(r-1))
-                 boolNewNextEState=1;
-              else
-                  boolNewNextEState=0;
-              end
-          end
+%           %Find distinct new nextE-state
+%           if(r==1)
+%               boolNewNextEState=1;
+%           else
+%               if(aug_nextE_Ind_Vect_p(r)~=aug_nextE_Ind_Vect_p(r-1))
+%                  boolNewNextEState=1;
+%               else
+%                   boolNewNextEState=0;
+%               end
+%           end
           
           while(E_Ind_VectALL(row)~=aug_nextE_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
               row=row+1;    %Continue
