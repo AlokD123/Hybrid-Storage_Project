@@ -219,31 +219,15 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                             nextE_Ind=-1; %Flag next state as impossible
                         end
                         
-
-                        %STEP 3
-                        %Create full probability matrix
-                        %SET DISTRIBUTION: UNIFORM <------------------------------------------- ************
+                        %STEP 4
+                        %Create p-th vector g, for constraint
                         if(nextE_Ind~=-1) %If this state leads to a feasible next state...
-                            %Put sentinel value to indicate as such (for given control)
-                            P_fullmtx(E_Ind,indL)=2;
-                            %If load admissible, increment count of admissible loads
-                            numAdmissibleLoads=numAdmissibleLoads+1;
-
-                            %STEP 4
-                            %Create p-th vector g, for constraint
                             gVec_p(indCount)=CtrlCost(D1,D2,L); %Cost of stage is given by CtrlCost
-
                         else %Else if infeasible next state...
                             %DO NOTHING
                         end
                     end
 
-                    %Fill in row of full matrix with UNIFORM DISTR. values, after finding number of feasible load values
-                    for indL_Vect=indL_Feas
-                        if(P_fullmtx(E_Ind,indL_Vect)==2)
-                           P_fullmtx(E_Ind,indL_Vect)=1/numAdmissibleLoads; %Uniform probability
-                        end
-                    end
                     %Reset feasible loads count, for subsequent energy state
                     numAdmissibleLoads=0;
                     %Reset list of feasible loads (next state)
@@ -316,6 +300,14 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
       nnzRow=nnz(E_Ind_MtxALL(row,:));
       E_Ind_Mtx_nzRow=E_Ind_MtxALL(row,1:nnzRow);
       E_Ind_VectALL=[E_Ind_VectALL; E_Ind_Mtx_nzRow'];
+  end
+  
+  %STEP 
+  %Create full probability matrix
+  %SET DISTRIBUTION: UNIFORM
+  %(Note: can't create until E_Ind_MtxALL complete, so outside main loop)
+  for r=1:size(E_Ind_MtxALL,1)
+      P_fullmtx(r,:)=E_Ind_MtxALL(r,:)/sum(E_Ind_MtxALL(r,:)); %<----------------For UNIFORM probability, just NORMALIZE rows of feasible states!!
   end
   
   %STEP 6
