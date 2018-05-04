@@ -354,23 +354,13 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
              row=1; %Restart from beginning of E_Ind_VectALL to find the state <----- ASSUMING ONLY 1 distinct new currently infeasible state!
           end
           
-%           %Find distinct new nextE-state
-%           if(r==1)
-%               boolNewNextEState=1;
-%           else
-%               if(aug_nextE_Ind_Vect_p(r)~=aug_nextE_Ind_Vect_p(r-1))
-%                  boolNewNextEState=1;
-%               else
-%                   boolNewNextEState=0;
-%               end
-%           end
-          
           while(E_Ind_VectALL(row)~=aug_nextE_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
               row=row+1;    %Continue
           end
           
           F_p(r,row)=1; %Once reached, map
-          row=row+1;  %Start at next column in F next time <-------- Assuming continuously increasing in augmented vector (fixed above)
+          row=min(row+1,length(E_Ind_VectALL)); %Start at next column in F next time, saturating at maximum
+          %^-------- Assuming continuously increasing in augmented vector (fixed above)
       end
       
       if isempty(F_p)   %If empty, ignore
@@ -418,7 +408,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
               %Otherwise, do nothing because already starting from offset
           end
           G_p(r,row)=1; %Once reached, map
-          row=row+1;  %Start at next column in G next time (continuously increasing)
+          row=min(row+1,length(E_Ind_VectALL));  %Start at next column in G next time (continuously increasing)
       end
       
       if isempty(G_p)   %If empty, ignore constraint
