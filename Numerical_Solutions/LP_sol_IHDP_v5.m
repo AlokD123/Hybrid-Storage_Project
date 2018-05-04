@@ -291,7 +291,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
         numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
         %Add given E-state to augmented vector that many times (for each load)
         aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
-        augVectRow=augVectRow+numRepNextE-1; %Start adding at end next time
+        augVectRow=augVectRow+numRepNextE; %Start adding at end next time
     end
     
     %Also, exclude from the augmented vector states that are nextly infeasible
