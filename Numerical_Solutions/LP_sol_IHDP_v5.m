@@ -234,23 +234,8 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
 %     end
         
     %At end of p-th cycle, restart list of unrepeated nextE_Ind values
-    unrepNextE_Inds=[];
-    
+    %unrepNextE_Inds=[];
 
-    %STEP
-    %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
-    augVectRow=1; %Index row in new augmented vector
-    for r=1:length(nextE_Ind_Vect_p) %For each next E-state WITH CURRENT CONTROL COMBO (p)
-        %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
-        numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
-        %Add given E-state to augmented vector that many times (for each load)
-        aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1))=nextE_Ind_Vect_p(r);
-    end
-    
-    %Also, exclude from the augmented vector states that are nextly infeasible
-    nextlyInfE=~ismember(aug_nextE_Ind_Vect_p,nextE_Ind_Vect_p);
-    aug_nextE_Ind_Vect_p(nextlyInfE)=[];
-    Lmin_offs_p(nextlyInfE)=[];
     
     
     
@@ -258,19 +243,15 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     g{p}=gVec_p';
     E_Ind_Vect{p}=E_Ind_Vect_p;
     nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
-    aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
     Lmin{p}=Lmin_p;
     Lmin_offs{p}=Lmin_offs_p;
-    %aug_Lmin_offs{p}=aug_Lmin_offs_p;
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
     E_Ind_Vect_p=[];
-    aug_nextE_Ind_Vect_p=[];
     gVec_p=[];
     Lmin_p=[];
     Lmin_offs_p=[];
-    %aug_Lmin_offs_p=[];
     
     numAdmissibleLoads=0;
     
@@ -294,14 +275,36 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
       P_fullmtx(r,:)=E_Ind_MtxALL(r,:)/sum(E_Ind_MtxALL(r,:)); %<----------------For UNIFORM probability, just NORMALIZE rows of feasible states!!
   end
   
-  %STEP 6
-  %Create P matrix: select rows corresponding to components in nextE_Ind_Vect
-  %(Doing after P_fullmtx completed)
+  
+  
   for p=1:P1*P2
     E_Ind_Vect_p=E_Ind_Vect{p};
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
-    aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
+    Lmin_offs_p=Lmin_offs{p};
     
+    %STEP
+    %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
+    %(Note: doing after E_Ind_VectALL complete)
+    augVectRow=1; %Index row in new augmented vector
+    for r=1:length(nextE_Ind_Vect_p) %For each next E-state WITH CURRENT CONTROL COMBO (p)
+        %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
+        numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
+        %Add given E-state to augmented vector that many times (for each load)
+        aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
+        augVectRow=augVectRow+numRepNextE-1; %Start adding at end next time
+    end
+    
+    %Also, exclude from the augmented vector states that are nextly infeasible
+    nextlyInfE=~ismember(aug_nextE_Ind_Vect_p,nextE_Ind_Vect_p);
+    aug_nextE_Ind_Vect_p(nextlyInfE)=[];
+    Lmin_offs_p(nextlyInfE)=[];
+    
+    %Store in cell array
+    aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
+    
+    %STEP 6
+    %Create P matrix: select rows corresponding to components in nextE_Ind_Vect
+    %(Note: doing after P_fullmtx completed)
     for r=1:length(E_Ind_Vect_p)
         Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
         
@@ -318,15 +321,19 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     end
         
     %Store in p-th PF matrix, as well as in own P_mtx
-    PF{end+1}=P; 
-    %RESET
+    PF{p}=P;
+    P_mtx{p}=P;
+    %Reset matrices/vectors
     P=[];
+    aug_nextE_Ind_Vect_p=[];
   end
+  
+  
+  
   
   %STEP : Construct each F matrix
   for p=1:P1*P2
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
-      %aug_Lmin_offs_p=aug_Lmin_offs{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
       row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
       
