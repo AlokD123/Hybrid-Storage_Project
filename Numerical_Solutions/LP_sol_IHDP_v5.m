@@ -153,8 +153,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                                   nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
                                   
                                   
-                                  %STEP
-                                  %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
+                                  
                                   if(length(nextE_Ind_Vect_p)==1 && E_Ind==nextE_Ind) %If first state being added, and not differing...
                                       aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
                                       %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Create vector of minimum load values for each nextE-state, WITH repeats (to add OFFSETS in F matrix)
@@ -247,16 +246,18 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
         end
       end
     end
+        
+    %At end of p-th cycle, restart list of unrepeated nextE_Ind values
+    unrepNextE_Inds=[];
+    
+
+    %STEP
+    %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
+    
     %Also, exclude from the augmented vector states that are nextly infeasible
     nextlyInfE=~ismember(aug_nextE_Ind_Vect_p,nextE_Ind_Vect_p);
     aug_nextE_Ind_Vect_p(nextlyInfE)=[];
     Lmin_offs_p(nextlyInfE)=[];
-    
-    %At end of p-th cycle, restart list of unrepeated nextE_Ind values
-    unrepNextE_Inds=[];
-    
-    P_mtx{end+1}=P;
-
     
     %Store vector data in cell array
     g{p}=gVec_p';
