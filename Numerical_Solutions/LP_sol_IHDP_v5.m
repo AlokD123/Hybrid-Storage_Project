@@ -6,17 +6,16 @@ global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
 E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
-%Input: initial state, horizon
+%Solver tolerance
+tolerance=1e-6;
+
+%% Input: initial state, horizon
 %Initial stored energy (user-defined)
 %Must be between MIN_STATE and MAX_STATE
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-%NOTE: at end, uOpt will have best control policy, and NetCost will contain total cost of DP operation
-%ASSUMING FINAL COST = 0
-
-
-%Model setup
+%% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
 MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
@@ -40,7 +39,7 @@ DISCOUNT=[];
 DISCOUNT=0.99;
 
 
-%Definitions
+%% Definitions
 M=MAX_LOAD-MIN_LOAD+1;
 N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
@@ -48,24 +47,21 @@ P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
 INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 
-%Initialization
+%% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
 nextE_Ind_Vect_p=[];  %Vector of next state energies
 aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
 
-PF={};
-P_mtx={};
-P=[];
+P_mtx={};   %Array of P matrices
+P=[];       %Current P matrix
+PF={};      %Array of P*F matrices
 
 indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 
-unrepNextE_Inds=[]; %List of unrepeated nextE_Ind values
-
 Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
 Lmin_offs_p=[]; %Vector of minimum load offsets for each E-state, to create CORRECT MAPPING in G matrix
-
-boolDiffNxtState=0; %Flag to indicate different next state different, so don't add current E-state
+E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
 
 %% PART A: SET UP MATRICES
 %For each possible control...
@@ -114,14 +110,14 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                         %If next state is amongst those achievable with a given perturbance....
                         if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
                             if(nextE2<=E_MAX(2) && nextE2>=E_MIN(2))
-                                %IF meeting following conditions: (C_MAX and C_MIN)
+                                %IF meeting following conditions: (C_MIN and C_MAX)
                                 %1) net supply (discharging) never below demand, 2) not charging cap. too quickly
                                 if(~((D1+D2-L)<0||(D1+D2-L)>MAX_CHARGE(2)))
                                   %Count the number of feasible states for a given set of controls (D1,D2)
                                   indCount=indCount+1; %... and use as an index
                                   
-                                  %STEP 1
-                                  %Add state energy index to vector of FEASIBLE state energies for current value of p (D1,D2 combo)
+                                  %STEP 1: create vector and matrix of FEASIBLE state energies for each load
+                                  %Add state energy index to vector for current value of p (D1,D2 combo)
                                   E_Ind_Vect_p=[E_Ind_Vect_p;E_Ind];
                                   %Add state energy index to matrix of ALL FEASIBLE energies
                                   %DO NOT RESET at end. Will overwrite with same values (and add) each time, which is ok.
@@ -132,59 +128,13 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                                   nextE_Ind1=round(nextE1-E_MIN(1)+1);
                                   nextE_Ind2=round(nextE2-E_MIN(2)+1); 
 
-                                  %STEP 2
+                                  %STEP 2: create vector of next state energies for each load
                                   %Get index of next state energy in vector of state energies
                                   nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
                                   %Add next state energy index to vector of FEASIBLE next state energies
                                   nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
-                                  
-                                  
-                                  
-%                                   if(length(nextE_Ind_Vect_p)==1 && E_Ind==nextE_Ind) %If first state being added, and not differing...
-%                                       aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %By default, add to augmented vector
-%                                       %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Create vector of minimum load values for each nextE-state, WITH repeats (to add OFFSETS in F matrix)
-%                                   else                            %ALL OTHER CASES
-%                                       if(above_E_Ind==E_Ind) %If repeating E_Ind...
-%                                           %if(boolUpdTemp) 
-%                                           unrepNextE_Inds=[unrepNextE_Inds; nextE_Ind]; %Store nextE_Ind value for later (whether currently infeasible OR POSSIBLY NOT)
-%                                             %boolUpdTemp=0; %Don't update temp until added this state to aug vector
-%                                           %end
-%                                           if (boolDiffNxtState==0) %If same next state INITIALLY (i.e. for current E-state with load=0)
-%                                             aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Just add CURRENT E-state to augmented vector
-%                                             %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
-%                                           else
-%                                               %Don't add
-%                                           end
-%                                       else
-%                                           %Else, if adding new E_Ind value (not repeating for load)...
-%                                           %For each next state not (/not yet) in aug_nextE_Ind_Vect_p...
-%                                           for unrepI=unrepNextE_Inds'
-%                                               if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
-%                                                 for i=1:max(nnz(E_Ind_Vect_p==unrepI),1) %Determine x, number of times to insert (number of loads, at least including load=0)
-%                                                     %^--------------ASSUMPTION: E_Ind_Vect_p contains x times, since nextEIndVect increasing in value up to unrepI, and EIndVect(i)>=nextEIndVect(i)
-%                                                     %Insert in between (x times)
-%                                                    aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
-%                                                    %E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
-%                                                    %unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
-%                                                    %aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
-%                                                 end
-%                                               end
-%                                           end
-%                                           if (E_Ind==nextE_Ind) %IF should include current E-state (because amongst next E-states)...
-%                                             aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p;E_Ind]; %Add regular state index at end, as usual
-%                                             %aug_Lmin_offs_p=[aug_Lmin_offs_p;minL]; %Add to vector
-%                                             boolDiffNxtState=0;
-%                                           else
-%                                              boolDiffNxtState=1;
-%                                           end
-%                                           %boolUpdTemp=1; %Resume updating temp
-%                                           unrepNextE_Inds=nextE_Ind; %Restart list of unrepeated nextE_Ind values
-%                                       end
-%                                   end
-%                                   above_E_Ind=E_Ind; %Update "above" E_ind value to current position
-                                  
-                                  
-                                  %STEP
+                                   
+                                  %STEP 3: determine feasible loads
                                   %Add indL to list of FEASIBLE loads for this combination of u and x
                                   indL_Feas=[indL_Feas;indL];
                                   %Create vector of minimum load values for each E-state, WITH repeats (to add OFFSETS in G matrix)
@@ -219,32 +169,14 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
                 end
             end
         end
-    
-%     %At end of p-th value cycle, if remaining unadded states, add to end
-%     for unrepI=unrepNextE_Inds'
-%       if ~any(nnz(aug_nextE_Ind_Vect_p==unrepI)) %If NOT in state space of current E-states...
-%         for i=1:max(nnz(E_Ind_Vect_p==unrepI),1) %Determine x, number of times to insert (number of loads, at least including load=0)
-%             %Insert in between (x times)
-%            aug_nextE_Ind_Vect_p=[aug_nextE_Ind_Vect_p; unrepI];
-%            %E2_unrepI=E_MIN(2)+(remainder(unrepI,N2)-1); %Determine E2 energy associate with this E-state
-%            %unrep_minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2_unrepI-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin for this unrepeated E-state
-%            %aug_Lmin_offs_p=[aug_Lmin_offs_p;unrep_minL]; %Add to vector
-%         end
-%       end
-%     end
         
-    %At end of p-th cycle, restart list of unrepeated nextE_Ind values
-    %unrepNextE_Inds=[];
-
-    
-    
-    
     %Store vector data in cell array
     g{p}=gVec_p';
     E_Ind_Vect{p}=E_Ind_Vect_p;
     nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
     Lmin{p}=Lmin_p;
     Lmin_offs{p}=Lmin_offs_p;
+    E_Ind_Mtx{p}=E_Ind_Mtx_p;
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
@@ -252,6 +184,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     gVec_p=[];
     Lmin_p=[];
     Lmin_offs_p=[];
+    E_Ind_Mtx_p=[];
     
     numAdmissibleLoads=0;
     
@@ -259,7 +192,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
   end
   
   
-  %STEP : Construct vector of ALL FEASIBLE energies
+  %STEP 5: Construct vector of ALL FEASIBLE energies, for all control
   E_Ind_VectALL=[];
   for row=1:size(E_Ind_MtxALL,1)
       nnzRow=nnz(E_Ind_MtxALL(row,:));
@@ -267,8 +200,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
       E_Ind_VectALL=[E_Ind_VectALL; E_Ind_Mtx_nzRow'];
   end
   
-  %STEP 
-  %Create full probability matrix
+  %STEP 6: Create full probability matrix
   %SET DISTRIBUTION: UNIFORM
   %(Note: can't create until E_Ind_MtxALL complete, so outside main loop)
   for r=1:size(E_Ind_MtxALL,1)
@@ -282,8 +214,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
     Lmin_offs_p=Lmin_offs{p};
     
-    %STEP
-    %Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
+    %STEP 7: Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
     %(Note: doing after E_Ind_VectALL complete)
     augVectRow=1; %Index row in new augmented vector
     r=1; %Start from beginning
@@ -312,8 +243,8 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
     %Store in cell array
     aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
     
-    %STEP 6
-    %Create P matrix: select rows corresponding to components in nextE_Ind_Vect
+    %STEP 8: Create each P matrix
+    %For P matrix, select rows corresponding to components in nextE_Ind_Vect
     %(Note: doing after P_fullmtx completed)
     for r=1:length(E_Ind_Vect_p)
         Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
@@ -341,7 +272,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
   
   
   
-  %STEP : Construct each F matrix
+  %STEP 9: Construct each F matrix
   for p=1:P1*P2
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
@@ -380,7 +311,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
       end
   end
   
-  %STEP : Construct each G matrix
+  %STEP 10: Construct each G matrix
   for p=1:P1*P2
       E_Ind_Vect_p=E_Ind_Vect{p};
       Lmin_offs_p=Lmin_offs{p};
@@ -422,10 +353,11 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
       G_p=[]; %Reset
   end
   
-  %Set g=zeros for empty g vectors
+  %If get empty g vector...
   for p=1:P1*P2
     if isempty(g{p})
-       g{p}=zeros(length(E_Ind_VectALL),1);
+        disp('ERROR!!'); %Error!!!
+       g{p}=zeros(length(E_Ind_VectALL),1); %Set equal to zeros
     end
   end
   
@@ -458,6 +390,7 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
   %Run optimization problem, and find primal as well as dual.
   cvx_begin
     grbControl.LPMETHOD = 1; % Use dual simplex method
+    params.OptimalityTol = tolerance; %Set tolerance
     variable cost(size(Q,2))
     dual variables d
     maximize( sum(cost) )
@@ -467,40 +400,119 @@ boolDiffNxtState=0; %Flag to indicate different next state different, so don't a
   %Get vector of optimal dual
   optD = d;
   
-  %Format cost vector into E1xE2 matrices (M matrices, for each value of load)
-    for i1=0:M*N2:M*N2*(N1-1)
-        for j=0:M-1
-          for ind=(1+i1+j):M:(M*(N2-1)+i1+(j+1))
-              if(mod(ind,M*N2)==0)
-                ind2=(M*N2-1-j)/M+1;
-              else
-                ind2=(mod(ind,M*N2)-1-j)/M+1;
-              end
-              ConvCosts(i1/(M*N2)+1,ind2,j+1)=cost(ind);
+  
+  %Format cost vector into E1xE2 matrices (one for each value of load)
+  
+  %1) Create matrix with 3 columns: a) E-state, b) load, c) associated cost
+  trE_Ind_MtxALL=E_Ind_MtxALL';
+  E_MtxALL_Vect=trE_Ind_MtxALL(:); %Vector form of E_Ind_MtxALL, including infeasible states (0)
+  
+  CostMtx=[]; %Abovementioned matrix with 3 columns
+  indL=0; %Load index, for second column of matrix
+  costInd=1; %To index optimal cost sol'n vectors
+  
+  for i=1:length(E_MtxALL_Vect)
+      if E_MtxALL_Vect(i)==0       %If infeasible load state...
+          indL=indL+1;      %Next load
+          %Create row of matrix
+          CostMtx(i,:)=[lastNz,indL,Inf]; %SET INFINITE COST FOR INFEASIBLE STATES
+      else                      %OTHERWISE...
+          %Determine whether going onto next row of E_Ind_MtxALL
+          if i==1 || E_MtxALL_Vect(i)==E_MtxALL_Vect(i-1) %For same E-state (row)
+              indL=indL+1;      %Next load
+          else
+              indL=1; %Restart load indexing, for new E-state
           end
-        end
-    end
+          
+          lastNz=E_MtxALL_Vect(i); %Distinct E-state value (row of E_Ind_MtxALL)
+          %Create row of matrix
+          CostMtx(i,:)=[E_MtxALL_Vect(i),indL,cost(costInd)]; %Get cost from optimal cost solution
+          %Take from next row of cost vector if subsequent state feasible
+          costInd=costInd+1;
+      end
+  end
+  
+  %2) Sort matrix based on loads (i.e. 2nd column)
+  sortedCostMtx=sortrows(CostMtx,2);
+  
+  %3) Get sub-vectors of costs for each distinct load value
+  subVectCosts_Load={};
+  for i=1:max(sortedCostMtx(:,2)) %For each load value (i)
+      subVectCosts_Load{i}=sortedCostMtx(sortedCostMtx(:,2)==i,3); %Get vector of costs with load i
+  end
+  
+  %4) Convert each sub-vector into a set of matrices (E1xE2) called ConvCosts
+  ConvCosts=[];
+  for i=1:length(subVectCosts_Load)
+      subVectCosts_Load_i=subVectCosts_Load{i};
+      ConvCosts(:,:,i)=vec2mat(subVectCosts_Load_i,N2);
+  end
     
     %% PART C: STATIONARY POLICY
-    %Create vector of probabilities marginalized over control applied (denominator)
-    d_state=zeros(N1*N2*M,1);
-    for(iij=1:N1*N2*M)
-       for(p=1:P1*P2)
-           d_state(iij)=d_state(iij)+optD(iij+N1*N2*M*(p-1)); %Sum over control values
-       end 
+    %PART 1: Create vector of probabilities of states (marginalized over control applied (denominator))
+    %1) Augment optD vector to include probabilities of infeasible states too (0's)
+    %Make each E_Ind_Mtx same size to compare ALL states between different
+    %values of p, once in vector form
+    %->Augmented vectors for given values of p (i.e. like augmented versions of
+    %E_Ind_VectALL, and subsets of E_MtxALL_Vect)
+    E_MtxALL_Vect_subs={};
+    for p=1:P1*P2
+        E_Ind_Mtx_p=E_Ind_Mtx{p};
+        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:size(E_Ind_MtxALL,2))=0; %Pad with zeros on sid to make same size
+        %Convert to vector
+        trE_Ind_Mtx_p=E_Ind_Mtx_p';
+        E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);
+    end
+    
+    %2) Create augmented vectors of probabilities for ALL states - feasible
+    %AND INFEASIBLE TOO - for EACH CONTROL p
+    
+    %For each element in E_MtxALL_Vect_subs{p}, if...
+    %a) 0, append 0 to aug_optD_subP{p}
+    %b) non-zero, append some value from optD to aug_optD_subP{p}
+    %where some value is next value in for i=1:p-1 sumLen=sumLen+len(vecti) end optD(sumLen:sumLen+len(vectp))
+    aug_optD_subP={};
+    indOptD=1;
+    for p=1:P1*P2
+        aug_optD_subP_p=[];
+        E_MtxALL_Vect_subs_p=E_MtxALL_Vect_subs{p};
+       for i=1:length(E_MtxALL_Vect_subs_p)
+           if(E_MtxALL_Vect_subs_p(i)==0)
+              aug_optD_subP_p=[aug_optD_subP_p;0];
+           else
+               %Find value in subvector of optD just by continuously
+               %indexing through optD in order <--------------------------Assuming optD linearly indexed in order (E2, E1, L, D2, D1)
+               aug_optD_subP_p=[aug_optD_subP_p;optD(indOptD)];
+               indOptD=indOptD+1;
+           end
+       end
+       aug_optD_subP{p}=aug_optD_subP_p;
+    end
+    
+    %3) Marginalise: sum vector components
+    d_state=zeros(length(aug_optD_subP{1}),1); %Initialize
+    for(p=1:P1*P2)
+       d_state=d_state+aug_optD_subP{p}; %Sum over control values
+    end
+    
+    %PART 2: Get stationary probabilities vector
+    %Create augmented optD vector, for ALL states
+    aug_optD=[];
+    for p=1:P1*P2
+        aug_optD=[aug_optD;aug_optD_subP{p}];
     end
     %Create vector with vector d_state duplicated P1*P2 times and appended
     %(to allow for dividing each probability by marginalized value)
     dup_ones=ones(P1*P2,1);
     d_state_dup=kron(dup_ones,d_state);
-    %Divide to get stationary probabilities vector
-    pi=optD./d_state_dup;
+    %Divide to get stationary probabilities vector for ALL states (augmented)
+    aug_pi=aug_optD./d_state_dup;
     
-    
-  %Quantify difference between costs and expected matrix of IHDP costs
-  Diff=X-ConvCosts; %Matrix of differences. X comes from Value Iteration
-  Diff(Diff==Inf)=0; %Ignore infinite differences (correct)
-  %Use 2-norm to quantify difference
-  norm_array=arrayfun(@(idx) norm(Diff(:,:,idx),1), 1:size(Diff,3));
-  TotalDiff=norm(norm_array,1);
-  disp('Net difference is'); TotalDiff
+    %Create augmented vector of all E_MtxALL_Vect_subs vectors
+    aug_E_MtxALL_Vect=[];
+    for p=1:P1*P2
+        aug_E_MtxALL_Vect=[aug_E_MtxALL_Vect;E_MtxALL_Vect_subs{p}];
+    end
+    %Get stationary probabilities vector for ONLY feasible states (non-zero
+    %in aug_E_MtxALL_Vect)
+    pi=aug_pi(aug_E_MtxALL_Vect~=0);

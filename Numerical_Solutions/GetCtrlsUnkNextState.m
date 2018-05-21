@@ -18,6 +18,10 @@ function [ expCostE_L ] = GetCtrlsUnkNextState( E_Ind1,E_Ind2,indL,t ) % Input: 
         %Calculate the state these values of u and w will lead to, even if
         %impossible...
         [nextE1,nextE2]=optNextStateLimited(E1,E2,D1,D2,L);
+%         if(D1==MAX_DISCHARGE(1)) %<---------------------------------------------------------------------------- SOL#2 for excess discharge: saturate state!!!!!!!!!!!!!!
+%            nextE1=0; 
+%         end
+        
         %If next state is amongst those achievable with a given perturbance....
         if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
           if(nextE2<=E_MAX(2) && nextE2>=E_MIN(2))

@@ -1,10 +1,10 @@
-boolSingleSequence=1;
+boolSingleSequence=0;
 
 
 if(~boolSingleSequence)
-    INFCOST=inf;
+    INFCOST=1e6;
     clear Costs_IHDP;
-    Costs_IHDP=X;
+    Costs_IHDP=ConvCosts_IHDP;
 
     Costs_IHDP(end+1,:,:)=INFCOST;
     Costs_IHDP(:,end+1,:)=INFCOST;
@@ -22,7 +22,7 @@ if(~boolSingleSequence)
         %subplot(1,1,t+1)
         for ind=1:length(indL)
             cost=Costs_IHDP(:,:,ind);
-            cost(cost==INFCOST)=-100;
+            cost(cost>=INFCOST)=-100;
             Z=(ind-1)*ones(length(E_Ind1),length(E_Ind2));
             surf(E_Ind2-1,E_Ind1-1,Z,cost)
             hold on
@@ -91,7 +91,7 @@ else
     xlabel('Time');
     ylabel('Unit of energy');
     title('Energy stored vs. load');
-    legend('E1','E2','Load');
+    legend('Battery(E1)','Supercapacitor(E2)','Demand(L)');
     
     figure
     hold on;
@@ -100,6 +100,6 @@ else
     xlabel('Time');
     ylabel('Unit of energy');
     title('Optimal policy vs. load');
-    legend('D1','D2','Load');
+    legend('D1','D2','Demand');
     axis([1 inf 0 max(MAX_DISCHARGE)]);
 end

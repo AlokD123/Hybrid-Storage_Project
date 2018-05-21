@@ -5,7 +5,7 @@ clearvars -except seqL;
 
 global E_MIN; global E_MAX; 
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+E_MAX=[30;5]; %Maximum energy to be stored (upper bound)
 
 %Input: initial state, horizon
 %Initial stored energy (user-defined)
@@ -20,7 +20,7 @@ E2_INIT=E_MAX(2);
 %Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[30;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -46,10 +46,12 @@ BETA=[0.99;0.99];    %Storage efficiency
 K=2;           %Weighting factor for D1^2 cost
 PERFECT_EFF=0;
 %Recurse for <=MAX_ITER iterations, even if not reached stopping condition for VI
-MAX_ITER=50;
+MAX_ITER=500;
 
 %DP Setup... with duplication for each control input
 global V; global D1Opt_State; global D2Opt_State; global expCostE;
+%First, reset matrices
+V=[]; D1Opt_State=[]; D2Opt_State=[]; 
 %COST MATRIX....V(:,k) holds the cost of the kth iteration for each possible state
 V(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1),1:MAX_ITER) = Inf;       %1 matrix b/c 1 cost function
 %uOptState holds the optimal control U for each state, and for all iterations
@@ -61,6 +63,9 @@ expCostE=[];
 
 %optNextE will hold optimal NEXT state at state E with load L (at iteration t)... FOR REFERENCE
 global optNextE1; global optNextE2;
+%First, reset matrices
+optNextE1=[];optNextE2=[];
+
 optNextE1(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1),1:MAX_ITER)=Inf;
 optNextE2(1:(E_MAX(1)-E_MIN(1)+1),1:(E_MAX(2)-E_MIN(2)+1),1:(MAX_LOAD-MIN_LOAD+1),1:MAX_ITER)=Inf;
 
@@ -172,7 +177,7 @@ while (  t>0 && ~all(all(all(BOOL_VI_CONV(:,:,:)==1))) )               %Continue
   t=t-1; %Continue bkwds in recursion;
 end
 %Replace infinite costs with -1%
-V(V==inf)=-1;
+%V(V==inf)=-1;
 %Final costs, depending on load
 NetCost=V(E1_INIT-E_MIN(1)+1,E2_INIT-E_MIN(2)+1,:,t+1);
 
@@ -185,82 +190,5 @@ IND_T_OFFS=t;
 %Restart at last time
 t=t+1;
 
-
-%%STEP 2: evaluate infinite horizon policy for a random sequence of loads (ONLINE)
-%Set up matrices
-optE1(1)=E1_INIT; optE2(1)=E2_INIT;
-% Debug counts
-countOOB=0;         %Out of bounds count
-countRepeatZeros=0; %Count of repeated zero loads
-%seqL=ones(50-38,1);
-while t<=(MAX_ITER-1)
-    %t
-    %Set 1-indexed time, with no offset due to VI-stopping
-    t_ind_VI=t-(IND_T_OFFS);
-    %Set state index
-    indE1=optE1(t_ind_VI)-E_MIN(1)+1;
-    indE2=optE2(t_ind_VI)-E_MIN(2)+1;
-    %Create random demand from IID Uniform probability sequence
-    MAX_LOAD_STATE=optE1(t_ind_VI)+optE2(t_ind_VI)-1; %Maximum possible load limited to total energy stored in that state
-    if(MAX_LOAD_STATE==Inf)
-        MAX_LOAD_STATE=MAX_LOAD;
-    end
-    randL=randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1;
-    %Or, use sample sequence of pseudo-random demands
-    %Select between sequences
-    %L=randL;
-    L= seqL(50-t-1);
-    %L=min(t_ind_VI,MAX_LOAD_STATE); 
-    %Short form for optimal controls...
-    D1=D1Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
-    D2=D2Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
-    %Calculate the state these values of u and w will lead to, even if impossible...
-        [nextE1,nextE2]=optNextStateLimited(optE1(t_ind_VI),optE2(t_ind_VI),D1,D2,L);
-        
-    %If leads to next state guaranteed out of bounds, decrease load
-    while(nextE1>E_MAX(1)||nextE1<E_MIN(1)||nextE2>E_MAX(2)||nextE2<E_MIN(2)||(D1+D2-L)<0)
-        L=L-1;%Decrement load
-        %Increment out of bounds count
-        countOOB=countOOB+1;
-        if(L==-1)
-            L=0;
-            break;
-        end
-        
-        %Calculate next state for new load value
-        D1=D1Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
-        D2=D2Opt_Inf(indE1,indE2,L-MIN_LOAD+1);
-        [nextE1,nextE2]=optNextStateLimited(optE1(t_ind_VI),optE2(t_ind_VI),D1,D2,L);
-    end
-    if(L==0 && countOOB~=0)
-        countRepeatZeros=countRepeatZeros+1;
-    end
-    indL=L-MIN_LOAD+1;
-    Load(t_ind_VI)=L;          %Hold value of load (for reference)
-    %Get optimal costs for this sequence of loads
-    optV(t_ind_VI)=V(indE1,indE2,indL,t);
-    %Get costs of other possible states for this state and load??
-    %(For comparison)
-
-    %Round next state to nearest int
-    nextE1=round(nextE1);
-    nextE2=round(nextE2);
-    %TO DO: APPLY STATE INTERPOLATION for better accuracy
-    
-    %Get specific control sequence for given load sequence
-    D1Opt(t_ind_VI)=D1;
-    D2Opt(t_ind_VI)=D2;
-    %Get optimal next state, starting at E_INIT
-    optE1(t_ind_VI+1)=nextE1;
-    optE2(t_ind_VI+1)=nextE2;
-    %Note: cross-check with optNextStateLtd?
-    
-    %If counted zero loads too many times, break loop
-    if(countRepeatZeros==MAX_NUM_ZEROS)
-        optE1(t_ind_VI+1)=optE1(t_ind_VI); optE2(t_ind_VI+1)=optE2(t_ind_VI);
-        optV(t_ind_VI+1)=V(optE1(t_ind_VI+1)-E_MIN(1)+1,optE2(t_ind_VI+1)-E_MIN(2)+1,indL,t);
-        Load(t_ind_VI+1)=0;
-        t=MAX_ITER;
-    end
-    t=t+1;
-end
+%GET CONVERGED COSTS
+ConvCosts_IHDP=V(:,:,:,t);

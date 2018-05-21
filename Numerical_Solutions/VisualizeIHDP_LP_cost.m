@@ -1,9 +1,10 @@
 boolSingleSequence=0;
-INFCOST=100;
+INFCOST=1e6;
 
 clear Costs_LP;
 Costs_LP=ConvCosts;
 
+%Padding (does not appear in 3D cost matrix)
 Costs_LP(end+1,:,:)=INFCOST;
 Costs_LP(:,end+1,:)=INFCOST;
 
@@ -20,9 +21,9 @@ if(~boolSingleSequence)
     %%% Layered-Surfaces Visualization %%%%
     for t=1:1
         %subplot(1,1,t+1)
-        for ind=1:length(indL)
+        for ind=1:(length(indL)-1) %FULL LOAD NOT POSSIBLE, so one less possibility
             cost=Costs_LP(:,:,ind);
-            cost(cost==INFCOST)=-100; %Replace all with infeasible costs for plotting
+            cost(cost>=INFCOST)=-100; %Replace all with infeasible costs for plotting
             Z=(ind-1)*ones(length(E_Ind1),length(E_Ind2));
             surf(E_Ind2-1,E_Ind1-1,Z,cost)
             hold on
