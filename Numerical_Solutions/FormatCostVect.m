@@ -3,7 +3,7 @@ function [formatMtxCosts] = FormatCostVect(cost_vect)
 %   Input: vector of costs (actual or approximate)
 %   Output: formatted matrices
 
-global E_Ind_MtxALL; global N2;
+global E_Ind_MtxALL; global N2; global CostMtx;
 
 %1) Create matrix with 3 columns: a) E-state, b) load, c) associated cost
   trE_Ind_MtxALL=E_Ind_MtxALL';

@@ -1,5 +1,5 @@
 function [ E_Ind2 ] = remainder( E_Ind, N2 )
-%remainder: returns index associated with state E2 for given linear indexing of
+%remainder Returns index associated with state E2 for given linear indexing of
 %both states
 
 if (rem(E_Ind,N2)==0)

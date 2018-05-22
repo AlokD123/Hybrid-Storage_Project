@@ -60,6 +60,8 @@ P=[];       %Current P matrix
 PF={};      %Array of P*F matrices
 
 global E_Ind_MtxALL; %Matrix of all states (0 if infeasible)
+global CostMtx; %Matrix with 3 columns: a) E-state, b) load, c) associated cost. Used for approximation
+CostMtx=[];
 
 indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 
