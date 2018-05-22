@@ -1,3 +1,5 @@
+%Script to TEST BEST APPROXIMATION, for one set of basis functions
+
 CostStructMtx=[]; %Create matrix containing cost structure
 E1s=[]; E2s=[]; Ls=[]; %Store values of E1, E2 and L for each state
 
@@ -21,7 +23,7 @@ sortedCostStructMtx = CostStructMtx(idx,:);   % sort the whole matrix using the 
 
 
 %Test selected basis functions by LSQ fitting
-%Bases: 1) Constant, 2) E1+E2, 3) L-E2, 4) E2
+%Bases: 1) Constant, 2) E1+E2, 3) L-E2, 4) E2, 5)-8)
 
 Phi=[]; %Create design matrix
 

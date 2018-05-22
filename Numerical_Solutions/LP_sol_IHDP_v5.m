@@ -367,15 +367,14 @@ E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
   
   %% CORRECTED MATRICES (REMAINING infeasible states removed)
   %1) Coefficients
-  %Create full 'A' matrices for coefficients (A=G-alpha*PF)
-  for p=1:P1*P2
-    A{p}=G{p}-DISCOUNT*PF{p};
-  end
-  %Adjoin A matrices to form Q
   Q=[];
   for p=1:P1*P2
+    %Create full 'A' matrices for coefficients (A=G-alpha*PF)
+    A{p}=G{p}-DISCOUNT*PF{p};
+    %Adjoin A matrices to form Q
     Q=[Q;A{p}];
   end
+  
   %If empty columns in Q...
   if (~all(any(Q,1)))
       disp('ERROR!!!!!'); %ERROR
