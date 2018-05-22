@@ -48,7 +48,7 @@ while t_ind_VI<NumIter
         end
     end
     %Get optimal p for given state
-    pOpt=find(fullPolicyMtx(indE1,indE2,L-MIN_LOAD+1,:)==1);
+    pOpt=find(abs(fullPolicyMtx(indE1,indE2,L-MIN_LOAD+1,:)-1)<0.01); %(Find equal to 1)
     %Get associated optimal controls
     D2_Ind=remainder(pOpt,P2);
     D1_Ind=(pOpt-D2_Ind)/P2+1;
