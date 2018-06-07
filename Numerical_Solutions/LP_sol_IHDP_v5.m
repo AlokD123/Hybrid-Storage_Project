@@ -391,6 +391,15 @@ E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
   end
   
   %% PART B: OPTIMIZATION
+  
+  % Find state-relevance vector for minimization, c
+  % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
+  % Probabilities are given in P_fullmtx (non-zero for feasible states)
+  trP_fullmtx=P_fullmtx';
+  c_state=trP_fullmtx(:); %Get probabilities for all states
+
+  c_state(c_state==0)=[]; %Remove zero probability states
+  
   %Created LP matrices and vectors.
   %Run optimization problem, and find primal as well as dual.
   cvx_begin
@@ -398,10 +407,14 @@ E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
     params.OptimalityTol = tolerance; %Set tolerance
     variable cost(size(Q,2))
     dual variables d
-    maximize( sum(cost) )
+    %dual variables d2
+    maximize( c_state'*cost )
     subject to
         d : Q*cost <= b
+        %d2: cost >= 0 %Never active
   cvx_end
+  %Set negative values to zero
+  cost(cost<0)=0;
   %Get vector of optimal dual
   optD = d;
   
