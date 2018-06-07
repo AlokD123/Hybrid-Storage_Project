@@ -2,7 +2,9 @@
 
 global CostMtx;
 
-CostStructMtx=[]; %Create matrix containing cost structure
+%% Create matrix containing cost structure
+
+CostStructMtx=[];
 E1s=[]; E2s=[]; Ls=[]; %Store values of E1, E2 and L for each state
 
 for i=1:length(CostMtx)
@@ -24,7 +26,7 @@ sortedCostStructMtx = CostStructMtx(idx,:);   % sort the whole matrix using the 
 
 
 
-%Test selected basis functions by LSQ fitting
+%% Test selected basis functions by 1-norm fitting
 %Bases: 1) Constant, 2) E1+E2, 3) L-E2, 4) E2, 5) E1^2, 6) E2^2, 7)
 %(L-E2)^2, 8) (L-E1)^2
 
@@ -35,10 +37,37 @@ for i=1:length(CostMtx)
    if CostMtx(i,3)<1e9 %For each feasible state...
        %Create parameter fitting vector
       %phi_vec=[1,E1s(i)+E2s(i),Ls(i)-E2s(i),E2s(i)]; 
-      phi_vec=[1,E1s(i)+E2s(i),Ls(i)-E2s(i),E2s(i),E1s(i)^2,E2s(i)^2,(Ls(i)-E2s(i))^2,(Ls(i)-E1s(i))^2];
+      %phi_vec=[1,E1s(i)+E2s(i),Ls(i)-E2s(i),E2s(i),E1s(i)^2,E2s(i)^2,(Ls(i)-E2s(i))^2,(Ls(i)-E1s(i))^2, Ls(i)^2,(E2s(i)-E1s(i))^2, Ls(i)^3,E1s(i)^3, E2s(i)^3 ];
+      phi_vec=[1,E1s(i)+E2s(i),Ls(i)-E2s(i),E2s(i),E1s(i)^2,E2s(i)^2,(Ls(i)-E2s(i))^2,(Ls(i)-E1s(i))^2, Ls(i)^2,(E2s(i)-E1s(i))^2, Ls(i)^3,E1s(i)^3, E2s(i)^3, E1s(i)^4, E2s(i)^4, Ls(i)^4 ];
       Phi=[Phi;phi_vec]; %Add to Phi
    end
 end
 
-%Do LSQ on overdetermined system to find r...
-r=(Phi'*Phi)^(-1)*Phi'*cost;
+%Do 1-norm minimization on overdetermined system to find r...
+
+cvx_begin
+    grbControl.LPMETHOD = 1; % Use dual simplex method
+    variable r_fit(size(Phi,2))
+    dual variables d
+    minimize( c_state'*abs(cost-Phi*r_fit) )
+    subject to
+        d : Q*Phi*r_fit <= b
+cvx_end
+
+figure
+
+plot(Phi*r_fit,Phi*r_fit, '.');
+hold on;
+plot(Phi*r_fit,cost, '.');
+
+% optD2=optD;
+% optD2(optD2<1e-2)=0;
+%  cvx_begin
+%     grbControl.LPMETHOD = 1; % Use dual simplex method
+%     variable r_fit(size(Phi,2))
+%     dual variables d
+%     minimize( c_state'*abs(cost-Phi*r_fit) + optD2'*(Q*Phi*r_fit - b) )
+% cvx_end
+
+%OLD Do LSQ on overdetermined system to find r...
+%r=(Phi'*Phi)^(-1)*Phi'*cost;
