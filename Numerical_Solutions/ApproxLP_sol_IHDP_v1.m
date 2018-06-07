@@ -3,7 +3,7 @@
 % Basis functions: 1) Constant, 2) E1+E2, 3) L-E2, 4) E2, 5) E1^2, 6) E2^2, 7)(L-E2)^2, 8) (L-E1)^2
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X V;
+clearvars -except X V optD2;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -410,7 +410,7 @@ Phi=[]; %Design matrix, for cost approximation
                 L=k-1;
                 if(feasStates(i,j,k)==1)
                     %Create parameter fitting vector
-                    phi_vec=[1,E1+E2,L-E2,E2,E1^2,E2^2,(L-E2)^2,(L-E1)^2];      %<--------------------------------------------------------------TO CUSTOMIZE, pick design vectors!!
+                    phi_vec=[1,E1+E2,L-E2,E2,E1^2,E2^2,(L-E2)^2,(L-E1)^2, L^2,(E2-E1)^2, L^3,E1^3, E2^3 ];      %<--TO CUSTOMIZE, pick design vectors!!
                     %Add to design matrix
                     Phi=[Phi;phi_vec];
                 end
@@ -418,6 +418,14 @@ Phi=[]; %Design matrix, for cost approximation
       end
   end
  
+% Find state-relevance vector for minimization, c
+% TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
+% Probabilities are given in P_fullmtx (non-zero for feasible states)
+trP_fullmtx=P_fullmtx';
+c_state=trP_fullmtx(:); %Get probabilities for all states
+
+c_state(c_state==0)=[]; %Remove zero probability states
+  
   %% PART B: OPTIMIZATION
   %Created LP matrices and vectors.
   %Run optimization problem, and find primal as well as dual.
@@ -426,7 +434,7 @@ Phi=[]; %Design matrix, for cost approximation
     params.OptimalityTol = tolerance; %Set tolerance
     variable r_fit(size(Phi,2))
     dual variables d
-    maximize( sum(Phi*r_fit) )
+    maximize( c_state'*Phi*r_fit )
     subject to
         d : Q*Phi*r_fit <= b
   cvx_end
