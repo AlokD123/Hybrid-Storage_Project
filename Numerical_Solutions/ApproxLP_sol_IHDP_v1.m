@@ -3,7 +3,7 @@
 % Basis functions: 1) Constant, 2) E1+E2, 3) L-E2, 4) E2, 5) E1^2, 6) E2^2, 7)(L-E2)^2, 8) (L-E1)^2
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X V optD2;
+clearvars -except X V cost;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)

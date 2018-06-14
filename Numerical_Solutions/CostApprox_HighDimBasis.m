@@ -2,7 +2,7 @@
 %V2: LARGE NUMBER OF BASIS FUNCTIONS (high dimensional model, dimension n)
 
 global CostMtx;
-n=8; %Order of polynomial approximation
+n=7; %Order of polynomial approximation
 
 %% Create matrix containing cost structure
 
@@ -55,6 +55,7 @@ cvx_begin
     minimize( c_state'*abs(cost-Phi*r_fit) )
     subject to
         d : Q*Phi*r_fit <= b
+        %Phi*r_fit>=0
 cvx_end
 
 figure
