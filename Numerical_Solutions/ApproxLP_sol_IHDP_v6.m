@@ -412,27 +412,37 @@ Phi=[]; %Design matrix, for cost approximation
                 if(feasStates(i,j,k)==1)
                     %Create parameter fitting vector by aggregating states
                     %with same L-E2 value
-                    switch L-E2
+                    switch L-E2+E1
                         case -4
-                            phi_vec=[1,zeros(1,9)];
+                            phi_vec=[1,zeros(1,14)];
                         case -3
-                            phi_vec=[zeros(1,1),1,zeros(1,8)];
+                            phi_vec=[zeros(1,1),1,zeros(1,13)];
                         case -2
-                            phi_vec=[zeros(1,2),1,zeros(1,7)];
+                            phi_vec=[zeros(1,2),1,zeros(1,12)];
                         case -1
-                            phi_vec=[zeros(1,3),1,zeros(1,6)];
+                            phi_vec=[zeros(1,3),1,zeros(1,11)];
                         case 0
-                            phi_vec=[zeros(1,4),1,zeros(1,5)];
+                            phi_vec=[zeros(1,4),1,zeros(1,10)];
                         case 1
-                            phi_vec=[zeros(1,5),1,zeros(1,4)];
+                            phi_vec=[zeros(1,5),1,zeros(1,9)];
                         case 2
-                            phi_vec=[zeros(1,6),1,zeros(1,3)];
+                            phi_vec=[zeros(1,6),1,zeros(1,8)];
                         case 3
-                            phi_vec=[zeros(1,7),1,zeros(1,2)];
+                            phi_vec=[zeros(1,7),1,zeros(1,7)];
                         case 4
-                            phi_vec=[zeros(1,8),1,zeros(1,1)];
+                            phi_vec=[zeros(1,8),1,zeros(1,6)];
                         case 5
-                            phi_vec=[zeros(1,9),1];
+                            phi_vec=[zeros(1,9),1,zeros(1,5)];
+                        case 6
+                            phi_vec=[zeros(1,10),1,zeros(1,4)];
+                        case 7
+                            phi_vec=[zeros(1,11),1,zeros(1,3)];
+                        case 8
+                            phi_vec=[zeros(1,12),1,zeros(1,2)];
+                        case 9
+                            phi_vec=[zeros(1,13),1,zeros(1,1)];
+                        case 10
+                            phi_vec=[zeros(1,14),1];
                         otherwise
                             disp('State out of bounds of aggregation!!');
                     end
