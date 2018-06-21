@@ -68,6 +68,8 @@ indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
 Lmin_offs_p=[]; %Vector of minimum load offsets for each E-state, to create CORRECT MAPPING in G matrix
 E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
+P_fullmtx=[];
+c_state=[];
 
 %% PART A: SET UP MATRICES
 %For each possible control...
