@@ -38,7 +38,7 @@ for i=1:length(CostMtx)
        %Create parameter fitting vector
       %phi_vec=[1,E1s(i)+E2s(i),Ls(i)-E2s(i),E2s(i)]; 
       %phi_vec=[1,E1s(i)+E2s(i),Ls(i)-E2s(i),E2s(i),E1s(i)^2,E2s(i)^2,(Ls(i)-E2s(i))^2,(Ls(i)-E1s(i))^2, Ls(i)^2,(E2s(i)-E1s(i))^2, Ls(i)^3,E1s(i)^3, E2s(i)^3 ];
-      phi_vec=[1,E1s(i)+E2s(i),Ls(i)-E2s(i),E2s(i),E1s(i)^2,E2s(i)^2,(Ls(i)-E2s(i))^2,(Ls(i)-E1s(i))^2, Ls(i)^2,(E2s(i)-E1s(i))^2, Ls(i)^3,E1s(i)^3, E2s(i)^3, E1s(i)^4, E2s(i)^4, Ls(i)^4 ];
+      phi_vec=[1,E1s(i)+E2s(i),Ls(i)-E2s(i),E2s(i), E1s(i)^2,E2s(i)^2,(Ls(i)-E2s(i))^2,(Ls(i)-E1s(i))^2, Ls(i)^2,(E2s(i)-E1s(i))^2, Ls(i)^3,E1s(i)^3, E2s(i)^3, E1s(i)^4, E2s(i)^4, Ls(i)^4 ];
       Phi=[Phi;phi_vec]; %Add to Phi
    end
 end
