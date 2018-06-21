@@ -22,10 +22,10 @@ if(~boolSingleSequence)
     for t=1:1
         %subplot(1,1,t+1)
         for ind=1:(length(indL)-1) %FULL LOAD NOT POSSIBLE, so one less possibility
-            cost=Costs_LP(:,:,ind);
-            cost(cost>=INFCOST)=-100; %Replace all with infeasible costs for plotting
+            costs=Costs_LP(:,:,ind);
+            costs(costs>=INFCOST)=-100; %Replace all with infeasible costs for plotting
             Z=(ind-1)*ones(length(E_Ind1),length(E_Ind2));
-            surf(E_Ind2-1,E_Ind1-1,Z,cost)
+            surf(E_Ind2-1,E_Ind1-1,Z,costs)
             hold on
         end
         colorbar
