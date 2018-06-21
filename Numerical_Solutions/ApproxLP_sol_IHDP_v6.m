@@ -3,7 +3,7 @@
 %v4: State aggregation based on L-E2
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X V cost ConvCosts;
+clearvars -except X V cost ConvCosts errorCostsMtx;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -414,25 +414,25 @@ Phi=[]; %Design matrix, for cost approximation
                     %with same L-E2 value
                     switch L-E2
                         case -4
-                            phi_vec=[1,1,zeros(1,9)];
+                            phi_vec=[1,zeros(1,9)];
                         case -3
-                            phi_vec=[1,zeros(1,1),1,zeros(1,8)];
+                            phi_vec=[zeros(1,1),1,zeros(1,8)];
                         case -2
-                            phi_vec=[1,zeros(1,2),1,zeros(1,7)];
+                            phi_vec=[zeros(1,2),1,zeros(1,7)];
                         case -1
-                            phi_vec=[1,zeros(1,3),1,zeros(1,6)];
+                            phi_vec=[zeros(1,3),1,zeros(1,6)];
                         case 0
-                            phi_vec=[1,zeros(1,4),1,zeros(1,5)];
+                            phi_vec=[zeros(1,4),1,zeros(1,5)];
                         case 1
-                            phi_vec=[1,zeros(1,5),1,zeros(1,4)];
+                            phi_vec=[zeros(1,5),1,zeros(1,4)];
                         case 2
-                            phi_vec=[1,zeros(1,6),1,zeros(1,3)];
+                            phi_vec=[zeros(1,6),1,zeros(1,3)];
                         case 3
-                            phi_vec=[1,zeros(1,7),1,zeros(1,2)];
+                            phi_vec=[zeros(1,7),1,zeros(1,2)];
                         case 4
-                            phi_vec=[1,zeros(1,8),1,zeros(1,1)];
+                            phi_vec=[zeros(1,8),1,zeros(1,1)];
                         case 5
-                            phi_vec=[1,zeros(1,9),1];
+                            phi_vec=[zeros(1,9),1];
                         otherwise
                             disp('State out of bounds of aggregation!!');
                     end
