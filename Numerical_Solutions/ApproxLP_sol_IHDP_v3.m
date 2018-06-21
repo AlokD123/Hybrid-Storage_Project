@@ -403,9 +403,9 @@ Phi=[]; %Design matrix, for cost approximation
   %% COST APPROXIMATION
   %Create design matrix (1 row per feasible state)
   rankOrth=0;
-  while rankOrth~=50
-    randMtx=randi(100,size(Q,2),50);
-    randOrth=abs(orth(randMtx));
+  while rankOrth~=16
+    randMtx=randi(100,size(Q,2),16);
+    randOrth=orth(randMtx);
     rankOrth=rank(randOrth);
   end
   Phi=[ones(size(Q,2),1), randOrth];

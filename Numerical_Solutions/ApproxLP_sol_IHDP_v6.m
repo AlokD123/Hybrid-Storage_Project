@@ -1,6 +1,6 @@
 %LP solution of IHDP (Value Iteration) for Hybrid Storage optimization
 %USING COST APPROXIMATION
-%v4: State aggregation based on L-E2
+%v6: State aggregation
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
 clearvars -except X V cost ConvCosts errorCostsMtx;
