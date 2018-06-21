@@ -459,8 +459,6 @@ c_state(c_state==0)=[]; %Remove zero probability states
         maximize( d'*Q*phi_k-2^3*c_state'*phi_k )
         subject to
             d1: norm(phi_k,1) <= 1e3
-            d2: Q*[Phi phi_k]*[r_fit;1] <= b + 1e-3
-            d3: [Phi phi_k]*[r_fit;1] >= -1e-3
       cvx_end
       
       %2) Add next basis to Phi
