@@ -74,3 +74,11 @@ Logs_Reports/Presentation/Hybrid-Storage-Control_presentation.run.xml
 *.snm
 Logs_Reports/Presentation/Hybrid-Storage-Control_presentation.toc
 *.asv
+*.eps
+Numerical_Solutions/polyfitn.m
+Numerical_Solutions/test.m
+Numerical_Solutions/test2.m
+Numerical_Solutions/test3.m
+Numerical_Solutions/test4.m
+Numerical_Solutions/Hybrid_Storage_DP_sol.asv
+Numerical_Solutions/Hybrid_Storage_DP_sol.asv

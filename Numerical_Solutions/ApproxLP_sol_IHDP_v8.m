@@ -447,7 +447,7 @@ Phi=[]; %Design matrix, for cost approximation
       end
   end
   
-   %ADD polynomial basis functions (order R-1)
+   %ADD polynomial basis functions (order R)
    
   phi_vecs_poly=[];
   for i=1:N1
