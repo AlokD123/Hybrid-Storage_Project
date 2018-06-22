@@ -19,7 +19,7 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=6; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=10; %MAXIMUM order of extra polynomial bases added by iteration, minus 1 (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
@@ -447,7 +447,7 @@ Phi=[]; %Design matrix, for cost approximation
       end
   end
   
-   %ADD polynomial basis functions (order R)
+   %ADD polynomial basis functions (order R-1)
    
   phi_vecs_poly=[];
   for i=1:N1
