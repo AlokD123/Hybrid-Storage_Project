@@ -446,6 +446,25 @@ Phi=[]; %Design matrix, for cost approximation
           end
       end
   end
+  
+  phi_vecs_poly=[];
+  for i=1:N1
+      E1=i-1;
+      for j=1:N2
+          E2=j-1;
+          for k=1:size(feasStates,3)
+                L=k-1;
+                if(feasStates(i,j,k)==1)
+                    %Create parameter fitting vector
+                    poly_vec=[E1^2,E2^2,(L-E2)^2,(L-E1)^2, L^2,(E2-E1)^2,L^3,E1^3, E2^3, E1^4,E2^4,L^4 ];      %<--TO CUSTOMIZE, pick design vectors!!
+                    %Add to design matrix
+                    phi_vecs_poly=[phi_vecs_poly;poly_vec];
+                end
+          end
+      end
+  end
+  
+  Phi=[Phi,phi_vecs_poly];
 
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
