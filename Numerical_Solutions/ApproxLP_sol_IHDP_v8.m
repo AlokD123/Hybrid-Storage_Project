@@ -19,7 +19,7 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=10; %MAXIMUM order of extra polynomial bases added by iteration, minus 1 (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=2; %MAXIMUM order of extra polynomial bases added by iteration, minus 1 (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
@@ -449,7 +449,7 @@ Phi=[]; %Design matrix, for cost approximation
   
    %ADD polynomial basis functions (order R-1)
    
-  phi_vecs_poly=[];
+  feasE2s=[]; feasE1s=[]; feasLs=[];
   for i=1:N1
       E1=i-1;
       for j=1:N2
@@ -457,20 +457,20 @@ Phi=[]; %Design matrix, for cost approximation
           for k=1:size(feasStates,3)
                 L=k-1;
                 if(feasStates(i,j,k)==1)
-                    %Create parameter fitting vector
-                    poly_vec=[];
-                    %Add R extra monomials, indexed by z, the order of the monomials
-                    for z=2:R
-                        poly_vec=[poly_vec, E1^z,E2^z,L^z];
-                    end
-                    %Add to design matrix
-                    phi_vecs_poly=[phi_vecs_poly;poly_vec];
+                    %If feasible state, add to list (for developing the
+                    %design matrix of monomials)
+                    feasE2s=[feasE2s;E2]; feasE1s=[feasE1s;E1]; feasLs=[feasLs;L];
                 end
           end
       end
   end
   
-  Phi=[Phi,phi_vecs_poly];
+  %Adjoin feasible state vectors to form a ?x3 array
+  feasStatesArr=[feasE1s,feasE2s,feasLs];
+  %Create design matrix with fitting functions up to order R
+  phi_poly=DesignMtx(feasStatesArr,cost,R);
+  %Add to present basis vectors
+  Phi=[Phi,phi_poly(:,4:end)]; %Ignore constant and linear terms (ALREADY ACCOUNTED FOR IN S.A.)
 
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
@@ -492,6 +492,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
     maximize( c_state'*Phi*r_fit )
     subject to
         d : Q*Phi*r_fit <= b
+        Phi*r_fit >= 0
   cvx_end
   
   %Plot approximate and actual costs
@@ -502,82 +503,83 @@ c_state(c_state==0)=[]; %Remove zero probability states
   title(strcat('Evaluating Approximation with',{' '},num2str(3*(R-1)+10),'-Bases Fit'));
   
   %Store NORMALIZED approximation error bases (2-NORM)
-  approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
+  approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
+  %approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
   %Store approximation
   %approx=Phi*r_fit;
   
   
-  optD = d; %Get vector of FINAL dual
-  cost=Phi*r_fit; %Get FINAL approximated cost
-  
-  %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
-  ConvCosts=FormatCostVect(cost);
-    
-    %% PART C: STATIONARY POLICY
-    %PART 1: Create vector of probabilities of states (marginalized over control applied (denominator))
-    %1) Augment optD vector to include probabilities of infeasible states too (0's)
-    %Make each E_Ind_Mtx same size to compare ALL states between different
-    %values of p, once in vector form
-    %->Augmented vectors for given values of p (i.e. like augmented versions of
-    %E_Ind_VectALL, and subsets of E_MtxALL_Vect)
-    E_MtxALL_Vect_subs={};
-    for p=1:P1*P2
-        E_Ind_Mtx_p=E_Ind_Mtx{p};
-        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:size(E_Ind_MtxALL,2))=0; %Pad with zeros on sid to make same size
-        %Convert to vector
-        trE_Ind_Mtx_p=E_Ind_Mtx_p';
-        E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);
-    end
-    
-    %2) Create augmented vectors of probabilities for ALL states - feasible
-    %AND INFEASIBLE TOO - for EACH CONTROL p
-    
-    %For each element in E_MtxALL_Vect_subs{p}, if...
-    %a) 0, append 0 to aug_optD_subP{p}
-    %b) non-zero, append some value from optD to aug_optD_subP{p}
-    %where some value is next value in for i=1:p-1 sumLen=sumLen+len(vecti) end optD(sumLen:sumLen+len(vectp))
-    aug_optD_subP={};
-    indOptD=1;
-    for p=1:P1*P2
-        aug_optD_subP_p=[];
-        E_MtxALL_Vect_subs_p=E_MtxALL_Vect_subs{p};
-       for i=1:length(E_MtxALL_Vect_subs_p)
-           if(E_MtxALL_Vect_subs_p(i)==0)
-              aug_optD_subP_p=[aug_optD_subP_p;0];
-           else
-               %Find value in subvector of optD just by continuously
-               %indexing through optD in order <--------------------------Assuming optD linearly indexed in order (E2, E1, L, D2, D1)
-               aug_optD_subP_p=[aug_optD_subP_p;optD(indOptD)];
-               indOptD=indOptD+1;
-           end
-       end
-       aug_optD_subP{p}=aug_optD_subP_p;
-    end
-    
-    %3) Marginalise: sum vector components
-    d_state=zeros(length(aug_optD_subP{1}),1); %Initialize
-    for(p=1:P1*P2)
-       d_state=d_state+aug_optD_subP{p}; %Sum over control values
-    end
-    
-    %PART 2: Get stationary probabilities vector
-    %Create augmented optD vector, for ALL states
-    aug_optD=[];
-    for p=1:P1*P2
-        aug_optD=[aug_optD;aug_optD_subP{p}];
-    end
-    %Create vector with vector d_state duplicated P1*P2 times and appended
-    %(to allow for dividing each probability by marginalized value)
-    dup_ones=ones(P1*P2,1);
-    d_state_dup=kron(dup_ones,d_state);
-    %Divide to get stationary probabilities vector for ALL states (augmented)
-    aug_pi=aug_optD./d_state_dup;
-    
-    %Create augmented vector of all E_MtxALL_Vect_subs vectors
-    aug_E_MtxALL_Vect=[];
-    for p=1:P1*P2
-        aug_E_MtxALL_Vect=[aug_E_MtxALL_Vect;E_MtxALL_Vect_subs{p}];
-    end
-    %Get stationary probabilities vector for ONLY feasible states (non-zero
-    %in aug_E_MtxALL_Vect)
-    pi=aug_pi(aug_E_MtxALL_Vect~=0);
+%   optD = d; %Get vector of FINAL dual
+%   cost=Phi*r_fit; %Get FINAL approximated cost
+%   
+%   %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
+%   ConvCosts=FormatCostVect(cost);
+%     
+%     %% PART C: STATIONARY POLICY
+%     %PART 1: Create vector of probabilities of states (marginalized over control applied (denominator))
+%     %1) Augment optD vector to include probabilities of infeasible states too (0's)
+%     %Make each E_Ind_Mtx same size to compare ALL states between different
+%     %values of p, once in vector form
+%     %->Augmented vectors for given values of p (i.e. like augmented versions of
+%     %E_Ind_VectALL, and subsets of E_MtxALL_Vect)
+%     E_MtxALL_Vect_subs={};
+%     for p=1:P1*P2
+%         E_Ind_Mtx_p=E_Ind_Mtx{p};
+%         E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:size(E_Ind_MtxALL,2))=0; %Pad with zeros on sid to make same size
+%         %Convert to vector
+%         trE_Ind_Mtx_p=E_Ind_Mtx_p';
+%         E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);
+%     end
+%     
+%     %2) Create augmented vectors of probabilities for ALL states - feasible
+%     %AND INFEASIBLE TOO - for EACH CONTROL p
+%     
+%     %For each element in E_MtxALL_Vect_subs{p}, if...
+%     %a) 0, append 0 to aug_optD_subP{p}
+%     %b) non-zero, append some value from optD to aug_optD_subP{p}
+%     %where some value is next value in for i=1:p-1 sumLen=sumLen+len(vecti) end optD(sumLen:sumLen+len(vectp))
+%     aug_optD_subP={};
+%     indOptD=1;
+%     for p=1:P1*P2
+%         aug_optD_subP_p=[];
+%         E_MtxALL_Vect_subs_p=E_MtxALL_Vect_subs{p};
+%        for i=1:length(E_MtxALL_Vect_subs_p)
+%            if(E_MtxALL_Vect_subs_p(i)==0)
+%               aug_optD_subP_p=[aug_optD_subP_p;0];
+%            else
+%                %Find value in subvector of optD just by continuously
+%                %indexing through optD in order <--------------------------Assuming optD linearly indexed in order (E2, E1, L, D2, D1)
+%                aug_optD_subP_p=[aug_optD_subP_p;optD(indOptD)];
+%                indOptD=indOptD+1;
+%            end
+%        end
+%        aug_optD_subP{p}=aug_optD_subP_p;
+%     end
+%     
+%     %3) Marginalise: sum vector components
+%     d_state=zeros(length(aug_optD_subP{1}),1); %Initialize
+%     for(p=1:P1*P2)
+%        d_state=d_state+aug_optD_subP{p}; %Sum over control values
+%     end
+%     
+%     %PART 2: Get stationary probabilities vector
+%     %Create augmented optD vector, for ALL states
+%     aug_optD=[];
+%     for p=1:P1*P2
+%         aug_optD=[aug_optD;aug_optD_subP{p}];
+%     end
+%     %Create vector with vector d_state duplicated P1*P2 times and appended
+%     %(to allow for dividing each probability by marginalized value)
+%     dup_ones=ones(P1*P2,1);
+%     d_state_dup=kron(dup_ones,d_state);
+%     %Divide to get stationary probabilities vector for ALL states (augmented)
+%     aug_pi=aug_optD./d_state_dup;
+%     
+%     %Create augmented vector of all E_MtxALL_Vect_subs vectors
+%     aug_E_MtxALL_Vect=[];
+%     for p=1:P1*P2
+%         aug_E_MtxALL_Vect=[aug_E_MtxALL_Vect;E_MtxALL_Vect_subs{p}];
+%     end
+%     %Get stationary probabilities vector for ONLY feasible states (non-zero
+%     %in aug_E_MtxALL_Vect)
+%     pi=aug_pi(aug_E_MtxALL_Vect~=0);
