@@ -19,7 +19,7 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=2; %MAXIMUM order of extra polynomial bases added by iteration, minus 1 (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=6; %MAXIMUM order of extra polynomial bases added by iteration, minus 1 (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
@@ -500,11 +500,11 @@ c_state(c_state==0)=[]; %Remove zero probability states
   plot(Phi*r_fit, '*'); hold on; plot(cost, '*');
   xlabel('State Index'); ylabel('Cost');
   legend('Approximate Cost','Actual Cost');
-  title(strcat('Evaluating Approximation with',{' '},num2str(3*(R-1)+10),'-Bases Fit'));
+  title(strcat('Evaluating Approximation with',{' '},num2str(size(Phi,2)),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
   
   %Store NORMALIZED approximation error bases (2-NORM)
-  approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
-  %approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
+  %approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
+  approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
   %Store approximation
   %approx=Phi*r_fit;
   
