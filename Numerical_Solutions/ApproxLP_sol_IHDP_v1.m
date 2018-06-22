@@ -410,7 +410,7 @@ Phi=[]; %Design matrix, for cost approximation
                 L=k-1;
                 if(feasStates(i,j,k)==1)
                     %Create parameter fitting vector
-                    phi_vec=[1,E1+E2,L-E2,E2, E1^2,E2^2,(L-E2)^2,(L-E1)^2, L^2,(E2-E1)^2, L^3,E1^3, E2^3, E1^4,E2^4,L^4 ];      %<--TO CUSTOMIZE, pick design vectors!!
+                    phi_vec=[1,E1, E2, L, E1^2,E2^2,(L-E2)^2,(L-E1)^2, L^2,(E2-E1)^2, L^3,E1^3, E2^3, E1^4,E2^4,L^4 ];      %<--TO CUSTOMIZE, pick design vectors!!
                     %Add to design matrix
                     Phi=[Phi;phi_vec];
                 end
@@ -418,6 +418,8 @@ Phi=[]; %Design matrix, for cost approximation
       end
   end
  
+  %Phi=orth(Phi);
+  
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
 % Probabilities are given in P_fullmtx (non-zero for feasible states)
