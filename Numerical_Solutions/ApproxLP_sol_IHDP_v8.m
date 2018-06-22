@@ -19,7 +19,7 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=6; %MAXIMUM order of extra polynomial bases added by iteration, minus 1 (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=7; %MAXIMUM order of extra polynomial bases added by iteration, minus 1 (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;

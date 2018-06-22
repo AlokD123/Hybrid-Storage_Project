@@ -2,7 +2,7 @@
 %V2: LARGE NUMBER OF BASIS FUNCTIONS (high dimensional model, dimension n)
 
 global CostMtx;
-n=7; %Order of polynomial approximation
+n=4; %Order of polynomial approximation
 
 %% Create matrix containing cost structure
 
@@ -55,18 +55,18 @@ cvx_begin
     minimize( c_state'*abs(cost-Phi*r_fit) )
     subject to
         d : Q*Phi*r_fit <= b
-        %Phi*r_fit>=0
+        Phi*r_fit>=0
 cvx_end
 
 figure
 hold on;
-plot(Phi*r_fit,Phi*r_fit, '*');
-plot(Phi*r_fit,cost, '*');
+plot(Phi*r_fit, '*');
+plot(cost, '*');
 xlabel('Approximate Cost');
 legend('Approximate Cost','Actual Cost');
 title(strcat('Testing Cost Approximation Using Order-',num2str(n),' Fit (',num2str(length(r_fit)),' Bases)'));
-%plot(Phi*r_fit, '.');
-%plot(cost, '.');
+%approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
+approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
 
 % optD2=optD;
 % optD2(optD2<1e-2)=0;
