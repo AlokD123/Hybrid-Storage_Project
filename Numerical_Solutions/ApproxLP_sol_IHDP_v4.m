@@ -489,7 +489,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
      
   end
   
-  title(strcat('Testing Cost Approximation Using', R+1,'-Bases Fit'));
+  title(strcat('Testing Cost Approximation Using', num2str(R+1),'-Bases Fit'));
   hold off
   
   figure

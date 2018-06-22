@@ -447,6 +447,8 @@ Phi=[]; %Design matrix, for cost approximation
       end
   end
   
+  %ADD polynomial basis functions
+  
   phi_vecs_poly=[];
   for i=1:N1
       E1=i-1;
@@ -456,7 +458,7 @@ Phi=[]; %Design matrix, for cost approximation
                 L=k-1;
                 if(feasStates(i,j,k)==1)
                     %Create parameter fitting vector
-                    poly_vec=[E1^2,E2^2,(L-E2)^2,(L-E1)^2, L^2,(E2-E1)^2,L^3,E1^3, E2^3, E1^4,E2^4,L^4 ];      %<--TO CUSTOMIZE, pick design vectors!!
+                    poly_vec=[E1^2,E2^2, L^2,L^3,E1^3, E2^3 ];      %<--TO CUSTOMIZE, pick design vectors!!
                     %Add to design matrix
                     phi_vecs_poly=[phi_vecs_poly;poly_vec];
                 end
@@ -489,7 +491,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
     subject to
         d : Q*Phi*r_fit <= b
   cvx_end
-  %Initialize counter for number of basis functions
+  %Initialize counter for number of extra basis functions
   k=1;
   
   %Plot first approximate cost 
