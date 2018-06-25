@@ -483,6 +483,10 @@ Phi=[]; %Design matrix, for cost approximation
     %Remove these bases
     nonAff_phi_poly=phi_poly(:,boolNonAff);
     Phi=[Phi,nonAff_phi_poly]; %Ignore constant and linear terms (ALREADY ACCOUNTED FOR IN S.A.)
+    %Remove column vectors UNTIL FULL RANK Phi
+    while rank(Phi)~=size(Phi,2) %rank( Phi(:,1:(size(Phi,2)-i) ))~=(size(Phi,2)-i)
+        Phi=Phi(:,1:(size(Phi,2)-1));
+    end
 
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
