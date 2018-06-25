@@ -1,6 +1,6 @@
 function Phi = DesignMtx(indepvar,depvar,modelterms)
 % DesigMtx creates a general polynomial regression design matrix
-% (n-dimensional polynomial fit, ALL terms included)
+% (n-th order polynomial fit, ALL terms included)
 %
 % Adapted from Polyfitn... Refer to license at end
 %   Source: https://www.mathworks.com/matlabcentral/fileexchange/34765-polyfitn
