@@ -4,7 +4,7 @@
 % POLYNOMIAL BASIS FUNCTIONS
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X V cost approx_err;
+clearvars -except X V cost approx_err Phi2;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -19,7 +19,8 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=7; %MAXIMUM order of extra polynomial bases added by iteration, minus 1 (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=2; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
@@ -405,7 +406,33 @@ Phi=[]; %Design matrix, for cost approximation
   
   %% PART B: COST APPROXIMATION AND BASIS FUNCTION GENERATION
   %Create initial design matrix (1 row per feasible state)
-  %Use state aggregation
+  %Use state aggregation for first 'num_steps', then start to generate
+  %monomials
+  
+  feasE2s=[]; feasE1s=[]; feasLs=[]; %To add polynomial basis functions (order R-1)
+  
+  %1) find bounds of linear fit
+  exprMax=0; exprMin=0;
+  for i=1:N1
+      E1=i-1;
+      for j=1:N2
+          E2=j-1;
+          for k=1:size(feasStates,3)
+                L=k-1;
+                if(feasStates(i,j,k)==1)
+                    exprMax=max(fitStateExpr(E1,E2,L),exprMax);
+                    exprMin=min(fitStateExpr(E1,E2,L),exprMin);
+                end
+          end
+      end
+  end
+  %2) determine suitable divisor so integer number steps
+  num_steps=MAX_STEPS;
+  while rem(exprMax-exprMin+1,num_steps) %While remainder, decrease steps
+      num_steps=num_steps-1;
+  end
+  step_size=(exprMax-exprMin+1)/num_steps; %Get step (aggregation) size
+  %3) finally, create feature vectors
   for i=1:N1
       E1=i-1;
       for j=1:N2
@@ -414,49 +441,26 @@ Phi=[]; %Design matrix, for cost approximation
                 L=k-1;
                 if(feasStates(i,j,k)==1)
                     %Create parameter fitting vector by aggregating states
-                    %with same L-E2 value
-                    switch L-E2
-                        case -4
-                            phi_vec=[1,zeros(1,9)];
-                        case -3
-                            phi_vec=[zeros(1,1),1,zeros(1,8)];
-                        case -2
-                            phi_vec=[zeros(1,2),1,zeros(1,7)];
-                        case -1
-                            phi_vec=[zeros(1,3),1,zeros(1,6)];
-                        case 0
-                            phi_vec=[zeros(1,4),1,zeros(1,5)];
-                        case 1
-                            phi_vec=[zeros(1,5),1,zeros(1,4)];
-                        case 2
-                            phi_vec=[zeros(1,6),1,zeros(1,3)];
-                        case 3
-                            phi_vec=[zeros(1,7),1,zeros(1,2)];
-                        case 4
-                            phi_vec=[zeros(1,8),1,zeros(1,1)];
-                        case 5
-                            phi_vec=[zeros(1,9),1];
-                        otherwise
-                            disp('State out of bounds of aggregation!!');
+                    %with same LINEAR EXPRESSION value (i.e. LINEAR FIT)
+                    %Set expression
+                    linStateExpr=fitStateExpr(E1,E2,L);
+                    %Create vector
+                    for l=1:num_steps
+                        if ((exprMin+(l-1)*step_size)<=linStateExpr && ...
+                                linStateExpr<(exprMin+l*step_size))
+                            phi_vec=[zeros(1,l-1),1,zeros(1,num_steps-l)];
+                        end
+                    end
+                    if phi_vec==0
+                        disp('State out of bounds of aggregation!!');
                     end
                     
-                    %Add to design matrix
+                    %Add to design matrix, and then reset
                     Phi=[Phi;phi_vec];
-                end
-          end
-      end
-  end
-  
-   %ADD polynomial basis functions (order R-1)
-   
-  feasE2s=[]; feasE1s=[]; feasLs=[];
-  for i=1:N1
-      E1=i-1;
-      for j=1:N2
-          E2=j-1;
-          for k=1:size(feasStates,3)
-                L=k-1;
-                if(feasStates(i,j,k)==1)
+                    phi_vec=0;
+                    
+                    
+                    %PREPARE to form monomials for remainder of vectors
                     %If feasible state, add to list (for developing the
                     %design matrix of monomials)
                     feasE2s=[feasE2s;E2]; feasE1s=[feasE1s;E1]; feasLs=[feasLs;L];
@@ -470,6 +474,7 @@ Phi=[]; %Design matrix, for cost approximation
   %Create design matrix with fitting functions up to order R
   phi_poly=DesignMtx(feasStatesArr,cost,R);
   %Add to present basis vectors
+  %Phi=phi_poly(:,1:end);
   Phi=[Phi,phi_poly(:,4:end)]; %Ignore constant and linear terms (ALREADY ACCOUNTED FOR IN S.A.)
 
 % Find state-relevance vector for minimization, c
