@@ -4,7 +4,7 @@
 % POLYNOMIAL BASIS FUNCTIONS
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X V cost approx_err Phi2;
+clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -19,7 +19,7 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=2; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=1; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
@@ -474,8 +474,15 @@ Phi=[]; %Design matrix, for cost approximation
   %Create design matrix with fitting functions up to order R
   phi_poly=DesignMtx(feasStatesArr,cost,R);
   %Add to present basis vectors
-  %Phi=phi_poly(:,1:end);
-  Phi=[Phi,phi_poly(:,4:end)]; %Ignore constant and linear terms (ALREADY ACCOUNTED FOR IN S.A.)
+  %OLD - use all vectors: Phi=phi_poly(:,1:end);
+    lenPoly=size(phi_poly,2);
+    %Determine the affine bases in order R polynomial by index
+    indBaseE2=lenPoly-(R+2)+1; indBaseE1=lenPoly-(0.5*R^2+1.5*R+2)+1;
+    %Get these columns of constant and linear terms
+    boolNonAff=~[zeros(1,indBaseE1-1) 1 zeros(1,indBaseE2-indBaseE1-1) 1 zeros(1,lenPoly-2-indBaseE2) 1 1]; 
+    %Remove these bases
+    nonAff_phi_poly=phi_poly(:,boolNonAff);
+    Phi=[Phi,nonAff_phi_poly]; %Ignore constant and linear terms (ALREADY ACCOUNTED FOR IN S.A.)
 
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
