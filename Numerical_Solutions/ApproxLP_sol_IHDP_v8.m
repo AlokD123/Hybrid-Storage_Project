@@ -19,7 +19,7 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=1; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=2; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
@@ -472,7 +472,7 @@ Phi=[]; %Design matrix, for cost approximation
   %Adjoin feasible state vectors to form a ?x3 array
   feasStatesArr=[feasE1s,feasE2s,feasLs];
   %Create design matrix with fitting functions up to order R
-  phi_poly=DesignMtx(feasStatesArr,cost,R);
+  phi_poly=DesignMtx(feasStatesArr,ones(length(feasStatesArr),1),R);
   %Add to present basis vectors
   %OLD - use all vectors: Phi=phi_poly(:,1:end);
     lenPoly=size(phi_poly,2);
@@ -515,8 +515,8 @@ c_state(c_state==0)=[]; %Remove zero probability states
   title(strcat('Evaluating Approximation with',{' '},num2str(size(Phi,2)),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
   
   %Store NORMALIZED approximation error bases (2-NORM)
-  %approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
-  approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
+  approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
+  %approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
   %Store approximation
   %approx=Phi*r_fit;
   
