@@ -19,7 +19,7 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=2; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=6; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
@@ -483,6 +483,7 @@ Phi=[]; %Design matrix, for cost approximation
     %Remove these bases
     nonAff_phi_poly=phi_poly(:,boolNonAff);
     Phi=[Phi,nonAff_phi_poly]; %Ignore constant and linear terms (ALREADY ACCOUNTED FOR IN S.A.)
+    origSizePhi=size(Phi,2); %Store old size of Phi
     %Remove column vectors UNTIL FULL RANK Phi
     while rank(Phi)~=size(Phi,2) %rank( Phi(:,1:(size(Phi,2)-i) ))~=(size(Phi,2)-i)
         Phi=Phi(:,1:(size(Phi,2)-1));
@@ -516,7 +517,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
   plot(Phi*r_fit, '*'); hold on; plot(cost, '*');
   xlabel('State Index'); ylabel('Cost');
   legend('Approximate Cost','Actual Cost');
-  title(strcat('Evaluating Approximation with',{' '},num2str(size(Phi,2)),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
+  title(strcat('Evaluating Approximation with',{' '},num2str(origSizePhi),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
   
   %Store NORMALIZED approximation error bases (2-NORM)
   approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
