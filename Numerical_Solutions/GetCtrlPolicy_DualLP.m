@@ -8,7 +8,7 @@ clear policyMtx;
 %P1=N1; P2=N2;
 
 %Repeat for each decision (D1,D2 combination)
-for(p=1:P1*P2)
+for(p=1:p_max)
 piSubVec=aug_pi((p-1)*N1*N2*(M-1)+1:p*N1*N2*(M-1));
 %Format binary policy sub-vector (for cases when applying the single decision) into E1xE2 matrices ((M-1) matrices, for each value of load)
     for(i1=0:(M-1)*N2:(M-1)*N2*(N1-1))
