@@ -8,7 +8,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[12;5]; %Maximum energy to be stored (upper bound)
+E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -19,13 +19,13 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=1; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=5; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[12;5]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -76,9 +76,12 @@ feasStates=[]; %List of all feasible states (E1,E2,L), no repeats
 Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
 Lmin_offs_p=[]; %Vector of minimum load offsets for each E-state, to create CORRECT MAPPING in G matrix
 E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
-
+P_fullmtx=[];   %Matrix of all probabilities
+c_state=[];     %Vector of state-relevance weightings
 
 Phi=[]; %Design matrix, for cost approximation
+
+p_max=0;    %Maximum number of controls to consider
 
 %% PART A: SET UP MATRICES
 %For each possible control...
@@ -120,9 +123,6 @@ Phi=[]; %Design matrix, for cost approximation
                         %Calculate the state these values of u and w will lead to, even if
                         %impossible...
                         [nextE1,nextE2]=optNextStateLimited(E1,E2,D1,D2,L);
-                        if(D1==MAX_DISCHARGE(1)||(round(nextE1)==0&&nextE1<=0)) %<---------------------------------------------------------------------------- SOL#2 for excess discharge: saturate state!!!!!!!!!!!!!!
-                           nextE1=0; 
-                        end
 
                         %If next state is amongst those achievable with a given perturbance....
                         if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
@@ -190,13 +190,24 @@ Phi=[]; %Design matrix, for cost approximation
             end
         end
         
-    %Store vector data in cell array
-    g{p}=gVec_p';
-    E_Ind_Vect{p}=E_Ind_Vect_p;
-    nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
-    Lmin{p}=Lmin_p;
-    Lmin_offs{p}=Lmin_offs_p;
-    E_Ind_Mtx{p}=E_Ind_Mtx_p;
+    %If at least one feasible state, consider this control
+    if (~isempty(gVec_p))
+        %Store vector data in cell array
+        g{p}=gVec_p';
+        E_Ind_Vect{p}=E_Ind_Vect_p;
+        nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
+        Lmin{p}=Lmin_p;
+        Lmin_offs{p}=Lmin_offs_p;
+        E_Ind_Mtx{p}=E_Ind_Mtx_p;
+        
+        %Continue testing next control
+        p_max=p_max+1;
+    else
+        %Else, IGNORE
+        %Also, STOP TESTING MORE CONTROLS (max feasible reached)
+        D1=MAX_DISCHARGE(1);
+        D2=MAX_DISCHARGE(2);
+    end
     
     %Reset matrices/vectors
     nextE_Ind_Vect_p=[];
@@ -229,7 +240,7 @@ Phi=[]; %Design matrix, for cost approximation
   
   
   
-  for p=1:P1*P2
+  for p=1:p_max
     E_Ind_Vect_p=E_Ind_Vect{p};
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
     Lmin_offs_p=Lmin_offs{p};
@@ -293,7 +304,7 @@ Phi=[]; %Design matrix, for cost approximation
   
   
   %STEP 10: Construct each F matrix
-  for p=1:P1*P2
+  for p=1:p_max
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
       row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
@@ -332,7 +343,7 @@ Phi=[]; %Design matrix, for cost approximation
   end
   
   %STEP 11: Construct each G matrix
-  for p=1:P1*P2
+  for p=1:p_max
       E_Ind_Vect_p=E_Ind_Vect{p};
       Lmin_offs_p=Lmin_offs{p};
       %Index COLUMN of G matrix by ROW number of E_Ind_VectALL
@@ -374,7 +385,7 @@ Phi=[]; %Design matrix, for cost approximation
   end
   
   %If get empty g vector...
-  for p=1:P1*P2
+  for p=1:p_max
     if isempty(g{p})
         disp('ERROR!!'); %Error!!!
        g{p}=zeros(length(E_Ind_VectALL),1); %Set equal to zeros
@@ -384,7 +395,7 @@ Phi=[]; %Design matrix, for cost approximation
   %% CORRECTED MATRICES (REMAINING infeasible states removed)
   %1) Coefficients
   Q=[];
-  for p=1:P1*P2
+  for p=1:p_max
     %Create full 'A' matrices for coefficients (A=G-alpha*PF)
     A{p}=G{p}-DISCOUNT*PF{p};
     %Adjoin A matrices to form Q
@@ -400,7 +411,7 @@ Phi=[]; %Design matrix, for cost approximation
   %2) Constants
   %Create full 'b' vector for constants
   b=[];
-  for p=1:P1*P2
+  for p=1:p_max
     b=[b;g{p}];
   end
   
@@ -540,7 +551,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
 %     %->Augmented vectors for given values of p (i.e. like augmented versions of
 %     %E_Ind_VectALL, and subsets of E_MtxALL_Vect)
 %     E_MtxALL_Vect_subs={};
-%     for p=1:P1*P2
+%     for p=1:p_max
 %         E_Ind_Mtx_p=E_Ind_Mtx{p};
 %         E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:size(E_Ind_MtxALL,2))=0; %Pad with zeros on sid to make same size
 %         %Convert to vector
@@ -557,7 +568,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
 %     %where some value is next value in for i=1:p-1 sumLen=sumLen+len(vecti) end optD(sumLen:sumLen+len(vectp))
 %     aug_optD_subP={};
 %     indOptD=1;
-%     for p=1:P1*P2
+%     for p=1:p_max
 %         aug_optD_subP_p=[];
 %         E_MtxALL_Vect_subs_p=E_MtxALL_Vect_subs{p};
 %        for i=1:length(E_MtxALL_Vect_subs_p)
@@ -575,26 +586,26 @@ c_state(c_state==0)=[]; %Remove zero probability states
 %     
 %     %3) Marginalise: sum vector components
 %     d_state=zeros(length(aug_optD_subP{1}),1); %Initialize
-%     for(p=1:P1*P2)
+%     for(p=1:p_max)
 %        d_state=d_state+aug_optD_subP{p}; %Sum over control values
 %     end
 %     
 %     %PART 2: Get stationary probabilities vector
 %     %Create augmented optD vector, for ALL states
 %     aug_optD=[];
-%     for p=1:P1*P2
+%     for p=1:p_max
 %         aug_optD=[aug_optD;aug_optD_subP{p}];
 %     end
-%     %Create vector with vector d_state duplicated P1*P2 times and appended
+%     %Create vector with vector d_state duplicated p_max times and appended
 %     %(to allow for dividing each probability by marginalized value)
-%     dup_ones=ones(P1*P2,1);
+%     dup_ones=ones(p_max,1);
 %     d_state_dup=kron(dup_ones,d_state);
 %     %Divide to get stationary probabilities vector for ALL states (augmented)
 %     aug_pi=aug_optD./d_state_dup;
 %     
 %     %Create augmented vector of all E_MtxALL_Vect_subs vectors
 %     aug_E_MtxALL_Vect=[];
-%     for p=1:P1*P2
+%     for p=1:p_max
 %         aug_E_MtxALL_Vect=[aug_E_MtxALL_Vect;E_MtxALL_Vect_subs{p}];
 %     end
 %     %Get stationary probabilities vector for ONLY feasible states (non-zero
