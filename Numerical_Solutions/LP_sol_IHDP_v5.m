@@ -4,7 +4,7 @@ clearvars -except X V;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+E_MAX=[12;5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -18,7 +18,7 @@ E2_INIT=E_MAX(2);
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[12;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -70,6 +70,7 @@ Lmin_offs_p=[]; %Vector of minimum load offsets for each E-state, to create CORR
 E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
 P_fullmtx=[];
 c_state=[];
+State_NextStates=[];
 
 %% PART A: SET UP MATRICES
 %For each possible control...
@@ -114,7 +115,11 @@ c_state=[];
                         if(D1==MAX_DISCHARGE(1)) %<---------------------------------------------------------------------------- SOL#2 for excess discharge: saturate state!!!!!!!!!!!!!!
                            nextE1=0; 
                         end
-
+                        
+                        boolFble=(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))&&(nextE2<=E_MAX(2) && nextE2>=E_MIN(2))&&(~((D1+D2-L)<0||(D1+D2-L)>MAX_CHARGE(2)));
+                        
+                        State_NextStates=[State_NextStates;E1,E2,D1,D2,L,nextE1,nextE2,boolFble];
+                        
                         %If next state is amongst those achievable with a given perturbance....
                         if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
                             if(nextE2<=E_MAX(2) && nextE2>=E_MIN(2))
@@ -382,7 +387,7 @@ c_state=[];
   %If empty columns in Q...
   if (~all(any(Q,1)))
       disp('ERROR!!!!!'); %ERROR
-     Q(:,~any(Q,1))=[]; %Remove, for now 
+     Q(:,~any(Q,1))=[]; %Remove, for now ]
   end
   
   %2) Constants
