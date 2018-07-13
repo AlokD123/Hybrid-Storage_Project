@@ -8,7 +8,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[15;10]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -19,13 +19,13 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=5; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=3; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[15;10]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -54,7 +54,6 @@ N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
-INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
@@ -119,7 +118,7 @@ tic;
                     Lmin_p=[Lmin_p; minL]; %Create vector
                     
                     %For each perturbation at the CURRENT time...
-                    for indL=1:(MAX_LOAD-MIN_LOAD+1)
+                    for indL=1:(D1+D2-MIN_LOAD+1)
                         %Map index to value of load
                         L=indL+MIN_LOAD-1;
 

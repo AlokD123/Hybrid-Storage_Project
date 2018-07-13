@@ -4,7 +4,7 @@ clearvars -except X V;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
+E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -18,7 +18,7 @@ E2_INIT=E_MAX(2);
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -76,6 +76,9 @@ F_p=[]; G_p=[];
 
 p_max=0;    %Maximum number of controls to consider
 
+maxTime=0;
+count=0;
+
 %% PART A: SET UP MATRICES
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
@@ -108,7 +111,7 @@ p_max=0;    %Maximum number of controls to consider
                     Lmin_p=[Lmin_p; minL]; %Create vector
                     
                     %For each perturbation at the CURRENT time...
-                    for indL=1:(MAX_LOAD-MIN_LOAD+1)
+                    for indL=1:(D1+D2-MIN_LOAD+1)
                         %Map index to value of load
                         L=indL+MIN_LOAD-1;
 
