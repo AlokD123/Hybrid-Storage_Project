@@ -168,7 +168,7 @@ boolRounded1=0; boolRounded2=0;
                                   
                                   %STEP A: create array of next state indices that are off-grid
                                   %Mapping from 2 indices to linear index
-                                  if ~isinteger(nextE_Ind) %If EITHER component of next state is off grid...
+                                  if round(nextE_Ind)~=nextE_Ind %If NOT INTEGER...... i.e. EITHER component of next state is off grid...
                                       offGrdNxtE1E2_p=[offGrdNxtE1E2_p;nextE_Ind1,nextE_Ind2,nextE_Ind];
                                   end
                                    
@@ -208,11 +208,11 @@ boolRounded1=0; boolRounded2=0;
         %Count number of feasible loads for NEXT E-states off grid (NOT CURRENT ONES)
       %Steps B-D
       %Count for ALL possible controls in NEXT STATE...
-      for D1_next=0:MAX_DISCHARGE(1)
-        for D2_next=0:MAX_DISCHARGE(2)
-
-            for i=1:size(offGrdNxtE1E2_p,1) %For each next state...
-                nextE1=offGrdNxtE1E2_p(i,1); nextE2=offGrdNxtE1E2_p(i,2);
+      for i=1:size(offGrdNxtE1E2_p,1) %For each next state...
+          for D1_next=0:MAX_DISCHARGE(1)
+            for D2_next=0:MAX_DISCHARGE(2)
+                nextE1=offGrdNxtE1E2_p(i,1)+E_MIN(1)-1; nextE2=offGrdNxtE1E2_p(i,2)+E_MIN(2)-1;
+                
                 %Get number of FEASIBLE next loads
                 %Check excess discharge condition
                 if(~(D1_next>nextE1 || D2_next>nextE2))
@@ -231,12 +231,14 @@ boolRounded1=0; boolRounded2=0;
                         end
                     end
                 end
-                %Store for next state
-                numL_OffGrd_p(i)=numL_OffGrd;
-                %Reset feasible loads count, for subsequent NEXT energy state
-                numL_OffGrd=0;
+                
             end
-        end
+          end
+          
+         %Store # for this next state
+         numL_OffGrd_p(i)=numL_OffGrd;
+         %Reset feasible loads count, for subsequent NEXT energy state
+         numL_OffGrd=0;
       end    
         
     %If at least one feasible state, consider this control
@@ -249,7 +251,7 @@ boolRounded1=0; boolRounded2=0;
         Lmin_offs{p}=Lmin_offs_p;
         E_Ind_Mtx{p}=E_Ind_Mtx_p;
         offGrdNxtE1E2{p}=offGrdNxtE1E2_p;
-        numL_OffGrd{p}=numL_OffGrd_p;
+        numLoads_OffGrd{p}=numL_OffGrd_p;
         
         %Continue testing next control
         p_max=p_max+1;
@@ -334,24 +336,26 @@ boolRounded1=0; boolRounded2=0;
     for r=1:length(E_Ind_Vect_p)
         Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
         
-        %IF off grid, follow step E instead
-        %Otherwise...
-        
-        %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
-        c=find(aug_nextE_Ind_Vect_p==Ind_nextE,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
-        
-        %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
-        nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
-        %Get said non-zero probabilities
-        prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
-        
-        %Store subscript pairs and associated values in array P
-        len=length(prob_nextE); 
-        cols=c:(c+nnzProb_nextE-1);
-        P=[P;r*ones(len,1),cols',prob_nextE];
-        
-        %Fill in row r with said probabilities
-        %P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
+        %IF off grid, follow step F instead
+        if round(Ind_nextE)~=Ind_nextE
+            %
+        else %Otherwise...
+            %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
+            c=find(aug_nextE_Ind_Vect_p==Ind_nextE,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
+
+            %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
+            nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
+            %Get said non-zero probabilities
+            prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
+
+            %Store subscript pairs and associated values in array P
+            len=length(prob_nextE); 
+            cols=c:(c+nnzProb_nextE-1);
+            P=[P;r*ones(len,1),cols',prob_nextE];
+
+            %Fill in row r with said probabilities
+            %P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
+        end
     end
         
     %Store in p-th PF matrix, as well as in own P_mtx
