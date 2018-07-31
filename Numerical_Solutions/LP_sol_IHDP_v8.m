@@ -38,9 +38,6 @@ global DISCOUNT; %Discount factor
 DISCOUNT=[];
 DISCOUNT=0.99;
 
-%Error tolerance
-epsilon=0.01;
-
 %% Definitions
 global N2;
 
@@ -50,32 +47,41 @@ N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
 
+%Next state rounding tolerance
+epsilon=0.01;
+
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
 nextE_Ind_Vect_p=[];  %Vector of next state energies
 aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
-numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
+offGrdNxtE1E2_p=[]; %Array mapping single index to linear next state index, for states OFF THE GRID
+numL_OffGrd_p=[]; %Vector of number of admissible loads in next states that are OFF THE GRID
+
+numL_OffGrd=0; %Count number of admissible load values for a given NEXT energy state
+
+
+global E_Ind_MtxALL; %Matrix of all states (element 0 if infeasible combo)
+global CostMtx; %Matrix with 3 columns: a) E-state, b) load, c) associated cost. Used for approximation
+CostMtx=[];
 
 P_mtx={};   %Array of P matrices
 P=[];       %Current P matrix
 PF={};      %Array of P*F matrices
 
-global E_Ind_MtxALL; %Matrix of all states (0 if infeasible)
-global CostMtx; %Matrix with 3 columns: a) E-state, b) load, c) associated cost. Used for approximation
-CostMtx=[];
-
-indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
+F_p=[]; G_p=[]; %F and G matrices, for mapping states
 
 Lmin_p=[]; %Vector of minimum loads required at high discharge (for given p)
 Lmin_offs_p=[]; %Vector of minimum load offsets for each E-state, to create CORRECT MAPPING in G matrix
 E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
 P_fullmtx=[];   %Matrix of all probabilities
+
+indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 c_state=[];     %Vector of state-relevance weightings
 
-%F and G matrices, for mapping states
-F_p=[]; G_p=[];
-
 p_max=0;    %Maximum number of controls to consider
+
+%Flags for rounding next state to grid
+boolRounded1=0; boolRounded2=0;
 
 %% PART A: SET UP MATRICES
 %For each possible control...
@@ -138,27 +144,39 @@ p_max=0;    %Maximum number of controls to consider
                                   %Map state to state index, to find cost of next state based on its index
                                   if(abs((nextE1-E_MIN(1)+1)-round(nextE1-E_MIN(1)+1))<epsilon)
                                       nextE_Ind1=round(nextE1-E_MIN(1)+1);  %IF within error bound, round
+                                      boolRounded1=1;
                                   else
                                       nextE_Ind1=nextE1-E_MIN(1)+1;         %.. Otherwise, will interpolate
                                   end
-                                  if(abs((nextE2-E_MIN(1)+1)-round(nextE2-E_MIN(1)+1))<epsilon)
-                                      nextE_Ind2=round(nextE2-E_MIN(1)+1);
+                                  if(abs((nextE2-E_MIN(2)+1)-round(nextE2-E_MIN(2)+1))<epsilon)
+                                      nextE_Ind2=round(nextE2-E_MIN(2)+1);
+                                      boolRounded2=1;
                                   else
-                                      nextE_Ind2=nextE2-E_MIN(1)+1;
+                                      nextE_Ind2=nextE2-E_MIN(2)+1;
                                   end
 
                                   %STEP 2: create vector of next state energies for each load
                                   %Get index of next state energy in vector of state energies
-                                  nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
+                                  if boolRounded1==1
+                                      nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
+                                  else
+                                      %PUT SOMETHING ELSE?????
+                                      nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
+                                  end
                                   %Add next state energy index to vector of FEASIBLE next state energies
                                   nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
+                                  
+                                  %STEP A: create array of next state indices that are off-grid
+                                  %Mapping from 2 indices to linear index
+                                  if ~isinteger(nextE_Ind) %If EITHER component of next state is off grid...
+                                      offGrdNxtE1E2_p=[offGrdNxtE1E2_p;nextE_Ind1,nextE_Ind2,nextE_Ind];
+                                  end
                                    
                                   %STEP 3: determine feasible loads
                                   %Add indL to list of FEASIBLE loads for this combination of u and x
                                   indL_Feas=[indL_Feas;indL];
                                   %Create vector of minimum load values for each E-state, WITH repeats (to add OFFSETS in G matrix)
                                   Lmin_offs_p=[Lmin_offs_p;minL];
-                                  
                                 else
                                   %If no feasible state for this combination of (E1,E2) and L...
                                   nextE_Ind=-1; %Flag next state as impossible
@@ -181,14 +199,46 @@ p_max=0;    %Maximum number of controls to consider
                         end
                     end
 
-                    %Reset feasible loads count, for subsequent energy state
-                    numAdmissibleLoads=0;
                     %Reset list of feasible loads (next state)
                     indL_Feas=[];
                 end
             end
-        end
+        end      
     
+        %Count number of feasible loads for NEXT E-states off grid (NOT CURRENT ONES)
+      %Steps B-D
+      %Count for ALL possible controls in NEXT STATE...
+      for D1_next=0:MAX_DISCHARGE(1)
+        for D2_next=0:MAX_DISCHARGE(2)
+
+            for i=1:size(offGrdNxtE1E2_p,1) %For each next state...
+                nextE1=offGrdNxtE1E2_p(i,1); nextE2=offGrdNxtE1E2_p(i,2);
+                %Get number of FEASIBLE next loads
+                %Check excess discharge condition
+                if(~(D1_next>nextE1 || D2_next>nextE2))
+                    %For each perturbation at the NEXT time...
+                    for indL=1:(D1_next+D2_next-MIN_LOAD+1)
+                        L=indL+MIN_LOAD-1;
+                        [next_nextE1,next_nextE2]=optNextStateLimited(nextE1,nextE2,D1_next,D2_next,L);
+                        %Check other conditions
+                        if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
+                            if(next_nextE2<=E_MAX(2) && next_nextE2>=E_MIN(2))
+                                if(~((D1_next+D2_next-L)<0||(D1_next+D2_next-L)>MAX_CHARGE(2)))
+                                    %If feasible, increment number
+                                        numL_OffGrd=numL_OffGrd+1;
+                                end
+                            end
+                        end
+                    end
+                end
+                %Store for next state
+                numL_OffGrd_p(i)=numL_OffGrd;
+                %Reset feasible loads count, for subsequent NEXT energy state
+                numL_OffGrd=0;
+            end
+        end
+      end    
+        
     %If at least one feasible state, consider this control
     if (~isempty(gVec_p))
         %Store vector data in cell array
@@ -198,6 +248,8 @@ p_max=0;    %Maximum number of controls to consider
         Lmin{p}=Lmin_p;
         Lmin_offs{p}=Lmin_offs_p;
         E_Ind_Mtx{p}=E_Ind_Mtx_p;
+        offGrdNxtE1E2{p}=offGrdNxtE1E2_p;
+        numL_OffGrd{p}=numL_OffGrd_p;
         
         %Continue testing next control
         p_max=p_max+1;
@@ -215,11 +267,13 @@ p_max=0;    %Maximum number of controls to consider
     Lmin_p=[];
     Lmin_offs_p=[];
     E_Ind_Mtx_p=[];
-    
-    numAdmissibleLoads=0;
+    offGrdNxtE1E2_p=[];
+    numL_OffGrd_p=[];
     
     end
   end
+  
+  
   
   
   %STEP 5: Construct vector of ALL FEASIBLE energies, for all control
@@ -255,6 +309,9 @@ p_max=0;    %Maximum number of controls to consider
         end
         if(r~=(length(nextE_Ind_Vect_p)+1))
             %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
+            
+            %If off grid, do step F)
+            %Otherwise...            
             numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
             %Add given E-state to augmented vector that many times (for each load)
             aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
@@ -276,6 +333,9 @@ p_max=0;    %Maximum number of controls to consider
     %(Note: doing after P_fullmtx completed)
     for r=1:length(E_Ind_Vect_p)
         Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
+        
+        %IF off grid, follow step E instead
+        %Otherwise...
         
         %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
         c=find(aug_nextE_Ind_Vect_p==Ind_nextE,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
