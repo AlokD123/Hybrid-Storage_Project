@@ -221,7 +221,7 @@ boolRounded1=0; boolRounded2=0;
                 %Check excess discharge condition
                 if(~(D1_next>nextE1 || D2_next>nextE2))
                     %For each perturbation at the NEXT time...
-                    for indL=maxL_prev:(D1_next+D2_next-MIN_LOAD+1) %TRY ONLY PERTURBATIONS ABOVE PREVIOUS MAX
+                    for indL=(maxL_prev+1):(D1_next+D2_next-MIN_LOAD+1) %TRY ONLY PERTURBATIONS ABOVE PREVIOUS MAX
                         L=indL+MIN_LOAD-1;
                         [next_nextE1,next_nextE2]=optNextStateLimited(nextE1,nextE2,D1_next,D2_next,L);
                         %Check other conditions
