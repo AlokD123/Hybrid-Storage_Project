@@ -47,8 +47,9 @@ N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
 
-%Next state rounding tolerance
-epsilon=0.01;
+
+epsilon=0.01; %Next state off grid rounding tolerance
+epsilon2=0.0001; %Off grid state comparison tolerance
 
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
@@ -209,6 +210,9 @@ boolRounded1=0; boolRounded2=0;
       %Steps B-D
       %Count for ALL possible controls in NEXT STATE...
       for i=1:size(offGrdNxtE1E2_p,1) %For each next state...
+          %Maximum load previously achieved by all ctrls (starting point, to not double-count)
+          maxL_prev=0; %Reset maximum previous load value
+          
           for D1_next=0:MAX_DISCHARGE(1)
             for D2_next=0:MAX_DISCHARGE(2)
                 nextE1=offGrdNxtE1E2_p(i,1)+E_MIN(1)-1; nextE2=offGrdNxtE1E2_p(i,2)+E_MIN(2)-1;
@@ -217,7 +221,7 @@ boolRounded1=0; boolRounded2=0;
                 %Check excess discharge condition
                 if(~(D1_next>nextE1 || D2_next>nextE2))
                     %For each perturbation at the NEXT time...
-                    for indL=1:(D1_next+D2_next-MIN_LOAD+1)
+                    for indL=maxL_prev:(D1_next+D2_next-MIN_LOAD+1) %TRY ONLY PERTURBATIONS ABOVE PREVIOUS MAX
                         L=indL+MIN_LOAD-1;
                         [next_nextE1,next_nextE2]=optNextStateLimited(nextE1,nextE2,D1_next,D2_next,L);
                         %Check other conditions
@@ -226,6 +230,9 @@ boolRounded1=0; boolRounded2=0;
                                 if(~((D1_next+D2_next-L)<0||(D1_next+D2_next-L)>MAX_CHARGE(2)))
                                     %If feasible, increment number
                                         numL_OffGrd=numL_OffGrd+1;
+                                        maxL_prev=maxL_prev+1;
+                                        %If feasible load with one set of discharges, no need to test others
+                                        %D1_next=MAX_DISCHARGE(1)+1; D2_next=MAX_DISCHARGE(2)+1;
                                 end
                             end
                         end
@@ -297,24 +304,30 @@ boolRounded1=0; boolRounded2=0;
     E_Ind_Vect_p=E_Ind_Vect{p};
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
     Lmin_offs_p=Lmin_offs{p};
+    numLoads_OffGrd_p=numLoads_OffGrd{p};
     
     %STEP 7: Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
     %(Note: doing after E_Ind_VectALL complete)
     augVectRow=1; %Index row in new augmented vector
-    r=1; %Start from beginning
+    r=1; offGrdNxtE_Idx=1; %Start from beginning
     while r<(length(nextE_Ind_Vect_p)+1) %For each next E-state WITH CURRENT CONTROL COMBO (p)
         if (r~=1) %...IN MOST CASES
             %If next E-state already counted once, do not double-count...
-            while r<(length(nextE_Ind_Vect_p)+1) && nnz(nextE_Ind_Vect_p(1:r-1)==nextE_Ind_Vect_p(r))
+            while r<(length(nextE_Ind_Vect_p)+1) && nnz(abs(nextE_Ind_Vect_p(1:r-1)-nextE_Ind_Vect_p(r))<epsilon2)
                 r=r+1; %Skip to next unrepeated E-state
             end
         end
         if(r~=(length(nextE_Ind_Vect_p)+1))
             %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
             
-            %If off grid, do step F)
-            %Otherwise...            
-            numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
+            %If off grid, do step E
+            if round(nextE_Ind_Vect_p(r))~=nextE_Ind_Vect_p(r)
+                numRepNextE=numLoads_OffGrd_p(offGrdNxtE_Idx);
+                offGrdNxtE_Idx=offGrdNxtE_Idx+1;
+            else %Otherwise...        
+                numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
+            end
+            
             %Add given E-state to augmented vector that many times (for each load)
             aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
             augVectRow=augVectRow+numRepNextE; %Start adding at end next time 
@@ -330,32 +343,39 @@ boolRounded1=0; boolRounded2=0;
     %Store in cell array
     aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
     
+    %Get index of subsequent next state that is off the grid
+    x=1;
+    
     %STEP 8: Create each P matrix
     %For P matrix, select rows corresponding to components in nextE_Ind_Vect
     %(Note: doing after P_fullmtx completed)
     for r=1:length(E_Ind_Vect_p)
         Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
         
+        %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
+        c=find(abs(aug_nextE_Ind_Vect_p-Ind_nextE)<epsilon2,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
+        
         %IF off grid, follow step F instead
         if round(Ind_nextE)~=Ind_nextE
-            %
+            %Count number of non-zero load probabilities for next state Ind_nextE
+            nnzProb_nextE=numLoads_OffGrd_p(x);
+            %Get non-zero probabilities
+            prob_nextE=1/nnzProb_nextE*ones(1,nnzProb_nextE)';
+            x=x+1;
         else %Otherwise...
-            %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
-            c=find(aug_nextE_Ind_Vect_p==Ind_nextE,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
-
             %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
             nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
             %Get said non-zero probabilities
             prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
-
-            %Store subscript pairs and associated values in array P
-            len=length(prob_nextE); 
-            cols=c:(c+nnzProb_nextE-1);
-            P=[P;r*ones(len,1),cols',prob_nextE];
-
-            %Fill in row r with said probabilities
-            %P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
         end
+        
+        %Store subscript pairs and associated values in array P
+        len=length(prob_nextE); 
+        cols=c:(c+nnzProb_nextE-1);
+        P=[P;r*ones(len,1),cols',prob_nextE];
+
+        %Fill in row r with said probabilities
+        %P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
     end
         
     %Store in p-th PF matrix, as well as in own P_mtx
@@ -372,24 +392,89 @@ boolRounded1=0; boolRounded2=0;
   %STEP 9: Construct each F matrix
   for p=1:p_max
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
+      offGrdNxtE1E2_p=offGrdNxtE1E2{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
       row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
       
       %Go through next E-state index vector for current value of p...
       for r=1:length(aug_nextE_Ind_Vect_p)
-          %If next state is currently infeasible...
-          if aug_nextE_Ind_Vect_p(r)<E_Ind_VectALL(row) %(i.e. NOT continuously increasing in augmented vector)
-             row=1; %Restart from beginning of E_Ind_VectALL to find the state <----- ASSUMING ONLY 1 distinct new currently infeasible state!
-          end
           
-          while(E_Ind_VectALL(row)~=aug_nextE_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
-              row=row+1;    %Continue
+          %IF next state is off grid...
+          if round(aug_nextE_Ind_Vect_p(r))~=aug_nextE_Ind_Vect_p(r)
+              
+              %Step G:
+              
+              %Get individual off-grid next state indices
+              idx=find(abs(offGrdNxtE1E2_p(:,3)-aug_nextE_Ind_Vect_p(r))<epsilon2);
+              nextE1_Ind=offGrdNxtE1E2_p(idx,1);
+              nextE2_Ind=offGrdNxtE1E2_p(idx,2);
+              
+              for col=1:length(E_Ind_VectALL)
+                  %Get individual current state indices
+                  E2_Ind=remainder(E_Ind_VectALL(col),N2);
+                  E1_Ind=(E_Ind_VectALL(col)-E2_Ind)/N2+1;
+                  
+                  %INTERPOLATION
+                  %Check if (nextE1,nextE2) is on edge of square
+                  %If so, apply different interpolation
+                  if nextE1_Ind==E1_Ind
+                      if floor(nextE2_Ind)==E2_Ind
+                          q=1-(nextE2_Ind-E2_Ind);
+                      elseif ceil(nextE2_Ind)==E2_Ind
+                          q=1-(E2_Ind-nextE2_Ind);
+                      else 
+                          q=0;
+                      end
+                  elseif nextE2_Ind==E2_Ind
+                      if floor(nextE1_Ind)==E1_Ind
+                          q=1-(nextE1_Ind-E1_Ind);
+                      elseif ceil(nextE1_Ind)==E1_Ind
+                          q=1-(E1_Ind-nextE1_Ind);
+                      else 
+                          q=0;
+                      end
+                  %If on neither edge...
+                  else 
+                      %Check to find 4  points closest to (nextE1,nextE2) off grid.... FIND (E1_Ind, E2_Ind)
+                      %CASE 1: round E1 down, round E2 down
+                      if floor(nextE1_Ind)==E1_Ind && floor(nextE2_Ind)==E2_Ind
+                          q=(1-(nextE1_Ind-E1_Ind))*(1-(nextE2_Ind-E2_Ind));
+                      %CASE 2: round E1 up, round E2 down
+                      elseif ceil(nextE1_Ind)==E1_Ind && floor(nextE2_Ind)==E2_Ind
+                          q=(1-(E1_Ind-nextE1_Ind))*(1-(nextE2_Ind-E2_Ind));
+                      %CASE 3: round E1 down, round E2 up
+                      elseif floor(nextE1_Ind)==E1_Ind && ceil(nextE2_Ind)==E2_Ind
+                          q=(1-(nextE1_Ind-E1_Ind))*(1-(E2_Ind-nextE2_Ind));
+                      %CASE 4: round E1 up, round E2 up
+                      elseif ceil(nextE1_Ind)==E1_Ind && ceil(nextE2_Ind)==E2_Ind
+                          q=(1-(E1_Ind-nextE1_Ind))*(1-(E2_Ind-nextE2_Ind));
+                      else
+                         q=0; %If this state on grid not used for interpolation (not corner of encompassing square)
+                      end
+                  end
+                  
+                  %Store subscript pairs and associated weightings in F_p
+                  if q~=0
+                    F_p=[F_p;r,col,q]; %Use states on grid for interpolation, with WEIGHTING q
+                  end
+              end
+              
+          else %Otherwise, if ON-GRID...
+              
+              %If next state is currently infeasible...
+              if aug_nextE_Ind_Vect_p(r)<E_Ind_VectALL(row) %(i.e. NOT continuously increasing in augmented vector)
+                 row=1; %Restart from beginning of E_Ind_VectALL to find the state <----- ASSUMING ONLY 1 distinct new currently infeasible state!
+              end
+
+              while(E_Ind_VectALL(row)~=aug_nextE_Ind_Vect_p(r)) %While not reached mapping column in F (ONLY 1 per row)...
+                  row=row+1;    %Continue
+              end
+
+              %Store subscript pairs and associated 1's (feasible next) in array F_p 
+              F_p=[F_p;r,row,1]; %Mark next state as feasible
+              row=min(row+1,length(E_Ind_VectALL)); %Start at next column in F next time, saturating at maximum
+              %^-------- Assuming continuously increasing in augmented vector (fixed above)
           end
-          
-          %Store subscript pairs and associated 1's (feasible next) in array F_p 
-          F_p=[F_p;r,row,1]; %Mark next state as feasible
-          row=min(row+1,length(E_Ind_VectALL)); %Start at next column in F next time, saturating at maximum
-          %^-------- Assuming continuously increasing in augmented vector (fixed above)
       end
       
       if isempty(F_p)   %If empty, ignore
