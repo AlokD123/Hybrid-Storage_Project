@@ -35,7 +35,6 @@ PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
 global DISCOUNT; %Discount factor
-DISCOUNT=[];
 DISCOUNT=0.99;
 
 %% Definitions
@@ -54,9 +53,8 @@ epsilon2=0.0001; %Off grid state comparison tolerance
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
 nextE_Ind_Vect_p=[];  %Vector of next state energies
-nextE_Ind_Vect_andLs_p=[]; %Same, but also including associated load values in each state
 aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
-aug_nextE_Ind_Vect_andLs_p=[]; %Same, but also including associated load values in each state
+aug_Vect_Ls_p=[]; %Same, but also including associated load values in each state
 
 offGrdNxtE1E2_p=[]; %Array mapping single index to linear next state index, for states OFF THE GRID
 numL_OffGrd_p=[]; %Vector of number of admissible loads in next states that are OFF THE GRID
@@ -169,7 +167,6 @@ boolRounded1=0; boolRounded2=0;
                                   end
                                   %Add next state energy index to vector of FEASIBLE next state energies
                                   nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
-                                  nextE_Ind_Vect_andLs_p=[nextE_Ind_Vect_andLs_p;nextE_Ind,L]; %Array containing L's as well
                                   
                                   %STEP A: create array of next state indices that are off-grid
                                   %Mapping from 2 indices to linear index
@@ -258,7 +255,6 @@ boolRounded1=0; boolRounded2=0;
         g{p}=gVec_p';
         E_Ind_Vect{p}=E_Ind_Vect_p;
         nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
-        nextE_Ind_Vect_andLs{p}=nextE_Ind_Vect_andLs_p;
         Lmin{p}=Lmin_p;
         Lmin_offs{p}=Lmin_offs_p;
         E_Ind_Mtx{p}=E_Ind_Mtx_p;
@@ -283,7 +279,6 @@ boolRounded1=0; boolRounded2=0;
     E_Ind_Mtx_p=[];
     offGrdNxtE1E2_p=[];
     numL_OffGrd_p=[];
-    nextE_Ind_Vect_andLs_p=[];
     
     end
   end
@@ -311,7 +306,6 @@ boolRounded1=0; boolRounded2=0;
   for p=1:p_max
     E_Ind_Vect_p=E_Ind_Vect{p};
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
-    nextE_Ind_Vect_andLs_p=nextE_Ind_Vect_andLs{p};
     Lmin_offs_p=Lmin_offs{p};
     numLoads_OffGrd_p=numLoads_OffGrd{p};
     
@@ -342,7 +336,7 @@ boolRounded1=0; boolRounded2=0;
             
             %Add given E-state to augmented vector that many times (for each load)
             aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
-            aug_nextE_Ind_Vect_andLs_p(augVectRow:(augVectRow+numRepNextE-1),:)=[repmat(nextE_Ind_Vect_p(r,:),numRepNextE,1),(0:(numRepNextE-1))'];
+            aug_Vect_Ls_p(augVectRow:(augVectRow+numRepNextE-1))=(0:(numRepNextE-1))';
             augVectRow=augVectRow+numRepNextE; %Start adding at end next time 
         end
         r=r+1; %Manually increment index in while loop
@@ -355,7 +349,7 @@ boolRounded1=0; boolRounded2=0;
     
     %Store in cell array
     aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
-    aug_nextE_Ind_Vect_andLs{p}=aug_nextE_Ind_Vect_andLs_p;
+    aug_Vect_Ls{p}=aug_Vect_Ls_p;
     
     %Get index of subsequent next state that is off the grid
     x=1;
@@ -398,7 +392,7 @@ boolRounded1=0; boolRounded2=0;
     %Reset matrices/vectors
     P=[];
     aug_nextE_Ind_Vect_p=[];
-    aug_nextE_Ind_Vect_andLs_p=[];
+    aug_Vect_Ls_p=[];
   end
   
   
@@ -407,12 +401,10 @@ boolRounded1=0; boolRounded2=0;
   %STEP 9: Construct each F matrix
   for p=1:p_max
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
-      aug_nextE_Ind_Vect_andLs_p=aug_nextE_Ind_Vect_andLs{p};
+      aug_Vect_Ls_p=aug_Vect_Ls{p};
       offGrdNxtE1E2_p=offGrdNxtE1E2{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
       row=1; %Row being checked in E_Ind_VectALL to start when starting on next E_Ind vector. Reset it
-      idxMin=1; %Minimum row # in aug_nextE_Ind_Vect from which to find subsequent offGrd state, to progress over repeats. Reset it.
-      debug_p=[];
       
       %Go through next E-state index vector for current value of p...
       for r=1:length(aug_nextE_Ind_Vect_p)
@@ -425,14 +417,10 @@ boolRounded1=0; boolRounded2=0;
               %Get individual off-grid next state indices
               idx=find(abs(offGrdNxtE1E2_p(:,3)-aug_nextE_Ind_Vect_p(r))<epsilon2);
               idx=idx(1); %Take only first element if repeats in offGrdNxtE1E2_p ................. ASSUMING REPEATED OFF-GRID linear INDICES MAP TO SAME SET OF index pairs
-              %if idx<idxMin
-              %    idx=idxMin;
-              %end
-              %idxMin=idxMin+1;
               
               nextE1_Ind=offGrdNxtE1E2_p(idx,1);
               nextE2_Ind=offGrdNxtE1E2_p(idx,2);
-              nextL=aug_nextE_Ind_Vect_andLs_p(r,2);
+              nextL=aug_Vect_Ls_p(r);
               
               for col=1:length(E_Ind_VectALL)
                   %Get individual current state indices
@@ -487,7 +475,6 @@ boolRounded1=0; boolRounded2=0;
                   %Store subscript pairs and associated weightings in F_p
                   if q~=0
                     F_p=[F_p;r,col,q]; %Use states on grid for interpolation, with WEIGHTING q
-                    debug_p=[debug_p;nextE1_Ind,nextE2_Ind,nextL,E1_Ind,E2_Ind,L,q];
                   end
               end
               
