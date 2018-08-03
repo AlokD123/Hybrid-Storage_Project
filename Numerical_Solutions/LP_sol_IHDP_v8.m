@@ -54,7 +54,10 @@ epsilon2=0.0001; %Off grid state comparison tolerance
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
 nextE_Ind_Vect_p=[];  %Vector of next state energies
+nextE_Ind_Vect_andLs_p=[]; %Same, but also including associated load values in each state
 aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
+aug_nextE_Ind_Vect_andLs_p=[]; %Same, but also including associated load values in each state
+
 offGrdNxtE1E2_p=[]; %Array mapping single index to linear next state index, for states OFF THE GRID
 numL_OffGrd_p=[]; %Vector of number of admissible loads in next states that are OFF THE GRID
 
@@ -166,6 +169,7 @@ boolRounded1=0; boolRounded2=0;
                                   end
                                   %Add next state energy index to vector of FEASIBLE next state energies
                                   nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
+                                  nextE_Ind_Vect_andLs_p=[nextE_Ind_Vect_andLs_p;nextE_Ind,L]; %Array containing L's as well
                                   
                                   %STEP A: create array of next state indices that are off-grid
                                   %Mapping from 2 indices to linear index
@@ -254,6 +258,7 @@ boolRounded1=0; boolRounded2=0;
         g{p}=gVec_p';
         E_Ind_Vect{p}=E_Ind_Vect_p;
         nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
+        nextE_Ind_Vect_andLs{p}=nextE_Ind_Vect_andLs_p;
         Lmin{p}=Lmin_p;
         Lmin_offs{p}=Lmin_offs_p;
         E_Ind_Mtx{p}=E_Ind_Mtx_p;
@@ -278,6 +283,7 @@ boolRounded1=0; boolRounded2=0;
     E_Ind_Mtx_p=[];
     offGrdNxtE1E2_p=[];
     numL_OffGrd_p=[];
+    nextE_Ind_Vect_andLs_p=[];
     
     end
   end
@@ -287,10 +293,12 @@ boolRounded1=0; boolRounded2=0;
   
   %STEP 5: Construct vector of ALL FEASIBLE energies, for all control
   E_Ind_VectALL=[];
+  E_Ind_VectALL_andLs=[]; %Array with associated loads
   for row=1:size(E_Ind_MtxALL,1)
       nnzRow=nnz(E_Ind_MtxALL(row,:));
       E_Ind_Mtx_nzRow=E_Ind_MtxALL(row,1:nnzRow);
       E_Ind_VectALL=[E_Ind_VectALL; E_Ind_Mtx_nzRow'];
+      E_Ind_VectALL_andLs=[E_Ind_VectALL_andLs; E_Ind_Mtx_nzRow', (0:nnzRow-1)'];
   end
   
   %STEP 6: Create full probability matrix
@@ -303,6 +311,7 @@ boolRounded1=0; boolRounded2=0;
   for p=1:p_max
     E_Ind_Vect_p=E_Ind_Vect{p};
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
+    nextE_Ind_Vect_andLs_p=nextE_Ind_Vect_andLs{p};
     Lmin_offs_p=Lmin_offs{p};
     numLoads_OffGrd_p=numLoads_OffGrd{p};
     
@@ -313,7 +322,10 @@ boolRounded1=0; boolRounded2=0;
     while r<(length(nextE_Ind_Vect_p)+1) %For each next E-state WITH CURRENT CONTROL COMBO (p)
         if (r~=1) %...IN MOST CASES
             %If next E-state already counted once, do not double-count...
-            while r<(length(nextE_Ind_Vect_p)+1) && nnz(abs(nextE_Ind_Vect_p(1:r-1)-nextE_Ind_Vect_p(r))<epsilon2)
+            while r<(length(nextE_Ind_Vect_p)+1) && nnz(abs(nextE_Ind_Vect_p(1:r-1)-nextE_Ind_Vect_p(r))<epsilon2) %(If at least one prev element matches current)
+                if round(nextE_Ind_Vect_p(r))~=nextE_Ind_Vect_p(r) %If off grid, also skip to subsequent unrepeated number of loads (associated)
+                    offGrdNxtE_Idx=offGrdNxtE_Idx+1;
+                end
                 r=r+1; %Skip to next unrepeated E-state
             end
         end
@@ -330,6 +342,7 @@ boolRounded1=0; boolRounded2=0;
             
             %Add given E-state to augmented vector that many times (for each load)
             aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
+            aug_nextE_Ind_Vect_andLs_p(augVectRow:(augVectRow+numRepNextE-1),:)=[repmat(nextE_Ind_Vect_p(r,:),numRepNextE,1),(0:(numRepNextE-1))'];
             augVectRow=augVectRow+numRepNextE; %Start adding at end next time 
         end
         r=r+1; %Manually increment index in while loop
@@ -342,6 +355,7 @@ boolRounded1=0; boolRounded2=0;
     
     %Store in cell array
     aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
+    aug_nextE_Ind_Vect_andLs{p}=aug_nextE_Ind_Vect_andLs_p;
     
     %Get index of subsequent next state that is off the grid
     x=1;
@@ -384,6 +398,7 @@ boolRounded1=0; boolRounded2=0;
     %Reset matrices/vectors
     P=[];
     aug_nextE_Ind_Vect_p=[];
+    aug_nextE_Ind_Vect_andLs_p=[];
   end
   
   
@@ -392,9 +407,12 @@ boolRounded1=0; boolRounded2=0;
   %STEP 9: Construct each F matrix
   for p=1:p_max
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
+      aug_nextE_Ind_Vect_andLs_p=aug_nextE_Ind_Vect_andLs{p};
       offGrdNxtE1E2_p=offGrdNxtE1E2{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
-      row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
+      row=1; %Row being checked in E_Ind_VectALL to start when starting on next E_Ind vector. Reset it
+      idxMin=1; %Minimum row # in aug_nextE_Ind_Vect from which to find subsequent offGrd state, to progress over repeats. Reset it.
+      debug_p=[];
       
       %Go through next E-state index vector for current value of p...
       for r=1:length(aug_nextE_Ind_Vect_p)
@@ -406,56 +424,70 @@ boolRounded1=0; boolRounded2=0;
               
               %Get individual off-grid next state indices
               idx=find(abs(offGrdNxtE1E2_p(:,3)-aug_nextE_Ind_Vect_p(r))<epsilon2);
+              idx=idx(1); %Take only first element if repeats in offGrdNxtE1E2_p ................. ASSUMING REPEATED OFF-GRID linear INDICES MAP TO SAME SET OF index pairs
+              %if idx<idxMin
+              %    idx=idxMin;
+              %end
+              %idxMin=idxMin+1;
+              
               nextE1_Ind=offGrdNxtE1E2_p(idx,1);
               nextE2_Ind=offGrdNxtE1E2_p(idx,2);
+              nextL=aug_nextE_Ind_Vect_andLs_p(r,2);
               
               for col=1:length(E_Ind_VectALL)
                   %Get individual current state indices
                   E2_Ind=remainder(E_Ind_VectALL(col),N2);
                   E1_Ind=(E_Ind_VectALL(col)-E2_Ind)/N2+1;
+                  L=E_Ind_VectALL_andLs(col,2);
                   
                   %INTERPOLATION
                   %Check if (nextE1,nextE2) is on edge of square
                   %If so, apply different interpolation
-                  if nextE1_Ind==E1_Ind
-                      if floor(nextE2_Ind)==E2_Ind
-                          q=1-(nextE2_Ind-E2_Ind);
-                      elseif ceil(nextE2_Ind)==E2_Ind
-                          q=1-(E2_Ind-nextE2_Ind);
+                  if nextL==L
+                      if nextE1_Ind==E1_Ind
+                          if floor(nextE2_Ind)==E2_Ind
+                              q=1-(nextE2_Ind-E2_Ind);
+                          elseif ceil(nextE2_Ind)==E2_Ind
+                              q=1-(E2_Ind-nextE2_Ind);
+                          else 
+                              q=0;
+                          end
+                      elseif nextE2_Ind==E2_Ind
+                          if floor(nextE1_Ind)==E1_Ind
+                              q=1-(nextE1_Ind-E1_Ind);
+                          elseif ceil(nextE1_Ind)==E1_Ind
+                              q=1-(E1_Ind-nextE1_Ind);
+                          else 
+                              q=0;
+                          end
+                      %If on neither edge...
                       else 
-                          q=0;
+                          %Check to find 4  points closest to (nextE1,nextE2) off grid.... FIND (E1_Ind, E2_Ind)
+                          %CASE 1: round E1 down, round E2 down
+                          if floor(nextE1_Ind)==E1_Ind && floor(nextE2_Ind)==E2_Ind
+                              q=(1-(nextE1_Ind-E1_Ind))*(1-(nextE2_Ind-E2_Ind));
+                          %CASE 2: round E1 up, round E2 down
+                          elseif ceil(nextE1_Ind)==E1_Ind && floor(nextE2_Ind)==E2_Ind
+                              q=(1-(E1_Ind-nextE1_Ind))*(1-(nextE2_Ind-E2_Ind));
+                          %CASE 3: round E1 down, round E2 up
+                          elseif floor(nextE1_Ind)==E1_Ind && ceil(nextE2_Ind)==E2_Ind
+                              q=(1-(nextE1_Ind-E1_Ind))*(1-(E2_Ind-nextE2_Ind));
+                          %CASE 4: round E1 up, round E2 up
+                          elseif ceil(nextE1_Ind)==E1_Ind && ceil(nextE2_Ind)==E2_Ind
+                              q=(1-(E1_Ind-nextE1_Ind))*(1-(E2_Ind-nextE2_Ind));
+                          else
+                             q=0; %If this state on grid not used for interpolation (not corner of encompassing square)
+                          end
                       end
-                  elseif nextE2_Ind==E2_Ind
-                      if floor(nextE1_Ind)==E1_Ind
-                          q=1-(nextE1_Ind-E1_Ind);
-                      elseif ceil(nextE1_Ind)==E1_Ind
-                          q=1-(E1_Ind-nextE1_Ind);
-                      else 
-                          q=0;
-                      end
-                  %If on neither edge...
-                  else 
-                      %Check to find 4  points closest to (nextE1,nextE2) off grid.... FIND (E1_Ind, E2_Ind)
-                      %CASE 1: round E1 down, round E2 down
-                      if floor(nextE1_Ind)==E1_Ind && floor(nextE2_Ind)==E2_Ind
-                          q=(1-(nextE1_Ind-E1_Ind))*(1-(nextE2_Ind-E2_Ind));
-                      %CASE 2: round E1 up, round E2 down
-                      elseif ceil(nextE1_Ind)==E1_Ind && floor(nextE2_Ind)==E2_Ind
-                          q=(1-(E1_Ind-nextE1_Ind))*(1-(nextE2_Ind-E2_Ind));
-                      %CASE 3: round E1 down, round E2 up
-                      elseif floor(nextE1_Ind)==E1_Ind && ceil(nextE2_Ind)==E2_Ind
-                          q=(1-(nextE1_Ind-E1_Ind))*(1-(E2_Ind-nextE2_Ind));
-                      %CASE 4: round E1 up, round E2 up
-                      elseif ceil(nextE1_Ind)==E1_Ind && ceil(nextE2_Ind)==E2_Ind
-                          q=(1-(E1_Ind-nextE1_Ind))*(1-(E2_Ind-nextE2_Ind));
-                      else
-                         q=0; %If this state on grid not used for interpolation (not corner of encompassing square)
-                      end
+                  else
+                      q=0;
                   end
+                      
                   
                   %Store subscript pairs and associated weightings in F_p
                   if q~=0
                     F_p=[F_p;r,col,q]; %Use states on grid for interpolation, with WEIGHTING q
+                    debug_p=[debug_p;nextE1_Ind,nextE2_Ind,nextL,E1_Ind,E2_Ind,L,q];
                   end
               end
               
@@ -484,7 +516,17 @@ boolRounded1=0; boolRounded2=0;
         %Also add extra zeros at end to ensure dimensions of F{p} and E_Ind_VectALL match
       end
      
+      %Correct for infeasible neighbouring states for next state interpolation in F matrix
+      for i=1:size(F{p},1)
+          if sum(F{p}(i,:))~=1
+              %Distribute missing weight evenly to remaining neighbouring states
+              inds=find(F{p}(i,:));%Indices of remaining states
+              F{p}(i,inds)=F{p}(i,inds)+(1-sum(F{p}(i,:)))/nnz(F{p}(i,:));
+          end
+      end
+      
       F_p=[]; %Reset
+      debug_p=[];
       
       if isempty(PF{p}) %If no next state..
           PF{p}=0;  %Ignore constraint
