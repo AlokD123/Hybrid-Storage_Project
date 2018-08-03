@@ -82,8 +82,6 @@ c_state=[];     %Vector of state-relevance weightings
 
 p_max=0;    %Maximum number of controls to consider
 
-%Flags for rounding next state to grid
-boolRounded1=0; boolRounded2=0;
 
 %% PART A: SET UP MATRICES
 %For each possible control...
@@ -146,25 +144,19 @@ boolRounded1=0; boolRounded2=0;
                                   %Map state to state index, to find cost of next state based on its index
                                   if(abs((nextE1-E_MIN(1)+1)-round(nextE1-E_MIN(1)+1))<epsilon)
                                       nextE_Ind1=round(nextE1-E_MIN(1)+1);  %IF within error bound, round
-                                      boolRounded1=1;
                                   else
                                       nextE_Ind1=nextE1-E_MIN(1)+1;         %.. Otherwise, will interpolate
                                   end
                                   if(abs((nextE2-E_MIN(2)+1)-round(nextE2-E_MIN(2)+1))<epsilon)
                                       nextE_Ind2=round(nextE2-E_MIN(2)+1);
-                                      boolRounded2=1;
                                   else
                                       nextE_Ind2=nextE2-E_MIN(2)+1;
                                   end
 
                                   %STEP 2: create vector of next state energies for each load
                                   %Get index of next state energy in vector of state energies
-                                  if boolRounded1==1
-                                      nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
-                                  else
-                                      %PUT SOMETHING ELSE?????
-                                      nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
-                                  end
+                                  nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
+                                  
                                   %Add next state energy index to vector of FEASIBLE next state energies
                                   nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
                                   
@@ -207,8 +199,8 @@ boolRounded1=0; boolRounded2=0;
             end
         end      
     
-        %Count number of feasible loads for NEXT E-states off grid (NOT CURRENT ONES)
-      %Steps B-D
+        %Count number of feasible loads for NEXT E-states off grid (NOT FOR CURRENT ONES)
+      %STEPS B-D
       %Count for ALL possible controls in NEXT STATE...
       for i=1:size(offGrdNxtE1E2_p,1) %For each next state...
           %Maximum load previously achieved by all ctrls (starting point, to not double-count)
@@ -326,7 +318,7 @@ boolRounded1=0; boolRounded2=0;
         if(r~=(length(nextE_Ind_Vect_p)+1))
             %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
             
-            %If off grid, do step E
+            %If off grid... STEP E
             if round(nextE_Ind_Vect_p(r))~=nextE_Ind_Vect_p(r)
                 numRepNextE=numLoads_OffGrd_p(offGrdNxtE_Idx);
                 offGrdNxtE_Idx=offGrdNxtE_Idx+1;
@@ -363,7 +355,7 @@ boolRounded1=0; boolRounded2=0;
         %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
         c=find(abs(aug_nextE_Ind_Vect_p-Ind_nextE)<epsilon2,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
         
-        %IF off grid, follow step F instead
+        %IF off grid... STEP F
         if round(Ind_nextE)~=Ind_nextE
             %Count number of non-zero load probabilities for next state Ind_nextE
             nnzProb_nextE=numLoads_OffGrd_p(x);
@@ -412,7 +404,7 @@ boolRounded1=0; boolRounded2=0;
           %IF next state is off grid...
           if round(aug_nextE_Ind_Vect_p(r))~=aug_nextE_Ind_Vect_p(r)
               
-              %Step G:
+              %STEP G:
               
               %Get individual off-grid next state indices
               idx=find(abs(offGrdNxtE1E2_p(:,3)-aug_nextE_Ind_Vect_p(r))<epsilon2);
