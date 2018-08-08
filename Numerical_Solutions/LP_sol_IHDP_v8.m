@@ -271,7 +271,6 @@ p_max=0;    %Maximum number of controls to consider
     E_Ind_Mtx_p=[];
     offGrdNxtE1E2_p=[];
     numL_OffGrd_p=[];
-    
     end
   end
   
@@ -280,12 +279,12 @@ p_max=0;    %Maximum number of controls to consider
   
   %STEP 5: Construct vector of ALL FEASIBLE energies, for all control
   E_Ind_VectALL=[];
-  E_Ind_VectALL_andLs=[]; %Array with associated loads
+  E_VectALL_Ls=[]; %Vector with associated loads
   for row=1:size(E_Ind_MtxALL,1)
       nnzRow=nnz(E_Ind_MtxALL(row,:));
       E_Ind_Mtx_nzRow=E_Ind_MtxALL(row,1:nnzRow);
       E_Ind_VectALL=[E_Ind_VectALL; E_Ind_Mtx_nzRow'];
-      E_Ind_VectALL_andLs=[E_Ind_VectALL_andLs; E_Ind_Mtx_nzRow', (0:nnzRow-1)'];
+      E_VectALL_Ls=[E_VectALL_Ls;(0:nnzRow-1)'];
   end
   
   %STEP 6: Create full probability matrix
@@ -418,7 +417,7 @@ p_max=0;    %Maximum number of controls to consider
                   %Get individual current state indices
                   E2_Ind=remainder(E_Ind_VectALL(col),N2);
                   E1_Ind=(E_Ind_VectALL(col)-E2_Ind)/N2+1;
-                  L=E_Ind_VectALL_andLs(col,2);
+                  L=E_VectALL_Ls(col);
                   
                   %INTERPOLATION
                   %Check if (nextE1,nextE2) is on edge of square
@@ -505,7 +504,6 @@ p_max=0;    %Maximum number of controls to consider
       end
       
       F_p=[]; %Reset
-      debug_p=[];
       
       if isempty(PF{p}) %If no next state..
           PF{p}=0;  %Ignore constraint
@@ -631,7 +629,7 @@ p_max=0;    %Maximum number of controls to consider
     E_MtxALL_Vect_subs={};
     for p=1:p_max
         E_Ind_Mtx_p=E_Ind_Mtx{p};
-        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:size(E_Ind_MtxALL,2))=0; %Pad with zeros on sid to make same size
+        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:(M-1))=0; %Pad with zeros on sid to make same size
         %Convert to vector
         trE_Ind_Mtx_p=E_Ind_Mtx_p';
         E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);
