@@ -1,4 +1,4 @@
-boolSingleSequence=0;
+boolSingleSequence=1;
 INFCOST=1e6;
 
 clear Costs_LP;
@@ -92,7 +92,7 @@ else
     xlabel('Time');
     ylabel('Unit of energy');
     title('Energy stored vs. load');
-    legend('E1','E2','Load');
+    legend('Battery Energy (E1)','Supercapacitor Energy (E2)','Demand (L)');
     
     figure
     hold on;
@@ -101,6 +101,6 @@ else
     xlabel('Time');
     ylabel('Unit of energy');
     title('Optimal policy vs. load');
-    legend('D1','D2','Load');
+    legend('Battery Discharge (D1)','Supercapacitor Discharge (D2)','Demand (L)');
     axis([1 inf 0 max(MAX_DISCHARGE)]);
 end

@@ -49,11 +49,12 @@ while t_ind_VI<NumIter
     %While load makes for infeasible state, decrease till feasible
     while isempty(D1)||isempty(D2)||(D1==0&&D2==0&&L>0) %Infeasible if no optimal control OR 0 when non-zero load
         L=L-1;
-        [D1,D2]=GetPOpt(indE1,indE2,L);
         if(L<0)
             L=0;
+            [D1,D2]=GetPOpt(indE1,indE2,L);
             break;
         end
+        [D1,D2]=GetPOpt(indE1,indE2,L);
     end
     
     
