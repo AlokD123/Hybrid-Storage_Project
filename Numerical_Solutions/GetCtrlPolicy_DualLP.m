@@ -3,6 +3,7 @@
 %policyMtx contains policy in elements, but also indicates infeasible states (NaN)
 
 clear policyMtx;
+global fullPolicyMtx;
 
 %N1=6; N2=5; M=10;
 %P1=N1; P2=N2;

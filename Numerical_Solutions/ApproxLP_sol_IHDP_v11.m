@@ -46,7 +46,7 @@ DISCOUNT=0.99;
 
 
 %% Definitions
-global N2;
+global N2; global P2;
 
 M=MAX_LOAD-MIN_LOAD+1;
 N1=(E_MAX(1)-E_MIN(1)+1);
@@ -54,6 +54,7 @@ N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
 
+global epsilon; global epsilon2;
 epsilon=0.01; %Next state off grid rounding tolerance
 epsilon2=0.0001; %Off grid state comparison tolerance
 
@@ -70,6 +71,8 @@ numL_OffGrd=0; %Count number of admissible load values for a given NEXT energy s
 
 
 global E_Ind_MtxALL; %Matrix of all states (0 if infeasible)
+global E_Ind_VectALL; %Vector of all feasible states
+global E_VectALL_Ls; %Vector of all associated loads
 global CostMtx; %Matrix with 3 columns: a) E-state, b) load, c) associated cost. Used for approximation
 CostMtx=[];
 
