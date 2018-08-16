@@ -8,7 +8,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
+E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -19,13 +19,13 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=3; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=5; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -55,6 +55,10 @@ N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
 
+global epsilon3; global gamma;
+epsilon3=0.01; %On-grid optimal control search tolerance
+gamma=1e-6; %Regularization term weighting factor
+
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
 nextE_Ind_Vect_p=[];  %Vector of next state energies
@@ -83,7 +87,8 @@ F_p=[]; G_p=[];
 
 Phi=[]; %Design matrix, for cost approximation
 
-p_max=0;    %Maximum number of controls to consider
+p_max=0;    %Maximum number of controls to consider, initialized at 0
+margApproxErr=zeros(N1,1); %Error in each state marginalized, initialized at 0s
 
 %% PART A: SET UP MATRICES
 tic;
@@ -304,7 +309,7 @@ tic;
         
     %Store in p-th PF matrix, as well as in own P_mtx
     PF{p}=sparse(P(:,1),P(:,2),P(:,3)); %Store as SPARSE MATRIX 
-    %P_mtx{p}=P;
+    P_mtx{p}=PF{p};
     %Reset matrices/vectors
     P=[];
     aug_nextE_Ind_Vect_p=[];
@@ -348,7 +353,7 @@ tic;
       if isempty(PF{p}) %If no next state..
           PF{p}=0;  %Ignore constraint
       else      %IN MOST CASES...
-         PF{p} = PF{p}*F{p}; %Finish PF matrices 
+         PF{p} = PF{p}*F{p}; %Finish PF matrices
       end
   end
   
@@ -417,7 +422,7 @@ tic;
   
   %If empty columns in Q...
   if (~all(any(Q,1)))
-      disp('ERROR!!!!!'); %ERROR
+      disp('ERROR!!!!!'); %Error
      Q(:,~any(Q,1))=[]; %Remove, for now 
   end
   
@@ -531,24 +536,38 @@ tic;
     params.OptimalityTol = tolerance; %Set tolerance
     variable r_fit(size(Phi,2))
     dual variables d
-    maximize( c_state'*Phi*r_fit )
+    maximize( c_state'*Phi*r_fit - gamma*norm(r_fit,1) )
     subject to
         d : Q*Phi*r_fit <= b
-        Phi*r_fit >= 0
+        %Phi*r_fit >= 0
   cvx_end
-toc  
+toc
+
+%   %Get error
+%   err=cost-Phi*r_fit;
+%   %Store NORMALIZED approximation error bases (2-NORM)
+%   %approx_err=norm(err,2)/norm(cost,2);
+%   approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
+%   %Store approximation
+%   approx=Phi*r_fit;
+  
   %Plot approximate and actual costs
 %   figure
 %   plot(Phi*r_fit, '*'); hold on; plot(cost, '*');
 %   xlabel('State Index'); ylabel('Cost');
 %   legend('Approximate Cost','Actual Cost');
 %   title(strcat('Evaluating Approximation with',{' '},num2str(origSizePhi),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
-  
-  %Store NORMALIZED approximation error bases (2-NORM)
-  %approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
-  %approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
-  %Store approximation
-  %approx=Phi*r_fit;
+
+%   %Get error in each state marginalized over E2 and L
+%   for r=1:length(feasStatesArr)
+%      E1=feasStatesArr(r,1)-E_MIN(1)+1;
+%      margApproxErr(E1)=margApproxErr(E1)+err(r);
+%   end
+%   %Plot
+%   figure
+%   plot(0:1:E_MAX(1),margApproxErr,'o');
+%   xlabel('Energy E1'); ylabel('Marginalized Error');
+%   title('Marginalized Error for default test');
   
  tic; 
   optD = d; %Get vector of FINAL dual
@@ -567,7 +586,7 @@ toc
     E_MtxALL_Vect_subs={};
     for p=1:p_max
         E_Ind_Mtx_p=E_Ind_Mtx{p};
-        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:size(E_Ind_MtxALL,2))=0; %Pad with zeros on sid to make same size
+        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:(M-1))=0; %Pad with zeros on sid to make same size
         %Convert to vector
         trE_Ind_Mtx_p=E_Ind_Mtx_p';
         E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);
@@ -627,3 +646,7 @@ toc
     pi=aug_pi(aug_E_MtxALL_Vect~=0);
     
     toc
+    
+    
+    %Get bound for error in dual
+    %err_bnd=abs((b-Q*Phi*r_fit)')*optD

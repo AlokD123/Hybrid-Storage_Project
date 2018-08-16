@@ -54,9 +54,11 @@ N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
 
-global epsilon; global epsilon2;
+global epsilon; global epsilon2; global epsilon3; global gamma;
 epsilon=0.01; %Next state off grid rounding tolerance
 epsilon2=0.0001; %Off grid state comparison tolerance
+epsilon3=0.01; %On-grid optimal control search tolerance
+gamma=1e-6; %Regularization term weighting factor
 
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
@@ -398,7 +400,7 @@ c_state=[];     %Vector of state-relevance weightings
         
     %Store in p-th PF matrix, as well as in own P_mtx
     PF{p}=sparse(P(:,1),P(:,2),P(:,3)); %Store as SPARSE MATRIX 
-    %P_mtx{p}=P;
+    P_mtx{p}=PF{p};
     %Reset matrices/vectors
     P=[];
     aug_nextE_Ind_Vect_p=[];
@@ -547,7 +549,7 @@ c_state=[];     %Vector of state-relevance weightings
               if(E_Ind_Vect_p(r)~=E_Ind_Vect_p(r-1))
                  boolNewEState=1;
               else
-                  boolNewEState=0;
+                 boolNewEState=0;
               end
           end
           while(E_Ind_VectALL(row)~=E_Ind_Vect_p(r)) %While not reached mapping column in G (ONLY 1 per row)...
@@ -703,25 +705,30 @@ c_state(c_state==0)=[]; %Remove zero probability states
   
   %Created LP matrices and vectors.
 
-
+%N=2;
+%Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-2*N),eye(N)];
+%Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-N-1),ones(N,1)];
+ 
+  cvx_solver Gurobi
  %Get approximate solution
   cvx_begin
     grbControl.LPMETHOD = 1; % Use dual simplex method
+    %grbControl.Presolve = 0; % Don't use presolver
     params.OptimalityTol = tolerance; %Set tolerance
     variable r_fit(size(Phi,2))
     dual variables d
-    maximize( c_state'*Phi*r_fit )
+    maximize( c_state'*Phi*r_fit - gamma*norm(r_fit,1) )
     subject to
         d : Q*Phi*r_fit <= b
-        Phi*r_fit >= 0
+        %Phi*r_fit >= 0
   cvx_end
 
 
 %    %Get error
 %    err=cost-Phi*r_fit;
 %    %Store NORMALIZED approximation error bases (2-NORM)
-%    %approx_err=norm(err,2)/norm(cost,2);
-%    approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
+%    approx_err=norm(err,2)/norm(cost,2);
+%    %approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
 %    %Store approximation
 %    approx=Phi*r_fit;
 %   
