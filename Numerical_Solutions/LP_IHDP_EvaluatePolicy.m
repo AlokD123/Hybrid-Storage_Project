@@ -1,4 +1,6 @@
 %GET INFINITE HORIZON POLICY USING LP SOLUTION
+%V1: no policy interpolation
+
 NumIter=10; %Number of iterations of the policy to do
 
 %E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -39,20 +41,20 @@ while t_ind_VI<NumIter
     L= seqL(t_ind_VI);
     %L=min(t_ind_VI,MAX_LOAD_STATE); %Ramp
     
+    %MOST IMPORTANT: RUN POLICY ONLINE!
+    %Get optimal controls for given state
+    [D1,D2]=GetPOpt(indE1,indE2,L);
+    
     %While load makes for infeasible state, decrease till feasible
-    while(isempty(find(fullPolicyMtx(indE1,indE2,L-MIN_LOAD+1,:)==1,1)))
+    while isempty(D1)||isempty(D2)||(D1==0&&D2==0&&L>0) %Infeasible if no optimal control OR 0 when non-zero load
         L=L-1;
         if(L<0)
             L=0;
+            [D1,D2]=GetPOpt(indE1,indE2,L);
             break;
         end
+        [D1,D2]=GetPOpt(indE1,indE2,L);
     end
-    %Get optimal p for given state
-    pOpt=find(abs(fullPolicyMtx(indE1,indE2,L-MIN_LOAD+1,:)-1)<0.01); %(Find equal to 1)
-    %Get associated optimal controls
-    D2_Ind=remainder(pOpt,P2);
-    D1_Ind=(pOpt-D2_Ind)/P2+1;
-    D1=D1_Ind-1; D2=D2_Ind-1;
     
     %Calculate the state these values of u and w will lead to, even if impossible...
     [nextE1,nextE2]=optNextStateLimited(optE1(t_ind_VI),optE2(t_ind_VI),D1,D2,L);
@@ -68,10 +70,7 @@ while t_ind_VI<NumIter
         end
         
         %Calculate next state for new load value
-        pOpt=find(fullPolicyMtx(indE1,indE2,L-MIN_LOAD+1,:)==1);
-        D2_Ind=remainder(pOpt,P2);
-        D1_Ind=(pOpt-D2_Ind)/P2+1;
-        D1=D1_Ind-1; D2=D2_Ind-1;
+        [D1,D2]=GetPOpt(indE1,indE2,L);
         [nextE1,nextE2]=optNextStateLimited(optE1(t_ind_VI),optE2(t_ind_VI),D1,D2,L);
     end
     if(L==0 && countOOB~=0)
@@ -85,7 +84,6 @@ while t_ind_VI<NumIter
     %Round next state to nearest int
     nextE1=round(nextE1);
     nextE2=round(nextE2);
-    %TO DO: APPLY STATE INTERPOLATION for better accuracy
     
     %Get specific control sequence for given load sequence
     D1Opt(t_ind_VI)=D1;
