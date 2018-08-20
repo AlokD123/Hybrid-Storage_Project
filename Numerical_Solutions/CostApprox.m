@@ -49,9 +49,10 @@ cvx_begin
     grbControl.LPMETHOD = 1; % Use dual simplex method
     variable r_fit(size(Phi,2))
     dual variables d
-    minimize( c_state'*abs(cost-Phi*r_fit) )
+    minimize( c_state'*(cost-Phi*r_fit) )
     subject to
         d : Q*Phi*r_fit <= b
+        Phi*r_fit >= 0
 cvx_end
 
 figure

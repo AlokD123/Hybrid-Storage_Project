@@ -1,6 +1,6 @@
 %LP solution of IHDP (Value Iteration) for Hybrid Storage optimization
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X V;
+clearvars -except X V approxFullPolicyMtx;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -38,6 +38,8 @@ global DISCOUNT; %Discount factor
 DISCOUNT=[];
 DISCOUNT=0.99;
 
+%Error tolerance
+epsilon=0.01;
 
 %% Definitions
 global N2;
@@ -47,7 +49,6 @@ N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
-INF_COST=1000; %Cost of infeasible states (arbitrary sentinel value)
 
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
@@ -55,7 +56,7 @@ nextE_Ind_Vect_p=[];  %Vector of next state energies
 aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
 numAdmissibleLoads=0; %Count number of admissible load values for a given energy state (for UNIFORM DISTRIBUTION)
 
-%P_mtx={};   %Array of P matrices
+P_mtx={};   %Array of P matrices
 P=[];       %Current P matrix
 PF={};      %Array of P*F matrices
 
@@ -75,9 +76,6 @@ c_state=[];     %Vector of state-relevance weightings
 F_p=[]; G_p=[];
 
 p_max=0;    %Maximum number of controls to consider
-
-maxTime=0;
-count=0;
 
 %% PART A: SET UP MATRICES
 %For each possible control...
@@ -136,10 +134,10 @@ count=0;
                                   %DO NOT RESET at end. Will overwrite with same values (and add) each time, which is ok.
                                   E_Ind_MtxALL(rowInd_Emtx,indL)=E_Ind;
                                   E_Ind_Mtx_p(rowInd_Emtx,indL)=E_Ind;
-                                    
+                                  
                                   %Map state to state index, to find cost of next state based on its index
                                   nextE_Ind1=round(nextE1-E_MIN(1)+1);
-                                  nextE_Ind2=round(nextE2-E_MIN(2)+1); 
+                                  nextE_Ind2=round(nextE2-E_MIN(2)+1);
 
                                   %STEP 2: create vector of next state energies for each load
                                   %Get index of next state energy in vector of state energies
@@ -290,7 +288,7 @@ count=0;
         
     %Store in p-th PF matrix, as well as in own P_mtx
     PF{p}=sparse(P(:,1),P(:,2),P(:,3)); %Store as SPARSE MATRIX 
-    %P_mtx{p}=P;
+    P_mtx{p}=P;
     %Reset matrices/vectors
     P=[];
     aug_nextE_Ind_Vect_p=[];
@@ -455,7 +453,7 @@ count=0;
     E_MtxALL_Vect_subs={};
     for p=1:p_max
         E_Ind_Mtx_p=E_Ind_Mtx{p};
-        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:size(E_Ind_MtxALL,2))=0; %Pad with zeros on sid to make same size
+        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:(M-1))=0; %Pad with zeros on sid to make same size
         %Convert to vector
         trE_Ind_Mtx_p=E_Ind_Mtx_p';
         E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);

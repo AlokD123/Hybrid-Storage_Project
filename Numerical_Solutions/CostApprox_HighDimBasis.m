@@ -2,7 +2,7 @@
 %V2: LARGE NUMBER OF BASIS FUNCTIONS (high dimensional model, dimension n)
 
 global CostMtx;
-n=4; %Order of polynomial approximation
+n=3; %Order of polynomial approximation
 
 %% Create matrix containing cost structure
 
@@ -65,8 +65,8 @@ plot(cost, '*');
 xlabel('Approximate Cost');
 legend('Approximate Cost','Actual Cost');
 title(strcat('Testing Cost Approximation Using Order-',num2str(n),' Fit (',num2str(length(r_fit)),' Bases)'));
-%approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
-approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
+approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
+%approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
 
 % optD2=optD;
 % optD2(optD2<1e-2)=0;

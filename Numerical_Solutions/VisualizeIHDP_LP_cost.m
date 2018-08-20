@@ -29,9 +29,9 @@ if(~boolSingleSequence)
             hold on
         end
         colorbar
-        title(colorbar,'Cost')
+        title(colorbar,'Optimal Value')
         xlabel('Supercapacitor Energy (E2)');ylabel('Battery Energy (E1)');zlabel('Demand (L)');
-        title(['Costs of State in LP form of IHDP']);
+        title('Optimal Value Function for Discrete States');
     end
 
 %     hold off;
@@ -92,7 +92,7 @@ else
     xlabel('Time');
     ylabel('Unit of energy');
     title('Energy stored vs. load');
-    legend('Battery Energy (E1)','Supercapacitor Energy (E2)','Demand (L)');
+    legend('Battery (E1)','Supercapacitor (E2)','Demand (L)');
     
     figure
     hold on;
