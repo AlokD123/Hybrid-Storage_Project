@@ -4,7 +4,7 @@ function [D1,D2] = GetPOpt(indCurrE1,indCurrE2,CurrL)
 %   Input: state
 %   Output: optimal controls
 
-global epsilon2; global E_Ind_VectALL; global E_VectALL_Ls; global N2;
+global epsilon2; global E_Ind_VectALL; global E_VectALL_Ls; global N2; global fullPolicyMtx;
 
 if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls off the grid...
     q_pOpt_Mtx=[];
@@ -80,6 +80,21 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls 
       D1_interp=0; D2_interp=0;
       for i=1:length(E_Ind_VectALL) %For every state on grid...
         [D1_onGRD,D2_onGRD]=GetPOpt_wo_Interp(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)); %Get optimal controls on grid
+        %If no optimal control value for state, due to approximation error..... <---------------------------------------------------------ERROR!!!!
+        if isempty(D1_onGRD) %<--------------------------------------------------------------------------------------------------------Workaround!!
+            if q_pOpt_Mtx(i,4)>0
+                disp('Approx Error: D1!');
+                break;
+            end
+            D1_onGRD=0;
+        end
+        if isempty(D2_onGRD)
+            if q_pOpt_Mtx(i,4)>0
+                disp('Approx Error: D2!');
+                break;
+            end
+            D2_onGRD=0;
+        end
         %Create weighted sum of optimal controls at all points in grid
         D1_interp=D1_interp+q_pOpt_Mtx(i,4)*D1_onGRD;
         D2_interp=D2_interp+q_pOpt_Mtx(i,4)*D2_onGRD;
