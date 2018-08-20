@@ -58,7 +58,7 @@ global epsilon; global epsilon2; global epsilon3; global gamma;
 epsilon=0.01; %Next state off grid rounding tolerance
 epsilon2=0.0001; %Off grid state comparison tolerance
 epsilon3=0.01; %On-grid optimal control search tolerance
-gamma=1e-6; %Regularization term weighting factor
+gamma=1e-2; %Regularization term weighting factor
 
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
@@ -712,12 +712,12 @@ c_state(c_state==0)=[]; %Remove zero probability states
   cvx_solver Gurobi
  %Get approximate solution
   cvx_begin
-    grbControl.LPMETHOD = 1; % Use dual simplex method
-    %grbControl.Presolve = 0; % Don't use presolver
-    params.OptimalityTol = tolerance; %Set tolerance
+    cvx_solver_settings('Method',1) % Use dual simplex method
+    cvx_solver_settings('Presolve',0) % Don't use presolver
+    %cvx_solver_settings('FeasibilityTol',1e-4) %Set tolerance
     variable r_fit(size(Phi,2))
     dual variables d
-    maximize( c_state'*Phi*r_fit - gamma*norm(r_fit,1) )
+    maximize( c_state'*Phi*r_fit ) % - gamma*norm(r_fit,1) )
     subject to
         d : Q*Phi*r_fit <= b
         %Phi*r_fit >= 0

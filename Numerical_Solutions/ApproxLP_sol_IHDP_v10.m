@@ -532,8 +532,9 @@ toc
 tic;
  %Get approximate solution
   cvx_begin
-    grbControl.LPMETHOD = 1; % Use dual simplex method
-    params.OptimalityTol = tolerance; %Set tolerance
+    cvx_solver_settings('Method',1) % Use dual simplex method
+    cvx_solver_settings('Presolve',0) % Don't use presolver
+    %cvx_solver_settings('FeasibilityTol',1e-4) %Set tolerance
     variable r_fit(size(Phi,2))
     dual variables d
     maximize( c_state'*Phi*r_fit - gamma*norm(r_fit,1) )
