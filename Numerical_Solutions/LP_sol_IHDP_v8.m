@@ -4,7 +4,7 @@ clearvars -except X V;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -18,7 +18,7 @@ E2_INIT=E_MAX(2);
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -81,6 +81,7 @@ E_Ind_Mtx_p=[]; %Matrix of E_Ind_MtxALL values, but for EACH value of p
 P_fullmtx=[];   %Matrix of all probabilities
 
 indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
+feasStates=[]; %List of all feasible states (E1,E2,L), no repeats
 c_state=[];     %Vector of state-relevance weightings
 
 p_max=0;    %Maximum number of controls to consider
@@ -174,6 +175,9 @@ p_max=0;    %Maximum number of controls to consider
                                   indL_Feas=[indL_Feas;indL];
                                   %Create vector of minimum load values for each E-state, WITH repeats (to add OFFSETS in G matrix)
                                   Lmin_offs_p=[Lmin_offs_p;minL];
+                                  
+                                  %STEP 3.5: Create list of all FEASIBLE states
+                                  feasStates(E_Ind1,E_Ind2,indL)=1;
                                 else
                                   %If no feasible state for this combination of (E1,E2) and L...
                                   nextE_Ind=-1; %Flag next state as impossible
@@ -690,3 +694,4 @@ p_max=0;    %Maximum number of controls to consider
     %Get stationary probabilities vector for ONLY feasible states (non-zero
     %in aug_E_MtxALL_Vect)
     pi=aug_pi(aug_E_MtxALL_Vect~=0);
+    aug_optD=aug_optD(aug_E_MtxALL_Vect~=0);

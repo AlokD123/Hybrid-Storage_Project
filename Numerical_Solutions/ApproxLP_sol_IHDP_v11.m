@@ -717,10 +717,11 @@ c_state(c_state==0)=[]; %Remove zero probability states
     %cvx_solver_settings('FeasibilityTol',1e-4) %Set tolerance
     variable r_fit(size(Phi,2))
     dual variables d
+    %dual variables d2
     maximize( c_state'*Phi*r_fit ) % - gamma*norm(r_fit,1) )
     subject to
         d : Q*Phi*r_fit <= b
-        %Phi*r_fit >= 0
+        %d2 : Phi*r_fit >= 0
   cvx_end
 
 
@@ -825,3 +826,4 @@ c_state(c_state==0)=[]; %Remove zero probability states
     %Get stationary probabilities vector for ONLY feasible states (non-zero
     %in aug_E_MtxALL_Vect)
     pi=aug_pi(aug_E_MtxALL_Vect~=0);
+    aug_optD=aug_optD(aug_E_MtxALL_Vect~=0);
