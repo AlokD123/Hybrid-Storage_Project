@@ -55,12 +55,15 @@ N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
 
-global epsilon; global epsilon2; global epsilon3; global gamma;
+global epsilon; global epsilon2; global epsilon3;
+global epsilon4; global epsilon5; global gamma; global INF_Q
 epsilon=0.01; %Next state off grid rounding tolerance
 epsilon2=0.0001; %Off grid state comparison tolerance
 epsilon3=0.01; %On-grid optimal control search tolerance
-gamma=1e-2; %Regularization term weighting factor
+epsilon4=1e-4; %On-grid optimal q search tolerance
+epsilon5=0.01; %Number of repeated q-values count tolerance
 
+gamma=1e-2; %Regularization term weighting factor
 INF_Q=-100; %Define infeasible Q-value to be large negative value (since feasible ones expected non-negative)
 
 %% Initialization
