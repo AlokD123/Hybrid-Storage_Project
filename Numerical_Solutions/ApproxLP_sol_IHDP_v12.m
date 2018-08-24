@@ -9,7 +9,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+E_MAX=[15;10]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -26,7 +26,7 @@ MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[15;10]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -60,11 +60,11 @@ global epsilon4; global epsilon5; global gamma; global INF_Q
 epsilon=0.01; %Next state off grid rounding tolerance
 epsilon2=0.0001; %Off grid state comparison tolerance
 epsilon3=0.01; %On-grid optimal control search tolerance
-epsilon4=1e-4; %On-grid optimal q search tolerance
+epsilon4=1e-3; %On-grid optimal q search tolerance
 epsilon5=0.01; %Number of repeated q-values count tolerance
 
 gamma=1e-2; %Regularization term weighting factor
-INF_Q=-100; %Define infeasible Q-value to be large negative value (since feasible ones expected non-negative)
+INF_Q=Inf; %Define infeasible Q-value to be infinite (so cannot choose as minimal)
 
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
@@ -622,6 +622,10 @@ c_state=[];     %Vector of state-relevance weightings
   
   feasE2s=[]; feasE1s=[]; feasLs=[]; %To add polynomial basis functions (order R-1)
   
+  %0) Add extra possible load into feasStates array for which no states are
+  %feasible (just to ensure correct dimension)
+  feasStates(:,:,end+1)=0;
+  
   %1) find bounds of linear fit
   exprMax=0; exprMin=0;
   for i=1:N1
@@ -718,7 +722,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
   cvx_solver Gurobi
  %Get approximate solution
   cvx_begin
-    cvx_solver_settings('Method',1) % Use dual simplex method
+    %cvx_solver_settings('Method',1) % Use dual simplex method
     cvx_solver_settings('Presolve',0) % Don't use presolver
     %cvx_solver_settings('FeasibilityTol',1e-4) %Set tolerance
     variable r_fit(size(Phi,2))

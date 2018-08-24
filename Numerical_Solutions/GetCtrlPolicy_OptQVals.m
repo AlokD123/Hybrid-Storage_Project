@@ -30,7 +30,7 @@ for i=1:N1
     for j=1:N2
         for k=1:size(feasStates,3)
             for m=1:length(qValsMtx(i,j,k,:))
-                if (abs(max(qValsMtx(i,j,k,:))-qValsMtx(i,j,k,m))<epsilon4) && (feasStates(i,j,k)==1)
+                if (abs(min(qValsMtx(i,j,k,:))-qValsMtx(i,j,k,m))<epsilon4) && (feasStates(i,j,k)==1)
                     fullPolicyMtx(i,j,k,m)=1;
                 else
                     fullPolicyMtx(i,j,k,m)=0;
