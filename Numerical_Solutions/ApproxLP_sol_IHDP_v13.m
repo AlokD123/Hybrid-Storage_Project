@@ -6,7 +6,7 @@
 % E_MAX input (optimization variables)
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size;
+clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -714,6 +714,9 @@ c_state=[];     %Vector of state-relevance weightings
         Phi=Phi(:,1:(size(Phi,2)-1));
     end
 
+ %Alternative: use EXACT LP (Phi=I)
+ Phi=eye(size(full(Q),2));
+    
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
 % Probabilities are given in P_fullmtx (non-zero for feasible states)
