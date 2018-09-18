@@ -1,8 +1,8 @@
 %Create matrix of optimal q-values and use to obtain optimal control policy
 %qValsMtx(E1,E2,L,:) has q-values of state (E1,E2,L) for all controls
 
-clear qValsMtx; global qValsMtx;
-clear fullPolicyMtx; global fullPolicyMtx;
+global qValsMtx; global fullPolicyMtx;
+qValsMtx=[]; fullPolicyMtx=[];
 
 %N1=6; N2=5; M=10;
 %P1=N1; P2=N2;

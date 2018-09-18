@@ -6,7 +6,7 @@
 % E_MAX input (optimization variables)
 
 %warning('off', 'Octave:possible-matlab-short-circuit-operator');
-clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal;
+clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -99,6 +99,8 @@ P_fullmtx=[];   %Matrix of all probabilities
 
 indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 feasStates=[]; %List of all feasible states (E1,E2,L), no repeats
+feasE1s_p=[]; feasE2s_p=[]; feasLs_p=[]; %Vectors of feasible states, for each p
+feasStates_p=[]; %Array of adjoint vectors, for each p
 
 p_max=0;    %Maximum number of controls to consider, initialized at 0
 
@@ -197,8 +199,11 @@ c_state=[];     %Vector of state-relevance weightings
                                   %Create vector of minimum load values for each E-state, WITH repeats (to add OFFSETS in G matrix)
                                   Lmin_offs_p=[Lmin_offs_p;minL];
                                   
-                                  %STEP 4: Create list of all FEASIBLE states
+                                  %STEP 4: Create boolean array of all FEASIBLE states
                                   feasStates(E_Ind1,E_Ind2,indL)=1;
+                                  %Also create separate lists just for current control
+                                  feasE1s_p=[feasE1s_p;E1]; feasE2s_p=[feasE2s_p;E2]; feasLs_p=[feasLs_p;L];
+                                  feasStatesArr_p=[feasE1s_p,feasE2s_p,feasLs_p];%Adjoin into array
                                   
                                 else
                                   %If no feasible state for this combination of (E1,E2) and L...
@@ -281,6 +286,8 @@ c_state=[];     %Vector of state-relevance weightings
         E_Ind_Mtx{p}=E_Ind_Mtx_p;
         offGrdNxtE1E2{p}=offGrdNxtE1E2_p;
         numLoads_OffGrd{p}=numL_OffGrd_p;
+        %feasE1s_ctrl{p}=feasE1s_p; feasE2s_ctrl{p}=feasE2s_p; feasLs_ctrl{p}=feasLs_p;
+        feasStatesArr_ctrl{p}=feasStatesArr_p;                                  
         
         %Continue testing next control
         p_max=p_max+1;
@@ -300,6 +307,8 @@ c_state=[];     %Vector of state-relevance weightings
     E_Ind_Mtx_p=[];
     offGrdNxtE1E2_p=[];
     numL_OffGrd_p=[];
+    feasE1s_p=[]; feasE2s_p=[]; feasLs_p=[];
+    feasStatesArr_p=[];
     end
   end
   
