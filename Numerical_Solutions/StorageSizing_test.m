@@ -77,6 +77,8 @@ for max_E2=2:max_E_SIZE(2)
     
     %Get total cost (convex)
     totCost=[totCost;(netOptVal_initE + c1*max_E1 + c2*max_E2)];
+    
+    %Plot
     plot(max_E2,(netOptVal_initE + c1*max_E1 + c2*max_E2),'O');
     hold on
     
