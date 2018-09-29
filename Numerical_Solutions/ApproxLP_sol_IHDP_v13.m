@@ -10,7 +10,7 @@ clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-%E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
+%global E_MAX; E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -221,7 +221,7 @@ c_state=[];     %Vector of state-relevance weightings
                         %STEP 5
                         %Create p-th vector g, for constraint
                         if(nextE_Ind~=-1) %If this state leads to a feasible next state...
-                            gVec_p(indCount)=CtrlCost(D1,D2,L); %Cost of stage is given by CtrlCost
+                            gVec_p(indCount)=CtrlCost_Modified(D1,D2,L); %Cost of stage is given by CtrlCost
                         else %Else if infeasible next state...
                             %DO NOTHING
                         end
@@ -715,7 +715,7 @@ c_state=[];     %Vector of state-relevance weightings
     end
 
  %Alternative: use EXACT LP (Phi=I)
- Phi=eye(size(full(Q),2));
+ %Phi=eye(size(full(Q),2));
     
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE

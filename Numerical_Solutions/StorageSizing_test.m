@@ -3,7 +3,7 @@
 
 %Input: feasible set for E_SIZE, size cost factors
 max_E_SIZE=[10,5];
-c1=2; c2=1;
+c1=1; c2=1;
 
 global E_MAX; global E_MIN; global MIN_LOAD;
 
@@ -30,6 +30,7 @@ for max_E2=2:max_E_SIZE(2)
     ApproxLP_sol_IHDP_v13; %Get optimal values for this size
     GetCtrlPolicy_OptQVals; %Get optimal policy matrix
     
+    %{
     %%GET PF and G UNDER OPTIMAL POLICY FOR EACH SIZE
     for l=1:length(E_Ind_VectALL) %For each feasible state...
         %Get TRANSITION WEIGHTS for OPTIMAL POLICY
@@ -56,6 +57,7 @@ for max_E2=2:max_E_SIZE(2)
     Exp_CostToGo{size_iter}=PF_opt{size_iter}*cost_nonneg; 
     %Format as matrix
     Exp_CostToGo_mtx{size_iter}=FormatCostVect(Exp_CostToGo{size_iter}); %<------- Difference is bigger
+    %}
     
     %Store feasible states array, for reference
     feasStatesArr_size{size_iter}=feasStatesArr;
@@ -65,7 +67,7 @@ for max_E2=2:max_E_SIZE(2)
     optVal_size{size_iter}=ConvCosts; %<--------- DIFFERENCE IS LARGE
     
     %Get norm of optimal values for CONSTANT energy state
-    netOptVal_initE=sum(ConvCosts(size(optVal_size{1},1),size(optVal_size{1},2),1:size(optVal_size{1},3))); %ASSUMING that E_min=0
+    netOptVal_initE=sum(  ConvCosts(max_E1-E_MIN(1)+1,max_E2-E_MIN(2)+1,:)  ); %ASSUMING that E_min=0
     
     vectS_netOptVal=[vectS_netOptVal;netOptVal_initE]; %Store in vector
     
