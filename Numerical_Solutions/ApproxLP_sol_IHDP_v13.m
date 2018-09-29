@@ -221,7 +221,7 @@ c_state=[];     %Vector of state-relevance weightings
                         %STEP 5
                         %Create p-th vector g, for constraint
                         if(nextE_Ind~=-1) %If this state leads to a feasible next state...
-                            gVec_p(indCount)=CtrlCost_Modified(D1,D2,L); %Cost of stage is given by CtrlCost
+                            gVec_p(indCount)=CtrlCost(D1,D2,L); %Cost of stage is given by CtrlCost
                         else %Else if infeasible next state...
                             %DO NOTHING
                         end
