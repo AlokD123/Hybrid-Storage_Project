@@ -26,12 +26,12 @@ MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
-MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
+MAX_CHARGE=[E_MAX(1);E_MAX(2)]; %Maximum charging of the 1) battery and 2) supercap
 MAX_DISCHARGE=[E_MAX(1);E_MAX(2)]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
-MIN_LOAD=0; %Minimum load expected
-MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2);
+MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
+MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
@@ -39,7 +39,7 @@ global ALPHA_C; global ALPHA_D; global BETA; global K;
 ALPHA_C=[0.9;0.99]; %Efficiency of charging
 ALPHA_D=[0.9;0.95]; %Efficiency of discharging
 BETA=[0.99;0.99];    %Storage efficiency
-K=2;           %Weighting factor for D1^2 cost
+K=[2;2];           %Weighting factors for D1^2 and C1^2 costs
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -48,13 +48,14 @@ DISCOUNT=0.99;
 
 
 %% Definitions
-global N2; global P2;
+global N2; global P2; global P3;
 
 M=MAX_LOAD-MIN_LOAD+1;
 N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
 P2=MAX_DISCHARGE(2)+1;
+P3=MAX_CHARGE(2)+1;
 
 global epsilon; global epsilon2; global epsilon3;
 global epsilon4; global epsilon5; global gamma; global INF_Q
@@ -113,218 +114,244 @@ c_state=[];     %Vector of state-relevance weightings
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
     for D2=0:MAX_DISCHARGE(2)
-        %Map control to control index
-        D1_Ind=D1+1; D2_Ind=D2+1;
-        %Get combination #(p)
-        p=D2_Ind+P2*(D1_Ind-1);
-        
-        indCount=0; %Index for feasible state #, for a given value of p
-        
-        %For each state at an iteration...
-        for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
-            for E_Ind2=1:(E_MAX(2)-E_MIN(2)+1)
-                %Map state index to state
-                E1=E_MIN(1)+(E_Ind1-1);
-                E2=E_MIN(2)+(E_Ind2-1);
-                
-                %Get index of current state energies in vector of state energies
-                E_Ind=(E_Ind1-1)*N2+E_Ind2;
-                
-                if(D1>E1 || D2>E2)  %If discharge too high for state...
-                    %IGNORE
-                else
-                    %Index row in E-state indices mtx (for feasible E-state) same as VALUE of E-state index
-                    rowInd_Emtx = E_Ind;
-                    %Determine MINIMUM required load for high discharge, to
-                    %not overflow E2 (one for each E-state)
-                    minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin
-                    Lmin_p=[Lmin_p; minL]; %Create vector
-                    
-                    %For each perturbation at the CURRENT time...
-                    for indL=1:(D1+D2-MIN_LOAD+1)
-                        %Map index to value of load
-                        L=indL+MIN_LOAD-1;
+      for C2=0:MAX_CHARGE(2)
+          %Map control to control index
+            D1_Ind=D1+1; D2_Ind=D2+1; C2_Ind=C2+1;
+            %Get combination #(p)
+            p=C2_Ind+P3*(D2_Ind+P2*(D1_Ind-1)-1);
 
-                        %STEP 0
-                        %Calculate the state these values of u and w will lead to, even if
-                        %impossible...
-                        [nextE1,nextE2]=optNextStateLimited(E1,E2,D1,D2,L);
+            indCount=0; %Index for feasible state #, for a given value of p
 
-                        %If next state is amongst those achievable with a given perturbance....
-                        if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
-                            if(nextE2<=E_MAX(2) && nextE2>=E_MIN(2))
-                                %IF meeting following conditions: (C_MIN and C_MAX)
-                                %1) net supply (discharging) never below demand, 2) not charging cap. too quickly
-                                if(~((D1+D2-L)<0||(D1+D2-L)>MAX_CHARGE(2)))
-                                  %Count the number of feasible states for a given set of controls (D1,D2)
-                                  indCount=indCount+1; %... and use as an index
-                                  
-                                  %STEP 1: create vector and matrix of FEASIBLE state energies for each load
-                                  %Add state energy index to vector for current value of p (D1,D2 combo)
-                                  E_Ind_Vect_p=[E_Ind_Vect_p;E_Ind];
-                                  %Add state energy index to matrix of ALL FEASIBLE energies
-                                  %DO NOT RESET at end. Will overwrite with same values (and add) each time, which is ok.
-                                  E_Ind_MtxALL(rowInd_Emtx,indL)=E_Ind;
-                                  E_Ind_Mtx_p(rowInd_Emtx,indL)=E_Ind;
-                                    
-                                  %Map state to state index, to find cost of next state based on its index
-                                  if(abs((nextE1-E_MIN(1)+1)-round(nextE1-E_MIN(1)+1))<epsilon)
-                                      nextE_Ind1=round(nextE1-E_MIN(1)+1);  %IF within error bound, round
-                                  else
-                                      nextE_Ind1=nextE1-E_MIN(1)+1;         %.. Otherwise, will interpolate
-                                  end
-                                  if(abs((nextE2-E_MIN(2)+1)-round(nextE2-E_MIN(2)+1))<epsilon)
-                                      nextE_Ind2=round(nextE2-E_MIN(2)+1);
-                                  else
-                                      nextE_Ind2=nextE2-E_MIN(2)+1;
-                                  end
+            %For each state at an iteration...
+            for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
+                for E_Ind2=1:(E_MAX(2)-E_MIN(2)+1)
+                    %Map state index to state
+                    E1=E_MIN(1)+(E_Ind1-1);
+                    E2=E_MIN(2)+(E_Ind2-1);
 
-                                  %STEP 2: create vector of next state energies for each load
-                                  %Get index of next state energy in vector of state energies
-                                  nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
-                                  %Add next state energy index to vector of FEASIBLE next state energies
-                                  nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
-                                   
-                                  
-                                  %STEP A: create array of next state indices that are off-grid
-                                  %Mapping from 2 indices to linear index
-                                  if round(nextE_Ind)~=nextE_Ind %If NOT INTEGER...... i.e. EITHER component of next state is off grid...
-                                      offGrdNxtE1E2_p=[offGrdNxtE1E2_p;nextE_Ind1,nextE_Ind2,nextE_Ind];
-                                  end
-                                  
-                                  
-                                  %STEP 3: determine feasible loads
-                                  %Add indL to list of FEASIBLE loads for this combination of u and x
-                                  indL_Feas=[indL_Feas;indL];
-                                  %Create vector of minimum load values for each E-state, WITH repeats (to add OFFSETS in G matrix)
-                                  Lmin_offs_p=[Lmin_offs_p;minL];
-                                  
-                                  %STEP 4: Create boolean array of all FEASIBLE states
-                                  feasStates(E_Ind1,E_Ind2,indL)=1;
-                                  %Also create separate lists just for current control
-                                  feasE1s_p=[feasE1s_p;E1]; feasE2s_p=[feasE2s_p;E2]; feasLs_p=[feasLs_p;L];
-                                  feasStatesArr_p=[feasE1s_p,feasE2s_p,feasLs_p];%Adjoin into array
-                                  
+                    %Get index of current state energies in vector of state energies
+                    E_Ind=(E_Ind1-1)*N2+E_Ind2;
+
+                    if(D1>E1 || D2>E2 || C2>(E_MAX(2)-E2))  %If discharge too high for state...
+                        %IGNORE
+                    else
+                        %Index row in E-state indices mtx (for feasible E-state) same as VALUE of E-state index
+                        rowInd_Emtx = E_Ind;
+                        %Determine MINIMUM required load for high discharge, to
+                        %not overflow E2 (one for each E-state)
+                        minL=ceil((1-1/(ALPHA_C(1)*ALPHA_D(1)))*D1+D2-C2+(BETA(1)*E1-E_MAX(1))/ALPHA_C(1)); %Calculate Lmin
+                        Lmin_p=[Lmin_p; minL]; %Create vector
+
+                        %For each perturbation at the CURRENT time...
+                        for indL=1:(D1+D2-C2-MIN_LOAD+1)
+                            %Map index to value of load
+                            L=indL+MIN_LOAD-1;
+
+                            %STEP 0
+                            %Calculate the state these values of u and w will lead to, even if
+                            %impossible...
+                            [nextE1,nextE2]=optNextStateLimited_v2(E1,E2,D1,D2,C2,L);
+
+                            %If next state is amongst those achievable with a given perturbance....
+                            if(nextE1<=E_MAX(1) && nextE1>=E_MIN(1))
+                                if(nextE2<=E_MAX(2) && nextE2>=E_MIN(2))
+                                    %IF meeting following conditions: (C_MIN and C_MAX)
+                                    %1) net supply (discharging) never below demand, 2) not charging cap. too quickly
+                                    if(~((D1+D2-C2-L)<0||(D1+D2-C2-L)>MAX_CHARGE(1)))
+                                      %Count the number of feasible states for a given set of controls (D1,D2)
+                                      indCount=indCount+1; %... and use as an index
+
+                                      %STEP 1: create vector and matrix of FEASIBLE state energies for each load
+                                      %Add state energy index to vector for current value of p (D1,D2 combo)
+                                      E_Ind_Vect_p=[E_Ind_Vect_p;E_Ind];
+                                      %Add state energy index to matrix of ALL FEASIBLE energies
+                                      %DO NOT RESET at end. Will overwrite with same values (and add) each time, which is ok.
+                                      E_Ind_MtxALL(rowInd_Emtx,indL)=E_Ind;
+                                      E_Ind_Mtx_p(rowInd_Emtx,indL)=E_Ind;
+
+                                      %Map state to state index, to find cost of next state based on its index
+                                      if(abs((nextE1-E_MIN(1)+1)-round(nextE1-E_MIN(1)+1))<epsilon)
+                                          nextE_Ind1=round(nextE1-E_MIN(1)+1);  %IF within error bound, round
+                                      else
+                                          nextE_Ind1=nextE1-E_MIN(1)+1;         %.. Otherwise, will interpolate
+                                      end
+                                      if(abs((nextE2-E_MIN(2)+1)-round(nextE2-E_MIN(2)+1))<epsilon)
+                                          nextE_Ind2=round(nextE2-E_MIN(2)+1);
+                                      else
+                                          nextE_Ind2=nextE2-E_MIN(2)+1;
+                                      end
+
+                                      %STEP 2: create vector of next state energies for each load
+                                      %Get index of next state energy in vector of state energies
+                                      nextE_Ind=(nextE_Ind1-1)*N2+nextE_Ind2;
+                                      %Add next state energy index to vector of FEASIBLE next state energies
+                                      nextE_Ind_Vect_p=[nextE_Ind_Vect_p;nextE_Ind];
+
+
+                                      %STEP A: create array of next state indices that are off-grid
+                                      %Mapping from 2 indices to linear index
+                                      if round(nextE_Ind)~=nextE_Ind %If NOT INTEGER...... i.e. EITHER component of next state is off grid...
+                                          offGrdNxtE1E2_p=[offGrdNxtE1E2_p;nextE_Ind1,nextE_Ind2,nextE_Ind];
+                                      end
+
+
+                                      %STEP 3: determine feasible loads
+                                      %Add indL to list of FEASIBLE loads for this combination of u and x
+                                      indL_Feas=[indL_Feas;indL];
+                                      %Create vector of minimum load values for each E-state, WITH repeats (to add OFFSETS in G matrix)
+                                      Lmin_offs_p=[Lmin_offs_p;minL];
+
+                                      %STEP 4: Create boolean array of all FEASIBLE states
+                                      feasStates(E_Ind1,E_Ind2,indL)=1;
+                                      %Also create separate lists just for current control
+                                      feasE1s_p=[feasE1s_p;E1]; feasE2s_p=[feasE2s_p;E2]; feasLs_p=[feasLs_p;L];
+                                      feasStatesArr_p=[feasE1s_p,feasE2s_p,feasLs_p];%Adjoin into array
+
+                                    else
+                                      %If no feasible state for this combination of (E1,E2) and L...
+                                      nextE_Ind=-1; %Flag next state as impossible
+                                    end
                                 else
-                                  %If no feasible state for this combination of (E1,E2) and L...
-                                  nextE_Ind=-1; %Flag next state as impossible
+                                    %If no feasible state for this combination of (E1,E2) and L...
+                                    nextE_Ind=-1; %Flag next state as impossible
                                 end
                             else
                                 %If no feasible state for this combination of (E1,E2) and L...
                                 nextE_Ind=-1; %Flag next state as impossible
                             end
-                        else
-                            %If no feasible state for this combination of (E1,E2) and L...
-                            nextE_Ind=-1; %Flag next state as impossible
-                        end
-                        
-                        %STEP 5
-                        %Create p-th vector g, for constraint
-                        if(nextE_Ind~=-1) %If this state leads to a feasible next state...
-                            gVec_p(indCount)=CtrlCost_Modified(D1,D2,L); %Cost of stage is given by CtrlCost
-                        else %Else if infeasible next state...
-                            %DO NOTHING
-                        end
-                    end
 
-                    %Reset list of feasible loads (next state)
-                    indL_Feas=[];
-                end
-            end
-        end
-    
-         %Count number of feasible loads for NEXT E-states off grid (NOT FOR CURRENT ONES)
-      %STEPS B-D
-      %Count for ALL possible controls in NEXT STATE...
-      for i=1:size(offGrdNxtE1E2_p,1) %For each next state...
-          %Maximum load previously achieved by all ctrls (starting point, to not double-count)
-          maxL_prev=0; %Reset maximum previous load value
-          
-          for D1_next=0:MAX_DISCHARGE(1)
-            for D2_next=0:MAX_DISCHARGE(2)
-                nextE1=offGrdNxtE1E2_p(i,1)+E_MIN(1)-1; nextE2=offGrdNxtE1E2_p(i,2)+E_MIN(2)-1;
-                
-                %Get number of FEASIBLE next loads
-                %Check excess discharge condition
-                if(~(D1_next>nextE1 || D2_next>nextE2))
-                    %For each perturbation at the NEXT time...
-                    for indL=(maxL_prev+1):(D1_next+D2_next-MIN_LOAD+1) %TRY ONLY PERTURBATIONS ABOVE PREVIOUS MAX
-                        L=indL+MIN_LOAD-1;
-                        [next_nextE1,next_nextE2]=optNextStateLimited(nextE1,nextE2,D1_next,D2_next,L);
-                        %Check other conditions
-                        if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
-                            if(next_nextE2<=E_MAX(2) && next_nextE2>=E_MIN(2))
-                                if(~((D1_next+D2_next-L)<0||(D1_next+D2_next-L)>MAX_CHARGE(2)))
-                                    %If feasible, increment number
-                                        numL_OffGrd=numL_OffGrd+1;
-                                        %maxL_prev=maxL_prev+1;
-                                        %If feasible load with one set of discharges, no need to test others
-                                        %D1_next=MAX_DISCHARGE(1)+1; D2_next=MAX_DISCHARGE(2)+1;
-                                end
+                            %STEP 5
+                            %Create p-th vector g, for constraint
+                            if(nextE_Ind~=-1) %If this state leads to a feasible next state...
+                                gVec_p(indCount)=CtrlCost_Modified(D1,D2,C2,L); %Cost of stage is given by CtrlCost
+                            else %Else if infeasible next state...
+                                %DO NOTHING
                             end
                         end
+
+                        %Reset list of feasible loads (next state)
+                        indL_Feas=[];
                     end
                 end
-                
             end
-          end
-          
-         %Store # for this next state
-         numLoads_OffGrd_p(i)=numL_OffGrd;
-         %Reset feasible loads count, for subsequent NEXT energy state
-         numL_OffGrd=0;
-      end    
-	
-    %If at least one feasible state, consider this control
-    if (~isempty(gVec_p))
-        %Store vector data in cell array
-        g{p}=gVec_p';
-        E_Ind_Vect{p}=E_Ind_Vect_p;
-        nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
-        Lmin{p}=Lmin_p;
-        Lmin_offs{p}=Lmin_offs_p;
-        E_Ind_Mtx{p}=E_Ind_Mtx_p;
-        offGrdNxtE1E2{p}=offGrdNxtE1E2_p;
-        numLoads_OffGrd{p}=numLoads_OffGrd_p;
-        %feasE1s_ctrl{p}=feasE1s_p; feasE2s_ctrl{p}=feasE2s_p; feasLs_ctrl{p}=feasLs_p;
-        feasStatesArr_ctrl{p}=feasStatesArr_p;                                  
+
+             %Count number of feasible loads for NEXT E-states off grid (NOT FOR CURRENT ONES)
+          %STEPS B-D
+          %Count for ALL possible controls in NEXT STATE...
+          for i=1:size(offGrdNxtE1E2_p,1) %For each next state...
+              %Maximum load previously achieved by all ctrls (starting point, to not double-count)
+              maxL_prev=0; %Reset maximum previous load value
+
+              nextE1=offGrdNxtE1E2_p(i,1)+E_MIN(1)-1; nextE2=offGrdNxtE1E2_p(i,2)+E_MIN(2)-1; 
+
+              for D1_next=0:MAX_DISCHARGE(1)
+
+                for Delta2_next=-MAX_CHARGE(2):MAX_DISCHARGE(2) %Loop through values of D2-C2 in increasing order, to ensure can remove double-counted loads
+                    for C2_next=MAX_CHARGE(2):-1:0
+                        %If D2 does not lie in allowed range, ignore that value of C2_next...
+                        if (Delta2_next+C2_next)>=0 && (Delta2_next+C2_next)<=MAX_DISCHARGE(2)
+
+                            %Get number of FEASIBLE next loads
+                            %Check excess discharge condition
+                            if(~(D1_next>nextE1 || (Delta2_next+C2_next)>nextE2) || C2_next>(E_MAX(2)-nextE2))
+                                %For each perturbation at the NEXT time...
+                                for indL=(maxL_prev+1):(D1_next+Delta2_next-MIN_LOAD+1) %TRY ONLY PERTURBATIONS ABOVE PREVIOUS MAX
+                                    L=indL+MIN_LOAD-1;
+                                    [next_nextE1,next_nextE2]=optNextStateLimited_v2(nextE1,nextE2,D1_next,Delta2_next+C2_next,C2_next,L);
+                                    %Check other conditions
+                                    if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
+                                        if(next_nextE2<=E_MAX(2) && next_nextE2>=E_MIN(2))
+                                            if(~((D1_next+Delta2_next-L)<0||(D1_next+Delta2_next-L)>MAX_CHARGE(1)))
+                                                %If feasible, increment number
+                                                numL_OffGrd=numL_OffGrd+1;
+                                                %Also, if moving on to next Delta (D2-C2) value, update minimum load value, since # of loads satisfied NOT DECREASING for DECREASING C2
+                                                if prev_Delta2_next~=Delta2_next
+                                                    maxL_prev=maxL_prev+1;
+                                                end
+                                                prev_Delta2_next=Delta2_next; %Update (or stays constant inside inner loop)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+
+                        end
+                    end
+                end
+
+              end
+
+             %Store # for this next state
+             numLoads_OffGrd_p(i)=numL_OffGrd;
+             %Reset feasible loads count, for subsequent NEXT energy state
+             numL_OffGrd=0;
+          end    
+
+        %If at least one feasible state, consider this control
+        if (~isempty(gVec_p))
+            %Store vector data in cell array
+            g{p}=gVec_p';
+            E_Ind_Vect{p}=E_Ind_Vect_p;
+            nextE_Ind_Vect{p}=nextE_Ind_Vect_p;
+            Lmin{p}=Lmin_p;
+            Lmin_offs{p}=Lmin_offs_p;
+            E_Ind_Mtx{p}=E_Ind_Mtx_p;
+            offGrdNxtE1E2{p}=offGrdNxtE1E2_p;
+            numLoads_OffGrd{p}=numLoads_OffGrd_p;
+            %feasE1s_ctrl{p}=feasE1s_p; feasE2s_ctrl{p}=feasE2s_p; feasLs_ctrl{p}=feasLs_p;
+            feasStatesArr_ctrl{p}=feasStatesArr_p;                                  
+
+            %Continue testing next control
+            p_max=p_max+1;
+        else
+            %Else, IGNORE
+            %Also, STOP TESTING MORE CONTROLS (max feasible reached)
+            D1=MAX_DISCHARGE(1);
+            D2=MAX_DISCHARGE(2);
+        end
+
+        %Reset matrices/vectors
+        nextE_Ind_Vect_p=[];
+        E_Ind_Vect_p=[];
+        gVec_p=[];
+        Lmin_p=[];
+        Lmin_offs_p=[];
+        E_Ind_Mtx_p=[];
+        offGrdNxtE1E2_p=[];
+        numLoads_OffGrd_p=[];
+        feasE1s_p=[]; feasE2s_p=[]; feasLs_p=[];
+        feasStatesArr_p=[];
+      end
         
-        %Continue testing next control
-        p_max=p_max+1;
-    else
-        %Else, IGNORE
-        %Also, STOP TESTING MORE CONTROLS (max feasible reached)
-        D1=MAX_DISCHARGE(1);
-        D2=MAX_DISCHARGE(2);
-    end
-    
-    %Reset matrices/vectors
-    nextE_Ind_Vect_p=[];
-    E_Ind_Vect_p=[];
-    gVec_p=[];
-    Lmin_p=[];
-    Lmin_offs_p=[];
-    E_Ind_Mtx_p=[];
-    offGrdNxtE1E2_p=[];
-    numLoads_OffGrd_p=[];
-    feasE1s_p=[]; feasE2s_p=[]; feasLs_p=[];
-    feasStatesArr_p=[];
     end
   end
   
  
+  %STEP 6: Get MINIMUM load for every E-state in E_VectALL (i.e. baseline for
+  %indexing loads for that E-state)
+  %E_MtxALL_Ls=FormatCostVect(E_VectALL_Ls);
+  for i=1:size(feasStates,1)
+    for j=1:size(feasStates,2)
+        k=1;
+        while feasStates(i,j,k)~=1 %Feasible state matrix contains 0s until minimum feasible L
+            k=k+1; %So increment till 1
+        end
+       MINLoad_E_state(j+N2*(i-1))=k+MIN_LOAD-1; %k is now index of minimum L <----------------------------------------------------------------------------------------------------------------------ASSUMING k=1 corresponds to MIN_LOAD!!!!!!!!!!!!!!!
+    end
+  end
   
-  %STEP 6: Construct vector of ALL FEASIBLE energies, for all controls
+  %STEP 7: Construct vector of ALL FEASIBLE energies, for all controls
   E_Ind_VectALL=[];
   E_VectALL_Ls=[]; %Vector with associated loads
   for row=1:size(E_Ind_MtxALL,1)
       nnzRow=nnz(E_Ind_MtxALL(row,:));
       E_Ind_Mtx_nzRow=E_Ind_MtxALL(row,1:nnzRow);
       E_Ind_VectALL=[E_Ind_VectALL; E_Ind_Mtx_nzRow'];
-      E_VectALL_Ls=[E_VectALL_Ls;(0:nnzRow-1)'];
+      E_VectALL_Ls=[E_VectALL_Ls;(MINLoad_E_state(row):(MINLoad_E_state(row)+nnzRow-1))']; %Create vector of all loads per E-state (for all controls)
   end
   
-  %STEP 7: Create full probability matrix
+  
+  %STEP 8: Create full probability matrix
   %DISTRIBUTION: UNIFORM
   %(Note: can't create until E_Ind_MtxALL complete, so outside main loop)
   for r=1:size(E_Ind_MtxALL,1)
@@ -337,7 +364,7 @@ c_state=[];     %Vector of state-relevance weightings
     Lmin_offs_p=Lmin_offs{p};
     numLoads_OffGrd_p=numLoads_OffGrd{p};
     
-    %STEP 8: Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
+    %STEP 9: Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
     %(Note: doing after E_Ind_VectALL complete)
     augVectRow=1; %Index row in new augmented vector
     r=1; offGrdNxtE_Idx=1; %Start from beginning
@@ -364,7 +391,8 @@ c_state=[];     %Vector of state-relevance weightings
             
             %Add given E-state to augmented vector that many times (for each load)
             aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
-            aug_Vect_Ls_p(augVectRow:(augVectRow+numRepNextE-1))=(0:(numRepNextE-1))';
+            nextE_rnd=ceil(nextE_Ind_Vect_p); %Get index of next E-state rounded (to get # of loads in that state). Round up to find worst case (higher minimum).
+            aug_Vect_Ls_p(augVectRow:(augVectRow+numRepNextE-1))=(MINLoad_E_state(nextE_rnd):(MINLoad_E_state(nextE_rnd)+numRepNextE-1))'; %<---------------------------------------------------------------TO RECHECK!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             augVectRow=augVectRow+numRepNextE; %Start adding at end next time 
         end
         r=r+1; %Manually increment index in while loop
@@ -382,7 +410,7 @@ c_state=[];     %Vector of state-relevance weightings
     %Get index of subsequent next state that is off the grid
     x=1;
     
-    %STEP 9: Create each P matrix
+    %STEP 10: Create each P matrix
     %For P matrix, select rows corresponding to components in nextE_Ind_Vect
     %(Note: doing after P_fullmtx completed)
     for r=1:length(E_Ind_Vect_p)
@@ -426,7 +454,7 @@ c_state=[];     %Vector of state-relevance weightings
   
   
   
-  %STEP 10: Construct each F matrix
+  %STEP 11: Construct each F matrix
   for p=1:p_max
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
       aug_Vect_Ls_p=aug_Vect_Ls{p};
@@ -549,10 +577,11 @@ c_state=[];     %Vector of state-relevance weightings
       end
   end
   
-  %STEP 11: Construct each G matrix
+  %STEP 12: Construct each G matrix
   for p=1:p_max
       E_Ind_Vect_p=E_Ind_Vect{p};
       Lmin_offs_p=Lmin_offs{p};
+      feasStatesArr_p=feasStatesArr_ctrl{p};
       %Index COLUMN of G matrix by ROW number of E_Ind_VectALL
       row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
       
@@ -571,8 +600,10 @@ c_state=[];     %Vector of state-relevance weightings
           while(E_Ind_VectALL(row)~=E_Ind_Vect_p(r)) %While not reached mapping column in G (ONLY 1 per row)...
               row=row+1;    %Continue
           end
+          row2=row; %Temporary variable to hold row index of E_Ind_VectALL.
+          %E_Ind_VectALL(row2) is value (AND INDEX) for UNIQUE E-states
           if(boolNewEState==1)  %Only if distinct new state...
-              row=row+Lmin_offs_p(r); %Add minimum load offset to first state #
+              row=row+Lmin_offs_p(r)-MINLoad_E_state(E_Ind_VectALL(row2)); %Add minimum load offset + negative loads offset to first state #
           else
               %Otherwise, do nothing because already starting from offset
           end
@@ -643,7 +674,7 @@ c_state=[];     %Vector of state-relevance weightings
       for j=1:N2
           E2=j-1;
           for k=1:size(feasStates,3)
-                L=k-1;
+                L=k+MIN_LOAD-1;
                 if(feasStates(i,j,k)==1)
                     exprMax=max(fitStateExpr(E1,E2,L),exprMax);
                     exprMin=min(fitStateExpr(E1,E2,L),exprMin);
@@ -663,7 +694,7 @@ c_state=[];     %Vector of state-relevance weightings
       for j=1:N2
           E2=j-1;
           for k=1:size(feasStates,3)
-                L=k-1;
+                L=k+MIN_LOAD-1;
                 if(feasStates(i,j,k)==1)
                     %Create parameter fitting vector by aggregating states
                     %with same LINEAR EXPRESSION value (i.e. LINEAR FIT)
@@ -715,7 +746,7 @@ c_state=[];     %Vector of state-relevance weightings
     end
 
  %Alternative: use EXACT LP (Phi=I)
- %Phi=eye(size(full(Q),2));
+ Phi=eye(size(full(Q),2));
     
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
