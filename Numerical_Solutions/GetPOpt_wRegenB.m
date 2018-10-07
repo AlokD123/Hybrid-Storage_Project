@@ -5,6 +5,7 @@ function [D1,D2,C2] = GetPOpt_wRegenB(indCurrE1,indCurrE2,CurrL)
 %   Output: optimal controls
 
 global epsilon2; global E_Ind_VectALL; global E_VectALL_Ls; global N2;
+global fullPolicyMtx; global MIN_LOAD;
 
 if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls off the grid...
     q_pOpt_Mtx=[];
@@ -79,7 +80,12 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls 
    %C) FINALLY, calculate optimal control values using interpolation
       D1_interp=0; D2_interp=0; C2_interp=0;
       for i=1:length(E_Ind_VectALL) %For every state on grid...
-        [D1_onGRD,D2_onGRD,C2_onGRD]=GetPOpt_wo_Interp(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)); %Get optimal controls on grid
+          if max(fullPolicyMtx(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)-MIN_LOAD+1,:))==0 %If demand is off the grid...
+              D1_onGRD=[]; D2_onGRD=[]; C2_onGRD=[];
+          else
+            [D1_onGRD,D2_onGRD,C2_onGRD]=GetPOpt_wo_Interp_wRegenB(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)); %Get optimal controls on grid
+          end
+          
         %If no optimal control value for state, due to approximation error..... <---------------------------------------------------------ERROR!!!!
         if isempty(D1_onGRD) %<--------------------------------------------------------------------------------------------------------Workaround!!
             if q_pOpt_Mtx(i,4)>0
@@ -111,7 +117,7 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls 
       D1=D1_interp; D2=D2_interp; C2=C2_interp; %Output interpolated optimal controls
    
 else %If state is on the grid
-    [D1,D2,C2]=GetPOpt_wo_Interp(indCurrE1,indCurrE2,CurrL); %Get optimal controls normally
+    [D1,D2,C2]=GetPOpt_wo_Interp_wRegenB(indCurrE1,indCurrE2,CurrL); %Get optimal controls normally
 end
 
 
