@@ -9,7 +9,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[15;10]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -20,13 +20,13 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=5; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
-MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
+R=2; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+MAX_STEPS=20; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[15;10]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -35,10 +35,10 @@ MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2);
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[0.99;0.99]; %Efficiency of charging
-ALPHA_D=[0.9;0.95]; %Efficiency of discharging
+ALPHA_C=[0.9;0.99]; %Efficiency of charging
+ALPHA_D=[0.1;0.95]; %Efficiency of discharging
 BETA=[0.99;0.99];    %Storage efficiency
-K=2;           %Weighting factor for D1^2 cost
+K=20;           %Weighting factor for D1^2 cost
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -714,7 +714,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
 %c_state=ones(size(Q,2),1);
   
   %Created LP matrices and vectors.
-
+  
 %N=2;
 %Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-2*N),eye(N)];
 %Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-N-1),ones(N,1)];
@@ -735,7 +735,7 @@ c_state(c_state==0)=[]; %Remove zero probability states
   cvx_end
 
 
-%    %Get error
+    %Get error
 %    err=cost-Phi*r_fit;
 %    %Store NORMALIZED approximation error bases (2-NORM)
 %    approx_err=norm(err,2)/norm(cost,2);

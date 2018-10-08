@@ -9,19 +9,21 @@ qValsMtx=[]; fullPolicyMtx=[];
 
 %Repeat for each decision (D1,D2 combination)
 for p=1:p_max 
-qSubVec=aug_Q((p-1)*N1*N2*(M-1)+1:p*N1*N2*(M-1));
-%Format q-values sub-vector into E1xE2 matrices ((M-1) matrices, for each value of load)
-    for i=0:(M-1)*N2:(M-1)*N2*(N1-1) 
-        for j=0:(M-1)-1 
-          for ind=(1+i+j):(M-1):((M-1)*(N2-1)+i+(j+1)) 
-              if(mod(ind,(M-1)*N2)==0)
-                ind2=((M-1)*N2-1-j)/(M-1)+1;
-              else
-                ind2=(mod(ind,(M-1)*N2)-1-j)/(M-1)+1;
-              end
-              qValsMtx(i/((M-1)*N2)+1,ind2,j+1,p)=qSubVec(ind);
-          end
-        end
+    if (~isempty(Lmin{p})) %IF CONTROLS NOT IMMEDIATELY INFEASIBLE for all states...
+        qSubVec=aug_Q((p-1)*N1*N2*(M-1)+1:p*N1*N2*(M-1));
+        %Format q-values sub-vector into E1xE2 matrices ((M-1) matrices, for each value of load)
+            for i=0:(M-1)*N2:(M-1)*N2*(N1-1) 
+                for j=0:(M-1)-1 
+                  for ind=(1+i+j):(M-1):((M-1)*(N2-1)+i+(j+1)) 
+                      if(mod(ind,(M-1)*N2)==0)
+                        ind2=((M-1)*N2-1-j)/(M-1)+1;
+                      else
+                        ind2=(mod(ind,(M-1)*N2)-1-j)/(M-1)+1;
+                      end
+                      qValsMtx(i/((M-1)*N2)+1,ind2,j+1,p)=qSubVec(ind);
+                  end
+                end
+            end
     end
 end
 

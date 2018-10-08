@@ -8,7 +8,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -19,13 +19,13 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=6; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
-MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
+R=7; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+MAX_STEPS=9; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -520,8 +520,8 @@ c_state(c_state==0)=[]; %Remove zero probability states
   title(strcat('Evaluating Approximation with',{' '},num2str(origSizePhi),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
   
   %Store NORMALIZED approximation error bases (2-NORM)
-  approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
-  %approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
+  %approx_err=norm(cost-Phi*r_fit,2)/norm(cost,2);
+  approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
   %Store approximation
   %approx=Phi*r_fit;
   

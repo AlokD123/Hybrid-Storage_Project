@@ -10,7 +10,7 @@ clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-%global E_MAX; E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
+%global E_MAX; E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -74,7 +74,7 @@ aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and
 aug_Vect_Ls_p=[]; %Same, but also including associated load values in each state
 
 offGrdNxtE1E2_p=[]; %Array mapping single index to linear next state index, for states OFF THE GRID
-numL_OffGrd_p=[]; %Vector of number of admissible loads in next states that are OFF THE GRID
+numLoads_OffGrd_p=[]; %Vector of number of admissible loads in next states that are OFF THE GRID
 
 numL_OffGrd=0; %Count number of admissible load values for a given NEXT energy state
 
@@ -137,7 +137,7 @@ c_state=[];     %Vector of state-relevance weightings
                     rowInd_Emtx = E_Ind;
                     %Determine MINIMUM required load for high discharge, to
                     %not overflow E2 (one for each E-state)
-                    minL=max(  ceil(1/ALPHA_C(2)*(BETA(2)*E2-E_MAX(2)-D2/ALPHA_D(2))+D1+D2),  0); %Calculate Lmin
+                    minL=max( ceil(1/ALPHA_C(2)*(BETA(2)*E2-E_MAX(2)-D2/ALPHA_D(2))+D1+D2), 0); %Calculate Lmin
                     Lmin_p=[Lmin_p; minL]; %Create vector
                     
                     %For each perturbation at the CURRENT time...
@@ -270,7 +270,7 @@ c_state=[];     %Vector of state-relevance weightings
           end
           
          %Store # for this next state
-         numL_OffGrd_p(i)=numL_OffGrd;
+         numLoads_OffGrd_p(i)=numL_OffGrd;
          %Reset feasible loads count, for subsequent NEXT energy state
          numL_OffGrd=0;
       end    
@@ -285,7 +285,7 @@ c_state=[];     %Vector of state-relevance weightings
         Lmin_offs{p}=Lmin_offs_p;
         E_Ind_Mtx{p}=E_Ind_Mtx_p;
         offGrdNxtE1E2{p}=offGrdNxtE1E2_p;
-        numLoads_OffGrd{p}=numL_OffGrd_p;
+        numLoads_OffGrd{p}=numLoads_OffGrd_p;
         %feasE1s_ctrl{p}=feasE1s_p; feasE2s_ctrl{p}=feasE2s_p; feasLs_ctrl{p}=feasLs_p;
         feasStatesArr_ctrl{p}=feasStatesArr_p;                                  
         
@@ -306,7 +306,7 @@ c_state=[];     %Vector of state-relevance weightings
     Lmin_offs_p=[];
     E_Ind_Mtx_p=[];
     offGrdNxtE1E2_p=[];
-    numL_OffGrd_p=[];
+    numLoads_OffGrd_p=[];
     feasE1s_p=[]; feasE2s_p=[]; feasLs_p=[];
     feasStatesArr_p=[];
     end
@@ -364,8 +364,8 @@ c_state=[];     %Vector of state-relevance weightings
             
             %Add given E-state to augmented vector that many times (for each load)
             aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
-            aug_Vect_Ls_p(augVectRow:(augVectRow+numRepNextE-1))=(0:(numRepNextE-1))';
-            augVectRow=augVectRow+numRepNextE; %Start adding at end next time 
+            aug_Vect_Ls_p(augVectRow:(augVectRow+numRepNextE-1),1)=(0:(numRepNextE-1))';
+            augVectRow=augVectRow+numRepNextE; %Start adding at end next time
         end
         r=r+1; %Manually increment index in while loop
     end
@@ -636,6 +636,7 @@ c_state=[];     %Vector of state-relevance weightings
   %feasible (just to ensure correct dimension)
   feasStates(:,:,end+1)=0;
   
+  %{
   %1) find bounds of linear fit
   exprMax=0; exprMin=0;
   for i=1:N1
@@ -643,7 +644,7 @@ c_state=[];     %Vector of state-relevance weightings
       for j=1:N2
           E2=j-1;
           for k=1:size(feasStates,3)
-                L=k-1;
+                L=k+MIN_LOAD-1;
                 if(feasStates(i,j,k)==1)
                     exprMax=max(fitStateExpr(E1,E2,L),exprMax);
                     exprMin=min(fitStateExpr(E1,E2,L),exprMin);
@@ -663,7 +664,7 @@ c_state=[];     %Vector of state-relevance weightings
       for j=1:N2
           E2=j-1;
           for k=1:size(feasStates,3)
-                L=k-1;
+                L=k+MIN_LOAD-1;
                 if(feasStates(i,j,k)==1)
                     %Create parameter fitting vector by aggregating states
                     %with same LINEAR EXPRESSION value (i.e. LINEAR FIT)
@@ -713,9 +714,11 @@ c_state=[];     %Vector of state-relevance weightings
     while rank(Phi)~=size(Phi,2) %rank( Phi(:,1:(size(Phi,2)-i) ))~=(size(Phi,2)-i)
         Phi=Phi(:,1:(size(Phi,2)-1));
     end
-
+ %}
+  
+  
  %Alternative: use EXACT LP (Phi=I)
- %Phi=eye(size(full(Q),2));
+ Phi=eye(size(full(Q),2));
     
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
@@ -801,6 +804,7 @@ c_state=ones(size(Phi,1),1);
     for p=1:p_max
         E_Ind_Mtx_p=E_Ind_Mtx{p};
         E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:(M-1))=0; %Pad with zeros on side to make same size
+        E_Ind_Mtx{p}=E_Ind_Mtx_p;
         %Convert to vector
         trE_Ind_Mtx_p=E_Ind_Mtx_p';
         E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);

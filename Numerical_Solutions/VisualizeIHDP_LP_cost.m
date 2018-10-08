@@ -89,18 +89,18 @@ else
     hold on;
     plot(optE1,':*','MarkerSize',10); plot(optE2,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10);
     hold off;
-    xlabel('Time');
-    ylabel('Unit of energy');
+    xlabel('Time (no units)');
+    ylabel('Energy (no units)');
     title('Energy stored vs. load');
     legend('Battery (E1)','Supercapacitor (E2)','Demand (L)');
     
     figure
     hold on;
-    plot(D1Opt,':*','MarkerSize',10); plot(D2Opt,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10);
+    plot(D1Opt,':*','MarkerSize',10); plot(D2Opt,':*','MarkerSize',10); plot(C2Opt,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10);
     hold off;
-    xlabel('Time');
-    ylabel('Unit of energy');
+    xlabel('Time (no units)');
+    ylabel('Energy (no units)');
     title('Optimal policy vs. load');
-    legend('Battery Discharge (D1)','Supercapacitor Discharge (D2)','Demand (L)');
-    axis([1 inf 0 max(MAX_DISCHARGE)]);
+    legend('Battery Discharge (D1)','Supercapacitor Discharge (D2)','Supercapacitor Charge (C2)','Demand (L)');
+    axis([1 inf -max(MAX_CHARGE) max(MAX_DISCHARGE)]);
 end
