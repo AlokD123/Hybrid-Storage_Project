@@ -20,13 +20,13 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=2; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
-MAX_STEPS=20; %MAXIMUM number of groups in state aggregation
+R=6; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+MAX_STEPS=15; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[E_MAX(1);E_MAX(2)]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -35,10 +35,10 @@ MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2);
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[0.9;0.99]; %Efficiency of charging
-ALPHA_D=[0.1;0.95]; %Efficiency of discharging
+ALPHA_C=[0.99;0.99]; %Efficiency of charging
+ALPHA_D=[0.9;0.95]; %Efficiency of discharging
 BETA=[0.99;0.99];    %Storage efficiency
-K=20;           %Weighting factor for D1^2 cost
+K=2;           %Weighting factor for D1^2 cost
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -684,8 +684,10 @@ c_state=[];     %Vector of state-relevance weightings
       end
   end
   
+  
   %Adjoin feasible state vectors to form a ?x3 array
   feasStatesArr=[feasE1s,feasE2s,feasLs];
+  %{
   %Create design matrix with fitting functions up to order R
   phi_poly=DesignMtx(feasStatesArr,ones(length(feasStatesArr),1),R);
   %Add to present basis vectors
@@ -704,14 +706,20 @@ c_state=[];     %Vector of state-relevance weightings
         Phi=Phi(:,1:(size(Phi,2)-1));
     end
 
+  %}
+ %Alternative: use EXACT LP (Phi=I)
+ Phi=eye(size(full(Q),2));    
+    
+    
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
 % Probabilities are given in P_fullmtx (non-zero for feasible states)
-trP_fullmtx=P_fullmtx';
-c_state=trP_fullmtx(:); %Get probabilities for all states
+%trP_fullmtx=P_fullmtx';
+%c_state=trP_fullmtx(:); %Get probabilities for all states
+%c_state(c_state==0)=[]; %Remove zero probability states
 
-c_state(c_state==0)=[]; %Remove zero probability states
-%c_state=ones(size(Q,2),1);
+% Alternative: TAKE c TO BE ALL EQUAL WEIGHTS
+c_state=ones(size(Phi,1),1);
   
   %Created LP matrices and vectors.
   
@@ -734,21 +742,21 @@ c_state(c_state==0)=[]; %Remove zero probability states
         %d2 : Phi*r_fit >= 0
   cvx_end
 
-
+%{
     %Get error
-%    err=cost-Phi*r_fit;
-%    %Store NORMALIZED approximation error bases (2-NORM)
-%    approx_err=norm(err,2)/norm(cost,2);
-%    %approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
-%    %Store approximation
-%    approx=Phi*r_fit;
-%   
-%   %Plot approximate and actual costs
-%   figure
-%   plot(Phi*r_fit, '*'); hold on; plot(cost, '*');
-%   xlabel('State Index'); ylabel('Cost');
-%   legend('Approximate Cost','Actual Cost');
-%   title(strcat('Evaluating Approximation with',{' '},num2str(origSizePhi),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
+    err=cost-Phi*r_fit;
+    %Store NORMALIZED approximation error bases (2-NORM)
+    %approx_err=norm(err,2)/norm(cost,2);
+    approx_err=[approx_err;norm(cost-Phi*r_fit,2)/norm(cost,2)];
+    %Store approximation
+    approx=Phi*r_fit;
+   
+   %Plot approximate and actual costs
+   figure
+   plot(Phi*r_fit, '*'); hold on; plot(cost, '*');
+   xlabel('State Index'); ylabel('Cost');
+   legend('Approximate Cost','Actual Cost');
+   title(strcat('Evaluating Approximation with',{' '},num2str(origSizePhi),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
 
 %   %Get error in each state marginalized over E2 and L
 %   for r=1:length(feasStatesArr)
@@ -761,7 +769,8 @@ c_state(c_state==0)=[]; %Remove zero probability states
 %   xlabel('Energy E1'); ylabel('Marginalized Error');
 %   title('Marginalized Error for default test');
   
-  
+  %}
+
   optD = d; %Get vector of FINAL dual
   cost=Phi*r_fit; %Get FINAL approximated cost
   

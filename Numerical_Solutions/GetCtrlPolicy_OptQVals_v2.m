@@ -14,7 +14,7 @@ Sigma=size(E_Ind_MtxALL,2); %i.e. -E_MAX -> M-2
 
 %Create CONCATENATED matrix of feasible controls per state
 feasStates_ctrl_i=[];
-feasStatesArr=[];
+feasStatesArr=[]; %<------- MUST RENAME WHEN DOING APPROXIMATION
 feasStatesCatArr=[];
 feasStates_ctrl={};
 
@@ -30,7 +30,7 @@ end
 
 
 %Create Q-value matrix
-for p=1:(p_max-CountInfCtrls) 
+for p=1:(p_max) 
     qSubVec=aug_Q((p-1)*N1*N2*Sigma+1:p*N1*N2*Sigma);
     %Format q-values sub-vector into E1xE2 matrices (Sigma matrices, one for each value of load)
     for i=0:Sigma*N2:Sigma*N2*(N1-1) 

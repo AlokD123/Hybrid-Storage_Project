@@ -3,7 +3,7 @@
 
 %Input: feasible set for E_SIZE, size cost factors
 max_E_SIZE=[10,5];
-c1=1; c2=1;
+c1=0; c2=0;
 
 global E_MAX; global E_MIN; global MIN_LOAD;
 
@@ -28,7 +28,7 @@ for max_E2=2:max_E_SIZE(2)
     size_iter=size_iter+1; %Next size up
     
     ApproxLP_sol_IHDP_v13; %Get optimal values for this size
-    GetCtrlPolicy_OptQVals; %Get optimal policy matrix
+    %GetCtrlPolicy_OptQVals; %Get optimal policy matrix
     
     %{
     %%GET PF and G UNDER OPTIMAL POLICY FOR EACH SIZE
@@ -67,7 +67,7 @@ for max_E2=2:max_E_SIZE(2)
     optVal_size{size_iter}=ConvCosts; %<--------- DIFFERENCE IS LARGE
     
     %Get norm of optimal values for CONSTANT energy state
-    netOptVal_initE=sum(  ConvCosts(max_E1-E_MIN(1)+1,max_E2-E_MIN(2)+1,:)  ); %ASSUMING that E_min=0
+    netOptVal_initE=max(  ConvCosts(max_E1-E_MIN(1)+1,max_E2-E_MIN(2)+1,:)  ); %ASSUMING that E_min=0
     
     vectS_netOptVal=[vectS_netOptVal;netOptVal_initE]; %Store in vector
     
@@ -86,8 +86,8 @@ for max_E2=2:max_E_SIZE(2)
     
 end
 
-title(sprintf('Storage size vs Total Cost (c1=%d, c2=%d)',c1,c2));
-xlabel('Size');
+title(sprintf('Storage size vs Total Cost (c1=%d, c2=%d), NO regenerative braking',c1,c2));
+xlabel('Size of Supercapacitor, E_{2}^{max} (E_{1}^{max}=2E_{2}^{max})');
 ylabel('Total Cost');
 
 %diffVal=optVal_size{4}(1:5,1:3,1:5)-optVal_size{1};

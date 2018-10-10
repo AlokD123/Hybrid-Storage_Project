@@ -53,8 +53,8 @@ for max_E1=4:max_E_SIZE(1)
     end
 end
 
-%title(sprintf('Storage size vs Total Cost (c1=%d, c2=%d)',c1,c2));
-%xlabel('Size');
+%title(sprintf('Storage size vs Total Cost (c1=%d, c2=%d), NO regenerative braking',c1,c2));
+%xlabel('Size of Supercapacitor, E_{2}^{max} (E_{1}^{max}=2E_{2}^{max})');
 %ylabel('Total Cost');
 
 %diffVal=optVal_size{4}(1:5,1:3,1:5)-optVal_size{1};

@@ -4,7 +4,7 @@ clearvars -except X V E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 ve
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-%E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
