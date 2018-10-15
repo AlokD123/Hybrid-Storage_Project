@@ -9,7 +9,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
+E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -70,10 +70,9 @@ INF_Q=Inf; %Define infeasible Q-value to be infinite (so cannot choose as minima
 E_Ind_Vect_p=[];      %Vector of current state energies
 nextE_Ind_Vect_p=[];  %Vector of next state energies
 aug_nextE_Ind_Vect_p=[]; %Augmented vector containing current state energies and next energies for currently infeasible states
-aug_Vect_Ls_p=[]; %Same, but also including associated load values in each state
 
 offGrdNxtE1E2_p=[]; %Array mapping single index to linear next state index, for states OFF THE GRID
-numL_OffGrd_p=[]; %Vector of number of admissible loads in next states that are OFF THE GRID
+numLoads_OffGrd_p=[]; %Vector of number of admissible loads in next states that are OFF THE GRID
 
 numL_OffGrd=0; %Count number of admissible load values for a given NEXT energy state
 
@@ -82,6 +81,9 @@ global E_Ind_MtxALL; %Matrix of all states (0 if infeasible)
 global E_Ind_VectALL; %Vector of all feasible states
 global E_VectALL_Ls; %Vector of all associated loads
 global CostMtx; %Matrix with 3 columns: a) E-state, b) load, c) associated cost. Used for approximation
+global aug_Vect_Ls_p; %Augmented vector containing associated load values in each state
+global feasStatesArr_p; %Array of current E1,E2,L values that are feasible states for the GIVEN TUPLE OF CONTROLS
+aug_Vect_Ls_p=[];
 CostMtx=[];
 
 P_mtx={};   %Array of P matrices
@@ -98,6 +100,9 @@ P_fullmtx=[];   %Matrix of all probabilities
 
 indL_Feas=[]; %Vector of feasible demands for ONE GIVEN combination of x and u
 feasStates=[]; %List of all feasible states (E1,E2,L), no repeats
+feasE1s_p=[]; feasE2s_p=[]; feasLs_p=[]; %Vectors of feasible states, for each p
+nxtLs=[]; %Vect of loads in next state, given any controls
+%nxtE1E2L_p=[]; %List of next states (for given p)
 
 p_max=0;    %Maximum number of controls to consider, initialized at 0
 
@@ -198,6 +203,9 @@ c_state=[];     %Vector of state-relevance weightings
                                   
                                   %STEP 4: Create list of all FEASIBLE states
                                   feasStates(E_Ind1,E_Ind2,indL)=1;
+                                  %Also create separate lists just for current control
+                                  feasE1s_p=[feasE1s_p;E1]; feasE2s_p=[feasE2s_p;E2]; feasLs_p=[feasLs_p;L];
+                                  feasStatesArr_p=[feasE1s_p-E_MIN(1)+1,feasE2s_p-E_MIN(2)+1,feasLs_p-MIN_LOAD+1];%Adjoin into array
                                   
                                 else
                                   %If no feasible state for this combination of (E1,E2) and L...
@@ -249,8 +257,12 @@ c_state=[];     %Vector of state-relevance weightings
                         if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
                             if(next_nextE2<=E_MAX(2) && next_nextE2>=E_MIN(2))
                                 if(~((D1_next+D2_next-L)<0||(D1_next+D2_next-L)>MAX_CHARGE(2)))
-                                    %If feasible, increment number
-                                        numL_OffGrd=numL_OffGrd+1;
+                                    %If feasible...
+                                        %Store next state
+                                        %nxtE1E2L_p=[nxtE1E2L_p;nextE1,nextE2,L];
+                                        %Get loads
+                                        nxtLs=[nxtLs;L];
+
                                         maxL_prev=maxL_prev+1;
                                         %If feasible load with one set of discharges, no need to test others
                                         %D1_next=MAX_DISCHARGE(1)+1; D2_next=MAX_DISCHARGE(2)+1;
@@ -263,10 +275,14 @@ c_state=[];     %Vector of state-relevance weightings
             end
           end
           
+          nxtLs=unique(nxtLs); %Remove duplicates
+          numL_OffGrd=length(nxtLs); %Get number of feasible loads
+          
          %Store # for this next state
-         numL_OffGrd_p(i)=numL_OffGrd;
+         numLoads_OffGrd_p(i)=numL_OffGrd;
          %Reset feasible loads count, for subsequent NEXT energy state
          numL_OffGrd=0;
+         nxtLs=[];
       end    
 	
     %If at least one feasible state, consider this control
@@ -279,7 +295,9 @@ c_state=[];     %Vector of state-relevance weightings
         Lmin_offs{p}=Lmin_offs_p;
         E_Ind_Mtx{p}=E_Ind_Mtx_p;
         offGrdNxtE1E2{p}=offGrdNxtE1E2_p;
-        numLoads_OffGrd{p}=numL_OffGrd_p;
+        %nxtE1E2L{p}=nxtE1E2L_p;
+        numLoads_OffGrd{p}=numLoads_OffGrd_p;
+        feasStatesArr_ctrl{p}=feasStatesArr_p;
         
         %Continue testing next control
         p_max=p_max+1;
@@ -298,7 +316,10 @@ c_state=[];     %Vector of state-relevance weightings
     Lmin_offs_p=[];
     E_Ind_Mtx_p=[];
     offGrdNxtE1E2_p=[];
-    numL_OffGrd_p=[];
+    %nxtE1E2L_p=[];
+    numLoads_OffGrd_p=[];
+    feasE1s_p=[]; feasE2s_p=[]; feasLs_p=[];
+    feasStatesArr_p=[];
     end
   end
   
@@ -315,10 +336,12 @@ c_state=[];     %Vector of state-relevance weightings
   end
   
   %STEP 7: Create full probability matrix
-  %DISTRIBUTION: UNIFORM
+  %DISTRIBUTION: Uniform (MODIFIED BELOW TO LINEAR PDF, TO INCREASE PROBABILITY OF "CURRENT"
+  %STATE)
   %(Note: can't create until E_Ind_MtxALL complete, so outside main loop)
   for r=1:size(E_Ind_MtxALL,1)
-      P_fullmtx(r,:)=E_Ind_MtxALL(r,:)/sum(E_Ind_MtxALL(r,:)); %<----------------For UNIFORM probability, just NORMALIZE rows of feasible states!!
+      %NumLoads_OnGrd=nnz(E_Ind_MtxALL(r,:)); %Get number of possible states at each E-state on grid
+      P_fullmtx(r,:)=E_Ind_MtxALL(r,:)/sum(E_Ind_MtxALL(r,:)); %<----------------For uniform probability, just NORMALIZE rows of feasible states!!
   end
 
   for p=1:p_max
@@ -326,6 +349,7 @@ c_state=[];     %Vector of state-relevance weightings
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
     Lmin_offs_p=Lmin_offs{p};
     numLoads_OffGrd_p=numLoads_OffGrd{p};
+    feasStatesArr_p=feasStatesArr_ctrl{p};
     
     %STEP 8: Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
     %(Note: doing after E_Ind_VectALL complete)
@@ -387,12 +411,17 @@ c_state=[];     %Vector of state-relevance weightings
             nnzProb_nextE=numLoads_OffGrd_p(x);
             %Get non-zero probabilities
             prob_nextE=1/nnzProb_nextE*ones(1,nnzProb_nextE)';
+            %Transform probabilities to custom distribution
+            prob_nextE=ProbDistr(prob_nextE,nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1));
+            
             x=x+1;
         else %Otherwise...
             %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
             nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
-            %Get said non-zero probabilities
+            %Get said non-zero probabilities (UNIFORM)
             prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
+            %Transform probabilities to custom distribution
+            prob_nextE=ProbDistr(prob_nextE,nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1));
         end
         
         %Store subscript pairs and associated values in array P
@@ -836,6 +865,7 @@ c_state=ones(size(Phi,1),1);
     %Get final q-values for ALL states (augmented)
     aug_Q=aug_optQ;
     
+    %{
     %Create augmented vector of all E_MtxALL_Vect_subs vectors
     aug_E_MtxALL_Vect=[];
     for p=1:p_max
@@ -845,3 +875,4 @@ c_state=ones(size(Phi,1),1);
     %Get FINAL q-values ONLY for feasible states (non-zero in aug_E_MtxALL_Vect)
     optQ=aug_Q(aug_E_MtxALL_Vect~=0);
     aug_optQ=aug_optQ(aug_E_MtxALL_Vect~=0);
+    %}
