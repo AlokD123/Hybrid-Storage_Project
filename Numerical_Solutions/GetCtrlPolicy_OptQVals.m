@@ -27,17 +27,38 @@ for p=1:p_max
     end
 end
 
-%Get optimal control policy as matrix
-for i=1:N1
-    for j=1:N2
-        for k=1:size(feasStates,3)
-            for m=1:length(qValsMtx(i,j,k,:))
-                if (abs(min(qValsMtx(i,j,k,:))-qValsMtx(i,j,k,m))<epsilon4) && (feasStates(i,j,k)==1)
-                    fullPolicyMtx(i,j,k,m)=1;
-                else
-                    fullPolicyMtx(i,j,k,m)=0;
+numOptCtrls=Inf; %TOTAL # of optimal ctrls. Initialize to infinity to guarantee 1 loop
+
+while numOptCtrls > length(E_Ind_VectALL) %WHILE more than one optimal ctrl per state....
+    epsilon4=epsilon4/10; %Decrease tolerance on minum Q-value detection UNTIL ONLY ONE OPT CTRL per STATE
+    
+    %NumOptCtrls_1=[];
+    NumOptCtrls_2=[]; %Store number of optimal controls per state, based on FULL POLICY MTX
+    %MaxQValues=[];
+
+    l=1;
+    %Get optimal control policy as matrix
+    for i=1:N1
+        for j=1:N2
+            for k=1:size(feasStates,3)
+                for m=1:length(qValsMtx(i,j,k,:))
+                    if (abs(min(qValsMtx(i,j,k,:))-qValsMtx(i,j,k,m))<epsilon4) && (feasStates(i,j,k)==1)
+                        fullPolicyMtx(i,j,k,m)=1;
+                    else
+                        fullPolicyMtx(i,j,k,m)=0;
+                    end
+                end
+
+                %ALSO, test if too MANY optimal optimal controls (more than one per state)...
+                if(feasStates(i,j,k)==1)
+                   %MinQValues=[MaxQValues;i,j,k,min(qValsMtx(i,j,k,:))];
+                   %NumOptCtrls_1=[NumOptCtrls_1;i,j,k,nnz(abs(qValsMtx(i,j,k,:)-min(qValsMtx(i,j,k,:)))<epsilon5)];
+                   l=l+1;
+                   NumOptCtrls_2=[NumOptCtrls_2;i,j,k,nnz(fullPolicyMtx(i,j,k,:))];
                 end
             end
         end
     end
+    
+    numOptCtrls=sum(NumOptCtrls_2(:,4)); %Get TOTAL number of optimal ctrls
 end
