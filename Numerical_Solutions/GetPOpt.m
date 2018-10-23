@@ -6,7 +6,7 @@ function [D1,D2] = GetPOpt(indCurrE1,indCurrE2,CurrL)
 
 global epsilon2; global E_Ind_VectALL; global E_VectALL_Ls; global N2; global fullPolicyMtx;
 
-if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2)||(round(CurrL)~=CurrL) %If state falls off the grid...
+if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls off the grid...
     q_pOpt_Mtx=[];
     
    %A) Go through all states and...
@@ -38,7 +38,7 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2)||(round(CurrL)~=
               end
           %If on neither edge...
           else 
-              %Check to find 4  points closest to (currE1,currE2,currL) off grid.... FIND (E1_Ind, E2_Ind,L)
+              %Check to find 4  points closest to (nextE1,nextE2) off grid.... FIND (E1_Ind, E2_Ind)
               %CASE 1: round E1 down, round E2 down
               if floor(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind
                   q=(1-(indCurrE1-E1_Ind))*(1-(indCurrE2-E2_Ind));
@@ -56,34 +56,7 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2)||(round(CurrL)~=
               end
           end
       else
-            %Check to find 8 points closest to (CurrE1,CurrE2,CurrL) off grid.... FIND (E1_Ind, E2_Ind, L)
-            %CASE 1: round E1 down, round E2 down, round L down
-            if floor(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind && floor(CurrL)==L
-              q=(1-(indCurrE1-E1_Ind))*(1-(indCurrE2-E2_Ind))*(1-(CurrL-L));
-            %CASE 2: round E1 up, round E2 down, round L down
-            elseif ceil(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind && floor(CurrL)==L
-              q=(1-(E1_Ind-indCurrE1))*(1-(indCurrE2-E2_Ind))*(1-(CurrL-L));
-            %CASE 3: round E1 down, round E2 up, round L down
-            elseif floor(indCurrE1)==E1_Ind && ceil(indCurrE2)==E2_Ind && floor(CurrL)==L
-              q=(1-(indCurrE1-E1_Ind))*(1-(E2_Ind-indCurrE2))*(1-(CurrL-L));
-            %CASE 4: round E1 up, round E2 up, round L down
-            elseif ceil(indCurrE1)==E1_Ind && ceil(indCurrE2)==E2_Ind && floor(CurrL)==L
-              q=(1-(E1_Ind-indCurrE1))*(1-(E2_Ind-indCurrE2))*(1-(CurrL-L));
-            %CASE 5: round E1 down, round E2 down, round L up
-            elseif floor(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind && ceil(CurrL)==L
-              q=(1-(indCurrE1-E1_Ind))*(1-(indCurrE2-E2_Ind))*(1-(L-CurrL));
-            %CASE 6: round E1 up, round E2 down, round L up
-            elseif ceil(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind && ceil(CurrL)==L
-              q=(1-(E1_Ind-indCurrE1))*(1-(indCurrE2-E2_Ind))*(1-(L-CurrL));
-            %CASE 7: round E1 down, round E2 up, round L up
-            elseif floor(indCurrE1)==E1_Ind && ceil(indCurrE2)==E2_Ind && ceil(CurrL)==L
-              q=(1-(indCurrE1-E1_Ind))*(1-(E2_Ind-indCurrE2))*(1-(L-CurrL));
-            %CASE 8: round E1 up, round E2 up, round L up
-            elseif ceil(indCurrE1)==E1_Ind && ceil(indCurrE2)==E2_Ind && ceil(CurrL)==L
-              q=(1-(E1_Ind-indCurrE1))*(1-(E2_Ind-indCurrE2))*(1-(L-CurrL));
-            else
-             q=0; %If this state on grid not used for interpolation (not corner of encompassing square)
-            end
+          q=0;
       end
 
 
