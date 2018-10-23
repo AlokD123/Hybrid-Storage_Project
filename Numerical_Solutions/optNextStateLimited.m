@@ -19,7 +19,7 @@ function [ nextE1,nextE2 ] = optNextStateLimited( E1,E2,D1,D2,L ) % Input: state
     if(newE2<E_MIN(2))
         if(StateEqn2(E2,D1,D2,L,1,ALPHA_C(2),ALPHA_D(2))>=E_MIN(2))
             nextE2=E_MIN(2);
-        %{
+        %
         elseif(StateEqn2(E2,D1,D2,L,1,1,1)>=E_MIN(2))&&E2<=2
             nextE2=E_MIN(2);
         %}

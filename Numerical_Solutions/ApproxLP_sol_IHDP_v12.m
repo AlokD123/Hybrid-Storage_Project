@@ -9,7 +9,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+E_MAX=[400;2]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -20,25 +20,26 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=6; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
-MAX_STEPS=15; %MAXIMUM number of groups in state aggregation
+R=10; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+MAX_STEPS=6; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
-global MAX_CHARGE; global MAX_DISCHARGE;
-MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[E_MAX(1);E_MAX(2)]; %Maximum discharging of the 1) battery and 2) supercap
-
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
-MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2);
+MAX_LOAD=4;
+
+global MAX_CHARGE; global MAX_DISCHARGE;
+MAX_CHARGE=[0;2]; %Maximum charging of the supercapacitor
+MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[0.99;0.99]; %Efficiency of charging
-ALPHA_D=[0.9;0.95]; %Efficiency of discharging
-BETA=[0.99;0.99];    %Storage efficiency
-K=2;           %Weighting factor for D1^2 cost
+ALPHA_C=[0.999;0.999]; %Efficiency of charging
+%ALPHA_D=[0.9;0.95]; %Efficiency of discharging
+ALPHA_D=[0.999;0.999]; %Efficiency of discharging
+BETA=[0.999;0.999];    %Storage efficiency
+K=1e-6;           %Weighting factor for D1^2 cost
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -60,7 +61,7 @@ global epsilon4; global epsilon5; global gamma; global INF_Q
 epsilon=0.01; %Next state off grid rounding tolerance
 epsilon2=0.0001; %Off grid state comparison tolerance
 epsilon3=0.01; %On-grid optimal control search tolerance
-epsilon4=1e-3; %On-grid optimal q search tolerance
+epsilon4=1e-2; %On-grid optimal q search tolerance
 epsilon5=0.01; %Number of repeated q-values count tolerance
 
 gamma=1e-2; %Regularization term weighting factor
@@ -143,7 +144,7 @@ c_state=[];     %Vector of state-relevance weightings
                     Lmin_p=[Lmin_p; minL]; %Create vector
                     
                     %For each perturbation at the CURRENT time...
-                    for indL=1:(D1+D2-MIN_LOAD+1)
+                    for indL=1:(MAX_LOAD-MIN_LOAD+1)
                         %Map index to value of load
                         L=indL+MIN_LOAD-1;
 
@@ -322,6 +323,16 @@ c_state=[];     %Vector of state-relevance weightings
     feasStatesArr_p=[];
     end
   end
+  
+  
+  E_MtxALL_Vect_subs={};
+    for p=1:p_max
+        E_Ind_Mtx_p=E_Ind_Mtx{p};
+        E_Ind_Mtx_p(:,size(E_Ind_Mtx_p,2)+1:M)=0; %Pad with zeros on side to make same size
+        %Convert to vector
+        trE_Ind_Mtx_p=E_Ind_Mtx_p';
+        E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);
+    end
   
  
   
@@ -653,7 +664,7 @@ c_state=[];     %Vector of state-relevance weightings
   
   %0) Add extra possible load into feasStates array for which no states are
   %feasible (just to ensure correct dimension)
-  feasStates(:,:,end+1)=0;
+  %feasStates(:,:,end+1)=0;
   
   %1) find bounds of linear fit
   exprMax=0; exprMin=0;
@@ -734,7 +745,6 @@ c_state=[];     %Vector of state-relevance weightings
     while rank(Phi)~=size(Phi,2) %rank( Phi(:,1:(size(Phi,2)-i) ))~=(size(Phi,2)-i)
         Phi=Phi(:,1:(size(Phi,2)-1));
     end
-
   %}
  %Alternative: use EXACT LP (Phi=I)
  Phi=eye(size(full(Q),2));    
@@ -786,7 +796,6 @@ c_state=ones(size(Phi,1),1);
    xlabel('State Index'); ylabel('Cost');
    legend('Approximate Cost','Actual Cost');
    title(strcat('Evaluating Approximation with',{' '},num2str(origSizePhi),'-Bases Fit, Rank of Phi=',num2str(rank(Phi))));
-
 %   %Get error in each state marginalized over E2 and L
 %   for r=1:length(feasStatesArr)
 %      E1=feasStatesArr(r,1)-E_MIN(1)+1;
@@ -821,6 +830,7 @@ c_state=ones(size(Phi,1),1);
     %values of p, once in vector form
     %->Augmented vectors for given values of p (i.e. like augmented versions of
     %E_Ind_VectALL, and subsets of E_MtxALL_Vect)
+    %{
     E_MtxALL_Vect_subs={};
     for p=1:p_max
         E_Ind_Mtx_p=E_Ind_Mtx{p};
@@ -829,6 +839,7 @@ c_state=ones(size(Phi,1),1);
         trE_Ind_Mtx_p=E_Ind_Mtx_p';
         E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);
     end
+    %}
     
     %2) Create augmented vectors of q-values for ALL states - feasible
     %AND INFEASIBLE TOO - for EACH CONTROL p

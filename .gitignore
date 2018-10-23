@@ -112,3 +112,6 @@ Numerical_Solutions/test_neg2.m
 Numerical_Solutions/test_optD_policy.m
 Numerical_Solutions/test_pos1.m
 Numerical_Solutions/test8.m
+Numerical_Solutions/licols.m
+Numerical_Solutions/test_LICOLS.m
+Numerical_Solutions/ApproxLP_sol_IHDP_v12b.m
