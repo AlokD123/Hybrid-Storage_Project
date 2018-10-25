@@ -421,18 +421,18 @@ c_state=[];     %Vector of state-relevance weightings
             %Count number of non-zero load probabilities for next state Ind_nextE
             nnzProb_nextE=numLoads_OffGrd_p(x);
             %Get non-zero probabilities
-            prob_nextE=1/nnzProb_nextE*ones(1,nnzProb_nextE)';
+            %prob_nextE=1/nnzProb_nextE*ones(1,nnzProb_nextE)';
             %Transform probabilities to custom distribution
-            prob_nextE=ProbDistr(prob_nextE,nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1));
+            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1),1);
             
             x=x+1;
         else %Otherwise...
             %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
             nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
             %Get said non-zero probabilities (UNIFORM)
-            prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
+            %prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
             %Transform probabilities to custom distribution
-            prob_nextE=ProbDistr(prob_nextE,nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1));
+            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1),1);
         end
         
         %Store subscript pairs and associated values in array P

@@ -8,8 +8,9 @@
 %E1_INIT=E_MAX(1); 
 %E2_INIT=E_MAX(2);
 
-%STEP 1: reset all
+%STEP 1: initalize
 optE1=[]; optE2=[]; D1Opt=[]; D2Opt=[]; Load=[];
+resL_Mult=2; %Set resolution of demands by a dividing factor (natural number)
 
 %STEP 2: evaluate policy for a random sequence of loads (ONLINE)
 %Set up matricee
@@ -25,7 +26,7 @@ countRepeatZeros=0; %Count of repeated zero loads
 %seqL=[1 1 0 0 1 1 2 2 1 0 1 1 0 0 1 1 2 2 1 0]; %SMOOTH LOAD
 
 %FLUCTUATING LOAD
-%
+%{
 seqL=[0.25 1 0.75 0 0.5 1 1.75 2 1.25 2 2.5 2.75 1.5 3 2.25 2.75 3.5 3 3.25 3.25]; %FLUCTUATING LOAD
 for i=1:1
     seqL=[seqL,2.75*(1+normrnd(0.2,0.1,1,140)).*(1+0.1*sin(linspace(1,50,140))).*(1-0.2*sin(linspace(1,10,140)))];
@@ -56,11 +57,12 @@ end
 
 %seqL=ones(1,10);
 
+%{
 seqL=seqL*3/4;
 seqL(seqL>3)=3;
 seqL(seqL<0)=0;
 
-%{
+
 plot(seqL);
 ylim([0 8])
 %}
@@ -79,6 +81,7 @@ while t_ind_VI<=NumIter
     
     %% OLD- create demand sequence
     
+    %{
     %OPTION 1: UNUSED
     %Create random demand from IID Uniform probability sequence
     MAX_LOAD_STATE=optE1(t_ind_VI)+optE2(t_ind_VI)-1; %Maximum possible load limited to total energy stored in that state
@@ -129,6 +132,8 @@ while t_ind_VI<=NumIter
     if abs(indE2-1)<epsilon2 && L>MAX_DISCHARGE(1)
         L=max(0,MAX_DISCHARGE(1)-(L-MAX_DISCHARGE(1)));
     end
+    
+    %}
     
     %% Run sequences online
     %Get optimal controls for given state
@@ -196,9 +201,9 @@ while t_ind_VI<=NumIter
     t_ind_VI=t_ind_VI+1; %RUN ONLINE, next step
     
     
-    %{
+    %
     %% GENERATE NEXT DEMAND SAMPLE
-    %**Note: GENERATE ACCORDING TO CUSTOM DISTRIBUTION (i.e. Linear PDF)
+    %**Note: GENERATE ACCORDING TO CUSTOM DISTRIBUTION (i.e. Binomial PDF)
     %Get number of feasible loads in next state
     numL_OffGrd=0; maxL_prev=0;
     nxtL=[];
@@ -233,13 +238,14 @@ while t_ind_VI<=NumIter
     
     %Create vector of next state probabilities for each of the next demands
     %First, assume uniform
-    prob_nextL=1/numL_OffGrd*ones(1,numL_OffGrd)';
-    %Then, transform to custom distribution
-    prob_nextL=ProbDistr(prob_nextL,numL_OffGrd,currL-MIN_LOAD+1,nxtL-MIN_LOAD+1);
+    %prob_nextL=1/numL_OffGrd*ones(1,numL_OffGrd)';
+    %Then, transform to custom distribution sampled resL_Mult times more finely
+    prob_nextL=ProbDistr_v2(numL_OffGrd,currL-MIN_LOAD+1,nxtL-MIN_LOAD+1,resL_Mult);
     
     %SAMPLE FROM CONDITIONAL DISTRIBUTION TO GET INDEX OF NEXT LOAD in vector nxtL (NOT RELATIVE TO MIN_LOAD) 
     nxt_indL=find(mnrnd(1,prob_nextL),1);
     %Get demand value from index
-    L=nxtL(nxt_indL);
+    minL=nxtL(1);
+    L=minL+nxt_indL/resL_Mult;
     %}
 end
