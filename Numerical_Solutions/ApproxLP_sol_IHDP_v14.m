@@ -2,11 +2,11 @@
 % **** ADDED REGENERATIVE BRAKING ****
 % No E_MAX input
 
-clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost;
+clearvars -except X V cost approx_err %E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-global E_MAX; E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+global E_MAX; E_MAX=[50,2]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -17,25 +17,25 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=E_MAX(2); %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
+R=E_MAX(2);   %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
-MAX_CHARGE=[E_MAX(1);E_MAX(2)]; %Maximum charging of the 1) battery and 2) supercap
-MAX_DISCHARGE=[E_MAX(1);E_MAX(2)]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[2;2]; %Maximum charging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
 
-global MIN_LOAD;
+global MIN_LOAD; global MAX_LOAD;
 MIN_LOAD=-(MAX_CHARGE(1)); %Maximum regenerative energy expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[0.9;0.99]; %Efficiency of charging
-ALPHA_D=[0.9;0.95]; %Efficiency of discharging
-BETA=[0.99;0.99];    %Storage efficiency
-K=[2;2];           %Weighting factors for D1^2 and C1^2 costs
+ALPHA_C=[1;0.95]; %Efficiency of charging
+ALPHA_D=[1;0.95]; %Efficiency of discharging
+BETA=[1;1];       %Storage efficiency
+K=[1e5;1e5];      %Weighting factors for D1^2 and C1^2 costs
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -44,14 +44,18 @@ DISCOUNT=0.99;
 
 
 %% Definitions
+%Resolution of supercap charge/dischage
+global RES_D2; RES_D2=4;
+global RES_C2; RES_C2=RES_D2;
+
 global N2; global P2; global P3;
 
 M=MAX_LOAD-MIN_LOAD+1;
 N1=(E_MAX(1)-E_MIN(1)+1);
 N2=(E_MAX(2)-E_MIN(2)+1);
 P1=MAX_DISCHARGE(1)+1;
-P2=MAX_DISCHARGE(2)+1;
-P3=MAX_CHARGE(2)+1;
+P2=RES_D2*MAX_DISCHARGE(2)+1;
+P3=RES_C2*MAX_CHARGE(2)+1;
 
 global epsilon; global epsilon2; global epsilon3;
 global epsilon4; global epsilon5; global gamma; global INF_Q
@@ -63,6 +67,7 @@ epsilon5=0.01; %Number of repeated q-values count tolerance
 
 gamma=1e-2; %Regularization term weighting factor
 INF_Q=Inf; %Define infeasible Q-value to be infinite (so cannot choose as minimal)
+
 
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
@@ -80,9 +85,13 @@ numL_OffGrd=0; %Count number of admissible load values for a given NEXT energy s
 global E_Ind_MtxALL; %Matrix of all states (0 if infeasible)
 global E_Ind_VectALL; %Vector of all feasible states
 global E_VectALL_Ls; %Vector of all associated loads
+global feasInf_E_VectALL_Ls; %Vector of both feasible associated loads and infeasible ones
 global CostMtx; %Matrix with 3 columns: a) E-state, b) load, c) associated cost. Used for approximation
 CostMtx=[];
 E_Ind_MtxALL=[];
+E_Ind_VectALL=[];
+E_VectALL_Ls=[];
+feasInf_E_VectALL_Ls=[];
 
 P_mtx={};   %Array of P matrices
 P=[];       %Current P matrix
@@ -110,35 +119,34 @@ c_state=[];     %Vector of state-relevance weightings
 
 %% PART A: SET UP MATRICES
 %For each possible control...
-  for D1=0:MAX_DISCHARGE(1)
-    for D2=0:MAX_DISCHARGE(2)
-      for C2=0:MAX_CHARGE(2)
+  for D1_Ind=1:P1
+    for D2_Ind=1:P2
+      for C2_Ind=1:P3
           %Map control to control index
-            D1_Ind=D1+1; D2_Ind=D2+1; C2_Ind=C2+1;
+            D1=D1_Ind-1; D2=(D2_Ind-1)/RES_D2; C2=(C2_Ind-1)/RES_C2;
             %Get combination #(p)
             p=C2_Ind+P3*(D2_Ind+P2*(D1_Ind-1)-1);
 
             indCount=0; %Index for feasible state #, for a given value of p
 
-            
-            if(D2-C2>=E_MAX(2))  %If net discharge is too high for supercapacitor (even when full)..
-                %IGNORE
-                %Set to have no minimum loads, as sentinel
-                Lmin_p=[];
-            else
-            
-                %For each state at an iteration...
-                for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
-                    for E_Ind2=1:(E_MAX(2)-E_MIN(2)+1)
-                        %Map state index to state
-                        E1=E_MIN(1)+(E_Ind1-1);
-                        E2=E_MIN(2)+(E_Ind2-1);
+            %For each state at an iteration...
+            for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
+                for E_Ind2=1:(E_MAX(2)-E_MIN(2)+1)
+                    %Map state index to state
+                    E1=E_MIN(1)+(E_Ind1-1);
+                    E2=E_MIN(2)+(E_Ind2-1);
 
-                        %Get index of current state energies in vector of state energies
-                        E_Ind=(E_Ind1-1)*N2+E_Ind2;
+                    %Get index of current state energies in vector of state energies
+                    E_Ind=(E_Ind1-1)*N2+E_Ind2;
 
-                        boolFbleState=0; %Flag for checking if state is feasible. Flag=1 only if at least one demand leads to a feasible state&next-state
-                        
+                    boolFbleState=0; %Flag for checking if state is feasible. Flag=1 only if at least one demand leads to a feasible state&next-state
+
+                    %If net discharge is too low (negative) or high for supercapacitor or battery
+                    if(D2-C2>E2 || (C2-D2)>(E_MAX(2)-E2) || D1>E1) 
+                        %IGNORE, but still account for state being counted by inserting row of zeros
+                        rowInd_Emtx = E_Ind;
+                        E_Ind_Mtx_p(rowInd_Emtx,:)=0;
+                    else
                         %Index row in E-state indices mtx (for feasible E-state) same as VALUE of E-state index
                         rowInd_Emtx = E_Ind;
                         %Determine MINIMUM required load for high discharge, to
@@ -162,9 +170,9 @@ c_state=[];     %Vector of state-relevance weightings
                                     %IF meeting following conditions: (C_MIN and C_MAX)
                                     %1) net supply (discharging) never below demand, 2) not charging cap. too quickly
                                     if(~((D1+D2-C2-L)<0||(D1+D2-C2-L)>MAX_CHARGE(1)))
-                                        
+
                                         boolFbleState=1; %State&next-state are feasible for this demand L
-                                        
+
                                       %Count the number of feasible states for a given set of controls (D1,D2)
                                       indCount=indCount+1; %... and use as an index
 
@@ -241,10 +249,11 @@ c_state=[];     %Vector of state-relevance weightings
                         if(~boolFbleState)
                             E_Ind_Mtx_p(rowInd_Emtx,:)=0;
                         end
-                        
+
                         %Reset list of feasible loads (next state)
                         indL_Feas=[];
                     end
+                    
                 end
             end
             
@@ -313,7 +322,7 @@ c_state=[];     %Vector of state-relevance weightings
               end
 
               %STORE ONLY UNIQUE LOADS PER NEXT STATE
-              nextE_Ind_L_Vect_p=unique(nextE_Ind_L_Vect_p,'rows','stable'); %<----------------------------------------------------------------------------------------- ASSUMING NEXT STATES ON GRID NOT REPEATED
+              nextE_Ind_L_Vect_p=unique(nextE_Ind_L_Vect_p,'rows','stable');
               
              if round(nextE_Ind_Vect_p(i))~=nextE_Ind_Vect_p(i) %ONLY if off grid..
                  %Store count of unique loads for this next state
@@ -406,11 +415,15 @@ c_state=[];     %Vector of state-relevance weightings
   %STEP 7: Construct vector of ALL FEASIBLE energies, for all controls
   E_Ind_VectALL=[];
   E_VectALL_Ls=[]; %Vector with associated loads
+  feasInf_E_VectALL_Ls=[]; %Same, but also including INF where loads are infeasible
   for row=1:size(E_Ind_MtxALL,1)
       nnzRow=nnz(E_Ind_MtxALL(row,:));
       %E_Ind_Mtx_nzRow=E_Ind_MtxALL(row,1:nnzRow);
       E_Ind_VectALL=[E_Ind_VectALL; nonzeros(E_Ind_MtxALL(row,:))];
       E_VectALL_Ls=[E_VectALL_Ls;(MINLoad_E_state(row):(MINLoad_E_state(row)+nnzRow-1))']; %Create vector of all loads per E-state (for all controls)
+      numLoads_lt_MINLoad=nnz(~E_Ind_MtxALL(row,1:MINLoad_E_state(row)-MIN_LOAD+1));
+      numLoads_gt_MAXLoad=nnz(~E_Ind_MtxALL(row,(MINLoad_E_state(row)+nnzRow):size(E_Ind_MtxALL,2)));
+      %feasInf_E_VectALL_Ls=[feasInf_E_VectALL_Ls;Inf*ones(numLoads_lt_MINLoad,1);(MINLoad_E_state(row):(MINLoad_E_state(row)+nnzRow-1))';Inf*ones(numLoads_gt_MAXLoad,1);];
   end
   
   
@@ -767,7 +780,7 @@ c_state=[];     %Vector of state-relevance weightings
   
   feasE2s=[]; feasE1s=[]; feasLs=[]; %To add polynomial basis functions (order R-1)
   
-  %{
+  
   %1) find bounds of linear fit
   exprMax=0; exprMin=0;
   for i=1:N1
@@ -828,6 +841,7 @@ c_state=[];     %Vector of state-relevance weightings
   
   %Adjoin feasible state vectors to form a ?x3 array
   feasStatesArr=[feasE1s,feasE2s,feasLs];
+  %{
   %Create design matrix with fitting functions up to order R
   phi_poly=DesignMtx(feasStatesArr,ones(length(feasStatesArr),1),R);
   %Add to present basis vectors
@@ -915,6 +929,7 @@ c_state=ones(size(Phi,1),1);
   %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
   ConvCosts=FormatCostVect_v2(cost);
     
+  %
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix
@@ -990,3 +1005,4 @@ c_state=ones(size(Phi,1),1);
     %Get FINAL q-values ONLY for feasible states (non-zero in aug_E_MtxALL_Vect)
     optQ=aug_Q(aug_E_MtxALL_Vect~=0);
     aug_optQ=aug_optQ(aug_E_MtxALL_Vect~=0);
+  %}
