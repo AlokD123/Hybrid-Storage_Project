@@ -240,7 +240,7 @@ while t_ind_VI<=NumIter
     %First, assume uniform
     %prob_nextL=1/numL_OffGrd*ones(1,numL_OffGrd)';
     %Then, transform to custom distribution sampled resL_Mult times more finely
-    prob_nextL=ProbDistr_v2(numL_OffGrd,currL-MIN_LOAD+1,nxtL-MIN_LOAD+1,resL_Mult);
+    prob_nextL=ProbDistr_v2(numL_OffGrd,currL-MIN_LOAD+1,nxtL-MIN_LOAD+1,0);
     
     %SAMPLE FROM CONDITIONAL DISTRIBUTION TO GET INDEX OF NEXT LOAD in vector nxtL (NOT RELATIVE TO MIN_LOAD) 
     nxt_indL=find(mnrnd(1,prob_nextL),1);

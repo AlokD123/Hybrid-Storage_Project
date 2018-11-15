@@ -19,9 +19,9 @@ countRepeatZeros=0; %Count of repeated zero loads
 
 %LOAD SEQUENCE!!!!
 seqL=[]; %Reset load sequence
-seqL=2*ones(NumIter,1);      %CONSTANT LOAD
+%seqL=2*ones(NumIter,1);      %CONSTANT LOAD
 %seqL=[3 1 0 1 0 2 0 1 1 0]; %FLUCTUATING LOAD
-%seqL=[3 0 1 0 1 0 2 0 1 0];
+seqL=[0.5 1 0 0 -1 0 -0.5 0 1 0];
 
 
 t_ind_VI=1; %Start evaluation
