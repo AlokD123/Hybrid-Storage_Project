@@ -7,7 +7,7 @@ function [D1,D2,C2] = GetPOpt_wRegenB(indCurrE1,indCurrE2,CurrL)
 global epsilon2; global E_Ind_VectALL; global E_VectALL_Ls; global N2;
 global fullPolicyMtx; global MIN_LOAD;
 
-if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls off the grid...
+if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2)||(round(CurrL)~=CurrL) %If state falls off the grid...
     q_pOpt_Mtx=[];
     
    %A) Go through all states and...
@@ -57,7 +57,34 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls 
               end
           end
       else
-          q=0;
+        %Check to find 8 points closest to (CurrE1,CurrE2,CurrL) off grid.... FIND (E1_Ind, E2_Ind, L)
+        %CASE 1: round E1 down, round E2 down, round L down
+        if floor(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind && floor(CurrL)==L
+          q=(1-(indCurrE1-E1_Ind))*(1-(indCurrE2-E2_Ind))*(1-(CurrL-L));
+        %CASE 2: round E1 up, round E2 down, round L down
+        elseif ceil(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind && floor(CurrL)==L
+          q=(1-(E1_Ind-indCurrE1))*(1-(indCurrE2-E2_Ind))*(1-(CurrL-L));
+        %CASE 3: round E1 down, round E2 up, round L down
+        elseif floor(indCurrE1)==E1_Ind && ceil(indCurrE2)==E2_Ind && floor(CurrL)==L
+          q=(1-(indCurrE1-E1_Ind))*(1-(E2_Ind-indCurrE2))*(1-(CurrL-L));
+        %CASE 4: round E1 up, round E2 up, round L down
+        elseif ceil(indCurrE1)==E1_Ind && ceil(indCurrE2)==E2_Ind && floor(CurrL)==L
+          q=(1-(E1_Ind-indCurrE1))*(1-(E2_Ind-indCurrE2))*(1-(CurrL-L));
+        %CASE 5: round E1 down, round E2 down, round L up
+        elseif floor(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind && ceil(CurrL)==L
+          q=(1-(indCurrE1-E1_Ind))*(1-(indCurrE2-E2_Ind))*(1-(L-CurrL));
+        %CASE 6: round E1 up, round E2 down, round L up
+        elseif ceil(indCurrE1)==E1_Ind && floor(indCurrE2)==E2_Ind && ceil(CurrL)==L
+          q=(1-(E1_Ind-indCurrE1))*(1-(indCurrE2-E2_Ind))*(1-(L-CurrL));
+        %CASE 7: round E1 down, round E2 up, round L up
+        elseif floor(indCurrE1)==E1_Ind && ceil(indCurrE2)==E2_Ind && ceil(CurrL)==L
+          q=(1-(indCurrE1-E1_Ind))*(1-(E2_Ind-indCurrE2))*(1-(L-CurrL));
+        %CASE 8: round E1 up, round E2 up, round L up
+        elseif ceil(indCurrE1)==E1_Ind && ceil(indCurrE2)==E2_Ind && ceil(CurrL)==L
+          q=(1-(E1_Ind-indCurrE1))*(1-(E2_Ind-indCurrE2))*(1-(L-CurrL));
+        else
+         q=0; %If this state on grid not used for interpolation (not corner of encompassing square)
+        end
       end
 
 
@@ -80,7 +107,7 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls 
    %C) FINALLY, calculate optimal control values using interpolation
       D1_interp=0; D2_interp=0; C2_interp=0;
       for i=1:length(E_Ind_VectALL) %For every state on grid...
-          if max(fullPolicyMtx(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)-MIN_LOAD+1,:))==0 %If demand is off the grid...
+          if max(fullPolicyMtx(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)-MIN_LOAD+1,:))==0 %If demand is OUTSIDE the space of the grid (not just off of the grid)...
               D1_onGRD=[]; D2_onGRD=[]; C2_onGRD=[];
           else
             [D1_onGRD,D2_onGRD,C2_onGRD]=GetPOpt_wo_Interp_wRegenB(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)); %Get optimal controls on grid
@@ -114,10 +141,11 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2) %If state falls 
         C2_interp=C2_interp+q_pOpt_Mtx(i,4)*C2_onGRD;
       end
       
-      D1=D1_interp; D2=D2_interp; C2=C2_interp; %Output interpolated optimal controls
-   
+      D1=D1_interp(1); D2=D2_interp(1); C2=C2_interp(1); %Output interpolated optimal controls
+      
 else %If state is on the grid
-    [D1,D2,C2]=GetPOpt_wo_Interp_wRegenB(indCurrE1,indCurrE2,CurrL); %Get optimal controls normally
+    [a,b,c]=GetPOpt_wo_Interp_wRegenB(indCurrE1,indCurrE2,CurrL); %Get optimal controls normally
+    D1=a(1); D2=b(1); C2=c(1);
 end
 
 
