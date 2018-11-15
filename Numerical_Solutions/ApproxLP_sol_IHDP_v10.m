@@ -8,7 +8,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -25,7 +25,7 @@ MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 MAX_CHARGE=[0;100]; %Maximum charging of the supercapacitor
-MAX_DISCHARGE=[5;4]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[10;5]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD;
 MIN_LOAD=0; %Minimum load expected
@@ -91,7 +91,7 @@ p_max=0;    %Maximum number of controls to consider, initialized at 0
 margApproxErr=zeros(N1,1); %Error in each state marginalized, initialized at 0s
 
 %% PART A: SET UP MATRICES
-tic;
+
 %For each possible control...
   for D1=0:MAX_DISCHARGE(1)
     for D2=0:MAX_DISCHARGE(2)
@@ -230,9 +230,9 @@ tic;
     end
   end
   
- toc
  
- tic;
+ 
+ 
   %STEP 6: Construct vector of ALL FEASIBLE energies, for all control
   E_Ind_VectALL=[];
   for row=1:size(E_Ind_MtxALL,1)
@@ -247,9 +247,9 @@ tic;
   for r=1:size(E_Ind_MtxALL,1)
       P_fullmtx(r,:)=E_Ind_MtxALL(r,:)/sum(E_Ind_MtxALL(r,:)); %<----------------For UNIFORM probability, just NORMALIZE rows of feasible states!!
   end
- toc 
   
-  tic;
+  
+  
   for p=1:p_max
     E_Ind_Vect_p=E_Ind_Vect{p};
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
@@ -408,10 +408,10 @@ tic;
     end
   end
   
-  toc
+  
   %% CORRECTED MATRICES (REMAINING infeasible states removed)
   %1) Coefficients
-  tic;
+  
   Q=[];
   for p=1:p_max
     %Create full 'A' matrices for coefficients (A=G-alpha*PF)
@@ -432,12 +432,12 @@ tic;
   for p=1:p_max
     b=[b;g{p}];
   end
-  toc
+  
   %% PART B: COST APPROXIMATION AND BASIS FUNCTION GENERATION
   %Create initial design matrix (1 row per feasible state)
   %Use state aggregation for first 'num_steps', then start to generate
   %monomials
-  tic;
+  
   feasE2s=[]; feasE1s=[]; feasLs=[]; %To add polynomial basis functions (order R-1)
   
   %1) find bounds of linear fit
@@ -521,15 +521,18 @@ tic;
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
 % Probabilities are given in P_fullmtx (non-zero for feasible states)
-trP_fullmtx=P_fullmtx';
-c_state=trP_fullmtx(:); %Get probabilities for all states
+%trP_fullmtx=P_fullmtx';
+%c_state=trP_fullmtx(:); %Get probabilities for all states
 
-c_state(c_state==0)=[]; %Remove zero probability states
-%c_state=ones(size(Q,2),1);
+%c_state(c_state==0)=[]; %Remove zero probability states
+c_state=ones(size(Q,2),1);
+
+%Alternative: use EXACT LP (Phi=I)
+Phi=eye(size(full(Q),2));
   
   %Created LP matrices and vectors.
-toc
-tic;
+
+
  %Get approximate solution
   cvx_begin
     cvx_solver_settings('Method',1) % Use dual simplex method
@@ -537,12 +540,12 @@ tic;
     %cvx_solver_settings('FeasibilityTol',1e-4) %Set tolerance
     variable r_fit(size(Phi,2))
     dual variables d
-    maximize( c_state'*Phi*r_fit - gamma*norm(r_fit,1) )
+    maximize( c_state'*Phi*r_fit ) %- gamma*norm(r_fit,1) )
     subject to
         d : Q*Phi*r_fit <= b
         %Phi*r_fit >= 0
   cvx_end
-toc
+
 
 %   %Get error
 %   err=cost-Phi*r_fit;
@@ -570,7 +573,7 @@ toc
 %   xlabel('Energy E1'); ylabel('Marginalized Error');
 %   title('Marginalized Error for default test');
   
- tic; 
+  
   optD = d; %Get vector of FINAL dual
   cost=Phi*r_fit; %Get FINAL approximated cost
   
@@ -646,7 +649,7 @@ toc
     %in aug_E_MtxALL_Vect)
     pi=aug_pi(aug_E_MtxALL_Vect~=0);
     
-    toc
+    
     
     
     %Get bound for error in dual

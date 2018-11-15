@@ -63,7 +63,7 @@ end
 
 %seqL=[testLoad,0];
 
-seqL=seqL;
+seqL=seqL/3;
 seqL(seqL>MAX_LOAD)=MAX_LOAD;
 seqL(seqL<MIN_LOAD)=MIN_LOAD;
 

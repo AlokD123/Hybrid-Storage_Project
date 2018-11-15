@@ -52,7 +52,7 @@ global E_Ind_MtxALL; global N2; global CostMtx;
   formatMtxCosts=[];
   for i=1:length(subVectCosts_Load)
       subVectCosts_Load_i=subVectCosts_Load{i};
-      formatMtxCosts(:,:,i)=vec2mat(subVectCosts_Load_i,N2);
+      formatMtxCosts(:,:,i)=vec2mat_custom(subVectCosts_Load_i,N2);
   end
 
 end

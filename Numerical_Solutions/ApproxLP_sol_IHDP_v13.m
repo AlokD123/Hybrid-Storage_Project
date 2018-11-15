@@ -10,7 +10,7 @@ clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-%global E_MAX; E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
+global E_MAX; E_MAX=[10;5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -636,7 +636,7 @@ c_state=[];     %Vector of state-relevance weightings
   %feasible (just to ensure correct dimension)
   feasStates(:,:,end+1)=0;
   
-  %{
+  
   %1) find bounds of linear fit
   exprMax=0; exprMin=0;
   for i=1:N1
@@ -697,6 +697,7 @@ c_state=[];     %Vector of state-relevance weightings
   
   %Adjoin feasible state vectors to form a ?x3 array
   feasStatesArr=[feasE1s,feasE2s,feasLs];
+  %{
   %Create design matrix with fitting functions up to order R
   phi_poly=DesignMtx(feasStatesArr,ones(length(feasStatesArr),1),R);
   %Add to present basis vectors
@@ -715,7 +716,6 @@ c_state=[];     %Vector of state-relevance weightings
         Phi=Phi(:,1:(size(Phi,2)-1));
     end
  %}
-  
   
  %Alternative: use EXACT LP (Phi=I)
  Phi=eye(size(full(Q),2));

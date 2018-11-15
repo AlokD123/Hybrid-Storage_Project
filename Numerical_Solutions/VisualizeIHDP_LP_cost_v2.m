@@ -108,21 +108,33 @@ else
     ylim([0 inf])
     title('Variation in energy storage state under demand');
     yyaxis right
-	plot(time,optE2*E_SCALE_SC_L,'-','MarkerSize',10); plot(time,[Load,0]*E_SCALE_SC_L,'-','MarkerSize',10);
+	plot(time,optE2*E_SCALE_SC_L,'-','MarkerSize',10); plot(time,[Load,0]*E_SCALE_SC_L,'--','MarkerSize',10);
     hold off;
     ylabel('Supercapacitor energy and demand (Wh)');
-    ylim([0 1000])
+    ylim([-200 1000])
     legend('Battery (E1)','Supercapacitor (E2)','Demand (L)');
     
-    %{
+    %
     figure
     hold on;
-    plot(D1Opt,':*','MarkerSize',10); plot(D2Opt,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10); %plot(C2Opt,':*','MarkerSize',10);
+    plot(D1Opt,':*','MarkerSize',10); plot(D2Opt,':*','MarkerSize',10); plot(C2Opt,':*','MarkerSize',10); %; plot(Load,':o','MarkerSize',10);
     hold off;
     xlabel('Time (no units)');
     ylabel('Energy (no units)');
     title('Optimal policy vs. load');
-    legend('Battery Discharge (D1)','Supercapacitor Discharge (D2)','Demand (L)');%,'Supercapacitor Charge (C2)');
+    legend('Battery Discharge (D1)','Supercapacitor Discharge (D2)','Supercapacitor Charge (C2)'); %,'Demand (L)')
+    axis([1 inf -max(MAX_CHARGE) max(MAX_DISCHARGE)]);
+    %}
+    
+    %{
+    figure
+    hold on;
+    plot(D1Opt,':*','MarkerSize',10); plot(D2Opt,':*','MarkerSize',10); plot(D1Opt+D2Opt-C2Opt-Load,':o','MarkerSize',10); plot(C2Opt,':*','MarkerSize',10);
+    hold off;
+    xlabel('Time (no units)');
+    ylabel('Energy (no units)');
+    title('Optimal policy vs. load');
+    legend('Battery Discharge (D1)','Supercapacitor Discharge (D2)','Battery Charge (C1)','Supercapacitor Charge (C2)');
     axis([1 inf -max(MAX_CHARGE) max(MAX_DISCHARGE)]);
     %}
 end

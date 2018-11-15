@@ -9,6 +9,8 @@ NumOptCtrls_1=[];
 NumOptCtrls_2=[];
 MaxQValues=[];
 
+epsilon5=0.01;
+
 l=1;
 for i=1:N1
     for j=1:N2
