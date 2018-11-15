@@ -7,6 +7,8 @@ qValsMtx=[]; fullPolicyMtx=[];
 %N1=6; N2=5; M=10;
 %P1=N1; P2=N2;
 
+epsilon4=1e-3;
+
 %Define Sigma as the total number of possible loads over all E-states and
 %controls
 Sigma=size(E_Ind_MtxALL,2); %i.e. -E_MAX -> M-2
@@ -49,20 +51,40 @@ end
 
 qValsMtx(qValsMtx==0)=Inf;
 
+numOptCtrls=Inf; %TOTAL # of optimal ctrls. Initialize to infinity to guarantee 1 loop
 
-%Get optimal control policy as matrix
-for i=1:N1
-    for j=1:N2
-        for k=1:Sigma
-            for m=1:length(qValsMtx(i,j,k,:))
-                if (abs(min(qValsMtx(i,j,k,:))-qValsMtx(i,j,k,m))<epsilon4) && feasStatesCatArr(i,j,k,m)==1 % ismember([i+E_MIN(1)-1,j+E_MIN(2)-1,k+MIN_LOAD-1],feasStatesArr_ctrl{m},'rows')
-                    fullPolicyMtx(i,j,k,m)=1;
-                else
-                    fullPolicyMtx(i,j,k,m)=0;
+while numOptCtrls > length(E_Ind_VectALL) %WHILE more than one optimal ctrl per state....
+    epsilon4=epsilon4/10; %Decrease tolerance on minum Q-value detection UNTIL ONLY ONE OPT CTRL per STATE
+    
+    %NumOptCtrls_1=[];
+    NumOptCtrls_2=[]; %Store number of optimal controls per state, based on FULL POLICY MTX
+    %MaxQValues=[];
+
+    l=1;
+    %Get optimal control policy as matrix
+    for i=1:N1
+        for j=1:N2
+            for k=1:Sigma
+                for m=1:length(qValsMtx(i,j,k,:))
+                    if (abs(min(qValsMtx(i,j,k,:))-qValsMtx(i,j,k,m))<epsilon4) && feasStatesCatArr(i,j,k,m)==1 % ismember([i+E_MIN(1)-1,j+E_MIN(2)-1,k+MIN_LOAD-1],feasStatesArr_ctrl{m},'rows')
+                        fullPolicyMtx(i,j,k,m)=1;
+                    else
+                        fullPolicyMtx(i,j,k,m)=0;
+                    end
+                end
+
+                %ALSO, test if too MANY optimal optimal controls (more than one per state)...
+                if(feasStates(i,j,k)==1)
+                   %MinQValues=[MaxQValues;i,j,k,min(qValsMtx(i,j,k,:))];
+                   %NumOptCtrls_1=[NumOptCtrls_1;i,j,k,nnz(abs(qValsMtx(i,j,k,:)-min(qValsMtx(i,j,k,:)))<epsilon5)];
+                   l=l+1;
+                   NumOptCtrls_2=[NumOptCtrls_2;i,j,k,nnz(fullPolicyMtx(i,j,k,:))];
                 end
             end
         end
     end
+
+    numOptCtrls=sum(NumOptCtrls_2(:,4)); %Get TOTAL number of optimal ctrls
 end
 
 %Find any states that do not have optimal controls
