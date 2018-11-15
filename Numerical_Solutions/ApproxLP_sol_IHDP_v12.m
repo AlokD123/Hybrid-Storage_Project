@@ -86,6 +86,7 @@ global aug_Vect_Ls_p; %Augmented vector containing associated load values in eac
 global feasStatesArr_p; %Array of current E1,E2,L values that are feasible states for the GIVEN TUPLE OF CONTROLS
 aug_Vect_Ls_p=[];
 CostMtx=[];
+E_Ind_MtxALL=[];
 
 P_mtx={};   %Array of P matrices
 P=[];       %Current P matrix
