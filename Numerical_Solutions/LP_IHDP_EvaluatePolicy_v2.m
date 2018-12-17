@@ -10,64 +10,16 @@
 
 %STEP 1: initalize
 optE1=[]; optE2=[]; D1Opt=[]; D2Opt=[]; Load=[];
-resL_Mult=2; %Set resolution of demands by a dividing factor (natural number)
 
 %STEP 2: evaluate policy for a random sequence of loads (ONLINE)
-%Set up matricee
+%Set up matrices
 optE1(1)=E1_INIT; optE2(1)=E2_INIT;
 % Debug counts
 countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 
-%OLD - load sequence
-%seqL=[]; %Reset load sequence
-%seqL=ones(NumIter,1); %CONSTANT LOAD
-%seqL=[3 1 0 1 0 2 0 1 1 0 3 1 0 1 0 2 0 1 1 0]; %FLUCTUATING LOAD
-%seqL=[1 1 0 0 1 1 2 2 1 0 1 1 0 0 1 1 2 2 1 0]; %SMOOTH LOAD
 
-%FLUCTUATING LOAD
-%{
-seqL=[0.25 1 0.75 0 0.5 1 1.75 2 1.25 2 2.5 2.75 1.5 3 2.25 2.75 3.5 3 3.25 3.25]; %FLUCTUATING LOAD
-for i=1:1
-    seqL=[seqL,2.75*(1+normrnd(0.2,0.1,1,140)).*(1+0.1*sin(linspace(1,50,140))).*(1-0.2*sin(linspace(1,10,140)))];
-
-end
-%}
-
-%SMOOTH LOAD
-%{
-seqL=[0.25 0 0.25 0.5 0.25 0.75 1.25 0.5 1.75 2 2.25 1.75 2.25 2.75 2.75 3 2.75 3 3.25 3.5];
-for i=1:1
-    seqL=[seqL,fliplr(seqL(end/2:end)).*linspace(1,1.75,length(seqL(end/2:end)))];
-    seqL=[seqL,(1+normrnd(0.2,0.1,1,129)).*linspace(3.2,1,129).*(1+0.1*sin(linspace(1,10,129)))];
-end
-%}
-
-%RAMP LOAD
-%{
-seqL=[0.25 0 0.25 0.5 0.75 1 1 0.75 1 1.25 1.25 1.25 1 1.5 1.5 1.75 2 2.25 2.25 2.25];
-for i=1:1
-    seqL=[seqL,2*rand(1)*seqL(end/2:end)+0.5];
-    seqL=[seqL,rand(1)*fliplr(seqL(end/2:end))];
-    seqL=[seqL,rand(1)*seqL(end/2:end)/2];
-    seqL=[seqL,rand(1)*fliplr(seqL(1:end))/2];
-    seqL=[seqL,fliplr(seqL(end-17:end))+0.25];
-end
-%}
-
-%seqL=ones(1,10);
-
-%{
-seqL=seqL*3/4;
-seqL(seqL>3)=3;
-seqL(seqL<0)=0;
-
-
-plot(seqL);
-ylim([0 8])
-%}
-
-NumIter=length(seqL); %Number of iterations of the policy to do
+NumIter=10; %Number of iterations of the policy to do
 
 DeltaL_min=0.2;
 
@@ -79,63 +31,7 @@ while t_ind_VI<=NumIter
     indE1=optE1(t_ind_VI)-E_MIN(1)+1;
     indE2=optE2(t_ind_VI)-E_MIN(2)+1;
     
-    %% OLD- create demand sequence
-    
-    %{
-    %OPTION 1: UNUSED
-    %Create random demand from IID Uniform probability sequence
-    MAX_LOAD_STATE=optE1(t_ind_VI)+optE2(t_ind_VI)-1; %Maximum possible load limited to total energy stored in that state
-    if(MAX_LOAD_STATE==Inf)
-        MAX_LOAD_STATE=MAX_LOAD;
-    end
-    %randL=randi(MAX_LOAD_STATE-MIN_LOAD+1,1,1)+MIN_LOAD-1;
-
-    %Option 2: create sample sequence of pseudo-random demands
-    %Select between sequences
-    %L=randL;
-    L= seqL(t_ind_VI);
-    %L=min(t_ind_VI,MAX_LOAD_STATE); %Ramp
-    
-    %If demand is infeasible for current E-state, reduce HERE
-    %When generating truly randomly using transition probabilities, this is automatically enforced
-    %1) Case: load is too high for E-state
-    if L>(E_MAX(1)+E_MAX(2))
-        L=max(0,(E_MAX(1)+E_MAX(2))-( L-(E_MAX(1)+E_MAX(2) )) );
-    end
-    %2) Case: no control in feasible set leads to a next E-state that is feasible
-    boolFeasL=0;
-    %Decrease load till feasible for some set of controls on grid
-    while L>=0 && boolFeasL==0
-        %Check if feasible for these controls
-        for D1=0:MAX_DISCHARGE(1) 
-            for D2=0:MAX_DISCHARGE(2)
-                if D1+D2>=L %For each control on grid that is feasible...
-                    [nextE1,nextE2]=optNextStateLimited(optE1(t_ind_VI),optE2(t_ind_VI),D1,D2,L);
-
-                    %If the next E-state is feasible, this is a feasible load (on or OFF grid)
-                    if ~(nextE1>E_MAX(1)||nextE1<E_MIN(1)||nextE2>E_MAX(2)||nextE2<E_MIN(2))
-                        %Store (one) feasible control on grid, to confirm ones off grid are unnecessarily infeasible
-                        fbleCtrlOnGrd=[D1,D2,L];
-                        %Exit loop with this value of L (feasible)
-                        D1=MAX_DISCHARGE(1)+1; D2=MAX_DISCHARGE(2)+1;
-                        boolFeasL=1;
-                    end
-                end
-            end
-        end
-        if boolFeasL==0 %If infeasible, decrease load
-           L=L-DeltaL_min; 
-        end
-    end
-    
-    %If supercap is empty and load is more than D1-max, reduce to range in [0, D1-max]
-    if abs(indE2-1)<epsilon2 && L>MAX_DISCHARGE(1)
-        L=max(0,MAX_DISCHARGE(1)-(L-MAX_DISCHARGE(1)));
-    end
-    
-    %}
-    
-    %% Run sequences online
+    %% Create demand sequences and run online
     %Get optimal controls for given state
     [D1,D2]=GetPOpt(indE1,indE2,L);
     
@@ -179,7 +75,7 @@ while t_ind_VI<=NumIter
     indL=L-MIN_LOAD+1;
     Load(t_ind_VI)=L;          %Hold value of load (for reference)
 
-    currL=L; %Store current load value
+    currL=indL; %Store current load value
     
     %Get specific control sequence for given load sequence
     D1Opt(t_ind_VI)=D1;
@@ -237,9 +133,7 @@ while t_ind_VI<=NumIter
     numL_OffGrd=length(nxtL); %Get number of feasible loads
     
     %Create vector of next state probabilities for each of the next demands
-    %First, assume uniform
-    %prob_nextL=1/numL_OffGrd*ones(1,numL_OffGrd)';
-    %Then, transform to custom distribution sampled resL_Mult times more finely
+    %Probabilities follow custom distribution sampled resL_Mult times more finely
     prob_nextL=ProbDistr_v2(numL_OffGrd,currL-MIN_LOAD+1,nxtL-MIN_LOAD+1,0);
     
     %SAMPLE FROM CONDITIONAL DISTRIBUTION TO GET INDEX OF NEXT LOAD in vector nxtL (NOT RELATIVE TO MIN_LOAD) 

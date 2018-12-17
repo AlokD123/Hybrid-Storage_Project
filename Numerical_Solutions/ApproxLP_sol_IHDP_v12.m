@@ -9,12 +9,12 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[400;2]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;2]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
 
-%% Input: initial state, horizon, number of bases in approximation
+%% Input: initial state, horizon, number of bases in approximation, resolution of demand (ONLINE ONLY)
 %Initial stored energy (user-defined)
 %Must be between MIN_STATE and MAX_STATE
 E1_INIT=E_MAX(1); 
@@ -23,8 +23,11 @@ E2_INIT=E_MAX(2);
 R=10; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=6; %MAXIMUM number of groups in state aggregation
 
+global resL_Mult;
+resL_Mult=1; %Set resolution of demands by a dividing factor (natural number)
+
 %% Model setup
-global MIN_LOAD;
+global MIN_LOAD; global MAX_LOAD;
 MIN_LOAD=0; %Minimum load expected
 MAX_LOAD=4;
 
@@ -35,11 +38,10 @@ MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[0.999;0.999]; %Efficiency of charging
-%ALPHA_D=[0.9;0.95]; %Efficiency of discharging
-ALPHA_D=[0.999;0.999]; %Efficiency of discharging
-BETA=[0.999;0.999];    %Storage efficiency
-K=1e-6;           %Weighting factor for D1^2 cost
+ALPHA_C=[1;0.99]; %Efficiency of charging
+ALPHA_D=[1;0.95]; %Efficiency of discharging
+BETA=[1;1];    %Storage efficiency
+K=1e2;           %Weighting factor for D1^2 cost
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -87,6 +89,9 @@ global feasStatesArr_p; %Array of current E1,E2,L values that are feasible state
 aug_Vect_Ls_p=[];
 CostMtx=[];
 E_Ind_MtxALL=[];
+feasStatesArr_p=[];
+E_Ind_VectALL=[];
+E_VectALL_Ls=[];
 
 P_mtx={};   %Array of P matrices
 P=[];       %Current P matrix
@@ -439,7 +444,7 @@ c_state=[];     %Vector of state-relevance weightings
         %Store subscript pairs and associated values in array P
         len=length(prob_nextE); 
         cols=c:(c+nnzProb_nextE-1);
-        P=[P;r*ones(len,1),cols',prob_nextE];
+        P=[P;r*ones(len,1),cols',prob_nextE'];
 
         %Fill in row r with said probabilities
         %P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
@@ -748,7 +753,7 @@ c_state=[];     %Vector of state-relevance weightings
     end
   %}
  %Alternative: use EXACT LP (Phi=I)
- Phi=eye(size(full(Q),2));    
+ Phi=eye(length(E_Ind_VectALL));    
     
     
 % Find state-relevance vector for minimization, c
@@ -767,7 +772,7 @@ c_state=ones(size(Phi,1),1);
 %Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-2*N),eye(N)];
 %Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-N-1),ones(N,1)];
  
-  cvx_solver Gurobi
+  %cvx_solver Gurobi
  %Get approximate solution
   cvx_begin
     %cvx_solver_settings('Method',1) % Use dual simplex method

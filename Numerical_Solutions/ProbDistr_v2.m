@@ -10,9 +10,6 @@ function [prob_nextE] = ProbDistr_v2(nnzProb_nextE,currState_indL,nextState_indL
 
 global epsilon3; global resL_Mult;
 
-%Set demand resolution multiplicative factor (LARGE natural number)
-resL_Mult=10;
-
 %Transform #of next loads input by multiplicative factor to achieve higher
 %resolution of demand (during simulation, with continuous loads)
 %nnzProb_nextE=resL_Mult*(nnzProb_nextE-1)+1;
@@ -23,7 +20,9 @@ resL_Mult=10;
 n=resL_Mult*nnzProb_nextE-1; %One less because lowest binomial random variable is 0 instead of 1
 
 %Small term to avoid all-none probability cases when n!=0 in binomial distribution
-epsP=(1/n)/2; %Change p by a term less than the resolution of p steps (1/n), so not making other load more probable
+if n~=0
+   epsP=(1/n)/2; %Change p by a term less than the resolution of p steps (1/n), so not making other load more probable
+end
 
 %Find number of elements to shift in weights (below) to allow for HIGHEST WEIGHT ON RETURNING TO SAME STATE (LOAD)
 %i.e. highest weight on MAIN DIAGONAL
@@ -55,7 +54,7 @@ end
 binomPDF_probs=binopdf(0:n,n,p);
 
 
-%Return custom probabilities
+%Return custom probabilities (i.e. for offline optimization, only sample integer values of L)
 if boolSubSamp
     for i=1:nnzProb_nextE       %If subsampling, modify probabilities so only nnzProb_nextE ones sampled
         sumProbSubSamp(i)=sum(binomPDF_probs((i-1)*resL_Mult+1:i*resL_Mult));

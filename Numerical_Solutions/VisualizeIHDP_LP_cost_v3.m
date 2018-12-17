@@ -1,18 +1,15 @@
 %Method to visualize optimal energy transfers
-%v2: for realistic sizing of components
+%v3: combined controls
 
 %% Parameter setup
 
-E_SCALE_BATT=75/1000*2; %0.075 kWh/unit for battery
+E_SCALE_BATT=75/1000; %0.075 kWh/unit for battery
 E_SCALE_SC_L=75;      %75 Wh/unit for supercapacitor and load
 T_SCALE=2.5;          %2.5s/unit
 
-%Create time axis
-time=[1:length(optE1)]*T_SCALE;
-
 %% Visualization
 
-boolSingleSequence=1;
+boolSingleSequence=0;
 INFCOST=1e6;
 
 clear Costs_LP;
@@ -38,7 +35,7 @@ if(~boolSingleSequence)
         for ind=1:size(Costs_LP,3) %FULL LOAD NOT POSSIBLE, so only up to maximum possible
             costs=Costs_LP(:,:,ind);
             costs(costs>=INFCOST)=-100; %Replace all with infeasible costs for plotting
-            Z=(ind-1)*ones(length(E_Ind1),length(E_Ind2));
+            Z=(ind+MIN_LOAD-1)*ones(length(E_Ind1),length(E_Ind2));
             surf(E_Ind2-1,E_Ind1-1,Z,costs)
             hold on
         end
@@ -50,6 +47,9 @@ if(~boolSingleSequence)
 
     
 else
+    %Create time axis
+    time=[1:length(optE1)]*T_SCALE;
+    
     %Visualize a possible sequence of loads, as previously found
     figure
     hold on;
