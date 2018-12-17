@@ -22,7 +22,7 @@ countRepeatZeros=0; %Count of repeated zero loads
 seqL=[]; %Reset load sequence
 
 %FLUCTUATING LOAD
-%{
+%
 seqL=[0.25 1 0.75 0 0.5 1 1.75 2 1.25 2 2.5 2.75 1.5 3 2.25 2.75 3.5 3 3.25 3.25]; %FLUCTUATING LOAD
 for i=1:1
     seqL=-[0.5*(1+normrnd(0.4,0.4,1,140)).*(1+0.2*sin(linspace(1,50,140))).*(-0.5*sin(linspace(1,10,140)))];
@@ -49,7 +49,7 @@ end
 %}
 
 %RAMP LOAD
-%
+%{
 seqL=[0.25 0 0.25 0.5 0.75 1 1 0.75 1 1.25 1.25 1.25 1 1.5 1.5 1.75 2 2.25 2.25 2.25];
 for i=1:1
     seqL=[seqL,2*rand(1)*seqL(end/2:end)+0.5];

@@ -9,7 +9,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[400;2]; %Maximum energy to be stored (upper bound)
+E_MAX=[10;2]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;

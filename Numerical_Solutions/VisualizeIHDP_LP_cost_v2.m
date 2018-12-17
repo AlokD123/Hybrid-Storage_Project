@@ -126,7 +126,7 @@ else
     axis([1 inf 0 max(MAX_DISCHARGE)]);
     %}
     
-    %
+    %{
     figure
     hold on;
     plot(D1Opt,':*','MarkerSize',10); plot(max(D2Opt-C2Opt,0),':*','MarkerSize',10); plot(D1Opt+D2Opt-C2Opt-Load,':o','MarkerSize',10); plot(max(C2Opt-D2Opt,0),':*','MarkerSize',10);
