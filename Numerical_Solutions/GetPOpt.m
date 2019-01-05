@@ -9,6 +9,8 @@ global epsilon2; global E_Ind_VectALL; global E_VectALL_Ls; global N2; global fu
 if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2)||(round(CurrL)~=CurrL) %If state falls off the grid...
     q_pOpt_Mtx=[];
     
+    ctrl_L_vals=[];
+    
    %A) Go through all states and...
    for i=1:length(E_Ind_VectALL)
       %1) Get individual current state indices
@@ -125,6 +127,11 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2)||(round(CurrL)~=
         %Create weighted sum of optimal controls at all points in grid
         D1_interp=D1_interp+q_pOpt_Mtx(i,4)*D1_onGRD;
         D2_interp=D2_interp+q_pOpt_Mtx(i,4)*D2_onGRD;
+        
+        %Store
+        if q_pOpt_Mtx(i,4)>0
+           ctrl_L_vals=[ctrl_L_vals;D1_onGRD,D2_onGRD,q_pOpt_Mtx(i,4)*D1_onGRD,q_pOpt_Mtx(i,4)*D2_onGRD,q_pOpt_Mtx(i,3)]; 
+        end
       end
       
       D1=D1_interp; D2=D2_interp; %Output interpolated optimal controls

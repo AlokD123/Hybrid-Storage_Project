@@ -93,7 +93,7 @@ else
     ylabel('Energy (no units)');
     title('Energy stored vs. load');
     legend('Battery (E1)','Supercapacitor (E2)','Demand (L)');
-    
+    %{
     figure
     hold on;
     plot(D1Opt,':*','MarkerSize',10); plot(D2Opt,':*','MarkerSize',10); plot(D1Opt+D2Opt-C2Opt-Load,':o','MarkerSize',10); plot(C2Opt,':*','MarkerSize',10);
@@ -103,4 +103,5 @@ else
     title('Optimal policy vs. load');
     legend('Battery Discharge (D1)','Supercapacitor Discharge (D2)','Battery Charge (C1)','Supercapacitor Charge (C2)');
     axis([1 inf -max(MAX_CHARGE) max(MAX_DISCHARGE)]);
+    %}
 end

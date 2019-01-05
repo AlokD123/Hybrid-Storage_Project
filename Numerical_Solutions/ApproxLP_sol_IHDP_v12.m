@@ -9,7 +9,7 @@ clearvars -except X V cost approx_err;
 
 global E_MIN; global E_MAX;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-E_MAX=[10;2]; %Maximum energy to be stored (upper bound)
+E_MAX=[200;2]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -24,7 +24,7 @@ R=10; %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE
 MAX_STEPS=6; %MAXIMUM number of groups in state aggregation
 
 global resL_Mult;
-resL_Mult=1; %Set resolution of demands by a dividing factor (natural number)
+resL_Mult=10; %Set resolution of demands by a dividing factor (natural number)
 
 %% Model setup
 global MIN_LOAD; global MAX_LOAD;
