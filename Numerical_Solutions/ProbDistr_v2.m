@@ -17,7 +17,7 @@ global epsilon3; global resL_Mult;
 
 %Set number of "samples" controls number of possible next state loads (finite, non-negative)
 %Binomial PDF parameter n
-n=resL_Mult*nnzProb_nextE-1; %One less because lowest binomial random variable is 0 instead of 1
+n=1*nnzProb_nextE-1; %One less because lowest binomial random variable is 0 instead of 1
 
 %Small term to avoid all-none probability cases when n!=0 in binomial distribution
 if n~=0
@@ -36,7 +36,7 @@ end
 
 %Transform d by multiplicative factor to show higher
 %resolution of demand (during simulation, with continuous loads)
-d=resL_Mult*(d-1)+1;
+d=1*(d-1)+1;
 
 %Create vector containing BINOMIAL PDF PROBABILITIES <---------------------------------------------- DISTRIBUTION W/ BINOMIAL PDF!!!!
 %Set binomial distribution parameter "p", which controls probability distribution over all "n" feasible loads
@@ -57,7 +57,7 @@ binomPDF_probs=binopdf(0:n,n,p);
 %Return custom probabilities (i.e. for offline optimization, only sample integer values of L)
 if boolSubSamp
     for i=1:nnzProb_nextE       %If subsampling, modify probabilities so only nnzProb_nextE ones sampled
-        sumProbSubSamp(i)=sum(binomPDF_probs((i-1)*resL_Mult+1:i*resL_Mult));
+        sumProbSubSamp(i)=sum(binomPDF_probs((i-1)*1+1:i*1));
     end
     prob_nextE=sumProbSubSamp;
 else                            %Otherwise, return all

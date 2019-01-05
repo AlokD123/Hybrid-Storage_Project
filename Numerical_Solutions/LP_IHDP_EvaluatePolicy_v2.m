@@ -10,6 +10,7 @@
 
 %STEP 1: initalize
 optE1=[]; optE2=[]; D1Opt=[]; D2Opt=[]; Load=[];
+global resL_Mult;
 
 %STEP 2: evaluate policy for a random sequence of loads (ONLINE)
 %Set up matrices
@@ -19,9 +20,9 @@ countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 
 
-NumIter=10; %Number of iterations of the policy to do
+NumIter=20; %Number of iterations of the policy to do
 
-DeltaL_min=0.2;
+DeltaL_min=1/resL_Mult;
 
 t_ind_VI=1; %Start evaluation
 
@@ -72,10 +73,10 @@ while t_ind_VI<=NumIter
     if(L==0 && countOOB~=0)
         countRepeatZeros=countRepeatZeros+1;
     end
-    indL=L-MIN_LOAD+1;
+    indL=(L-MIN_LOAD)*resL_Mult+1;
     Load(t_ind_VI)=L;          %Hold value of load (for reference)
 
-    currL=indL; %Store current load value
+    currL=L; %Store current load value
     
     %Get specific control sequence for given load sequence
     D1Opt(t_ind_VI)=D1;
@@ -110,8 +111,8 @@ while t_ind_VI<=NumIter
             %Check excess discharge condition
             if(~(D1_next>nextE1 || D2_next>nextE2))
                 %For each perturbation at the NEXT time...
-                for indL=(maxL_prev+1):(D1_next+D2_next-MIN_LOAD+1) %TRY ONLY PERTURBATIONS ABOVE PREVIOUS MAX
-                    L=indL+MIN_LOAD-1;
+                for indL=(maxL_prev+1):((D1_next+D2_next-MIN_LOAD)*resL_Mult+1) %TRY ONLY PERTURBATIONS ABOVE PREVIOUS MAX
+                    L=MIN_LOAD+(indL-1)/resL_Mult;
                     [next_nextE1,next_nextE2]=optNextStateLimited(nextE1,nextE2,D1_next,D2_next,L);
                     %Check other conditions
                     if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
@@ -134,12 +135,12 @@ while t_ind_VI<=NumIter
     
     %Create vector of next state probabilities for each of the next demands
     %Probabilities follow custom distribution sampled resL_Mult times more finely
-    prob_nextL=ProbDistr_v2(numL_OffGrd,currL-MIN_LOAD+1,nxtL-MIN_LOAD+1,0);
+    prob_nextL=ProbDistr_v2(numL_OffGrd,(currL-MIN_LOAD)*resL_Mult+1,(nxtL-MIN_LOAD)*resL_Mult+1,0);
     
     %SAMPLE FROM CONDITIONAL DISTRIBUTION TO GET INDEX OF NEXT LOAD in vector nxtL (NOT RELATIVE TO MIN_LOAD) 
     nxt_indL=find(mnrnd(1,prob_nextL),1);
     %Get demand value from index
     minL=nxtL(1);
-    L=minL+nxt_indL/resL_Mult;
+    L=minL+(nxt_indL-1)/resL_Mult;
     %}
 end
