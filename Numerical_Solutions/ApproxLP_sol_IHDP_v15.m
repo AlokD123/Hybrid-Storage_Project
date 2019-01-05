@@ -6,12 +6,12 @@ clearvars -except X V cost approx_err %E_MAX max_E_SIZE minCost max_E1 max_E2 op
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-global E_MAX; E_MAX=[200,2]; %Maximum energy to be stored (upper bound)
+global E_MAX; E_MAX=[50,2]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
 
-%% Input: initial state, horizon, number of bases in approximation
+%% Input: initial state, horizon, number of bases in approximation, resolution of demand (ONLINE ONLY)
 %Initial stored energy (user-defined)
 %Must be between MIN_STATE and MAX_STATE
 E1_INIT=E_MAX(1); 
@@ -19,6 +19,9 @@ E2_INIT=E_MAX(2);
 
 R=E_MAX(2);   %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
+
+global resL_Mult;
+resL_Mult=10;       %Set resolution of demands by a dividing factor (natural number)
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
@@ -32,8 +35,8 @@ MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[1;0.95]; %Efficiency of charging
-ALPHA_D=[1;0.95]; %Efficiency of discharging
+ALPHA_C=[0.9;0.95]; %Efficiency of charging
+ALPHA_D=[0.9;0.95]; %Efficiency of discharging
 BETA=[1;1];       %Storage efficiency
 K=[1e5;1e5];      %Weighting factors for D1^2 and C1^2 costs
 PERFECT_EFF=0;
@@ -45,7 +48,7 @@ DISCOUNT=0.99;
 
 %% Definitions
 %Resolution of battery charge/dischage
-global RES_U1; RES_U1=4;
+global RES_U1; RES_U1=resL_Mult;         %% SET RESOLUTION OF DEMANDS EQUAL TO CONTROLS (SINCE SAME QUANTITY)
 
 global N2; global P0; global P1;
 
@@ -91,6 +94,7 @@ E_Ind_MtxALL=[];
 E_Ind_VectALL=[];
 E_VectALL_Ls=[];
 feasInf_E_VectALL_Ls=[];
+feasStatesArr_p=[];
 
 P_mtx={};   %Array of P matrices
 P=[];       %Current P matrix
@@ -149,7 +153,7 @@ c_state=[];     %Vector of state-relevance weightings
                     fbleEStates_p=[fbleEStates_p;E_Ind1,E_Ind2];
 
                     %For each perturbation at the CURRENT time...
-                    for indL=1:(MAX_DISCHARGE(2)+MAX_CHARGE(2)-MIN_LOAD+1)
+                    for indL=1:(MAX_LOAD-MIN_LOAD+1)
                         %Map index to value of load
                         L=indL+MIN_LOAD-1;
 
@@ -274,13 +278,21 @@ c_state=[];     %Vector of state-relevance weightings
               nextE1=offGrdNxtE1E2_p(ind_offGrd,1)+E_MIN(1)-1; nextE2=offGrdNxtE1E2_p(ind_offGrd,2)+E_MIN(2)-1;
           end
 
+          
+          %{ 
+            for U1_Ind_next=1:(MAX_DISCHARGE(1)+MAX_CHARGE(1))*RES_U1+1
+                U1_next=(U1_Ind_next-1)/RES_U1-MAX_CHARGE(1)
+                ...
+            end
+          %}
 
-          for U1_next=0:MAX_DISCHARGE(1)
+          for U1_Ind_next=1:(MAX_DISCHARGE(1)+MAX_CHARGE(1))*RES_U1+1
+                U1_next=(U1_Ind_next-1)/RES_U1-MAX_CHARGE(1);
                 %Get number of FEASIBLE next loads
                 %Check excess discharge condition
                 if( ~(U1_next>nextE1 || U1_next<(nextE1-E_MAX(1))) )
                     %For each perturbation at the NEXT time...
-                    for L=(-MAX_CHARGE(2)+U1_next):(MAX_CHARGE(1)+U1_next)
+                    for L=MIN_LOAD:MAX_LOAD                                                         %Next L is defined to be ON GRID!! (NOT OFF GRID due to control resolution)
                         [next_nextE1,next_nextE2]=optNextStateLimited_v3(nextE1,nextE2,U1_next,L);
                         %Check other conditions
                         if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
@@ -414,6 +426,7 @@ c_state=[];     %Vector of state-relevance weightings
     Lmin_offs_p=Lmin_offs{p};
     numLoads_OffGrd_p=numLoads_OffGrd{p};
     nextE_Ind_L_Vect_p=nextE_Ind_L_Vect{p};
+    feasStatesArr_p=feasStatesArr_ctrl{p};
     
     %STEP 9: Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
     %(Note: doing after E_Ind_VectALL complete)
@@ -475,20 +488,21 @@ c_state=[];     %Vector of state-relevance weightings
         if round(Ind_nextE)~=Ind_nextE
             %Count number of non-zero load probabilities for next state Ind_nextE
             nnzProb_nextE=numLoads_OffGrd_p(x);
-            %Get non-zero probabilities
-            prob_nextE=1/nnzProb_nextE*ones(1,nnzProb_nextE)';
+            %Transform probabilities to custom distribution
+            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1),1);
+            
             x=x+1;
         else %Otherwise...
             %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
             nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
-            %Get said non-zero probabilities
-            prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
+            %Transform probabilities to custom distribution
+            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1),1);
         end
         
         %Store subscript pairs and associated values in array P
         len=length(prob_nextE); 
         cols=c:(c+nnzProb_nextE-1);
-        P=[P;r*ones(len,1),cols',prob_nextE];
+        P=[P;r*ones(len,1),cols',prob_nextE'];
 
         %Fill in row r with said probabilities
         %P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
@@ -834,7 +848,7 @@ c_state=[];     %Vector of state-relevance weightings
 
   %}
  %Alternative: use EXACT LP (Phi=I)
- Phi=eye(size(full(Q),2));
+ Phi=eye(length(E_Ind_VectALL));
     
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
