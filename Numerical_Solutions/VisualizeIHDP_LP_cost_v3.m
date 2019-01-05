@@ -9,7 +9,7 @@ T_SCALE=2.5;          %2.5s/unit
 
 %% Visualization
 
-boolSingleSequence=0;
+boolSingleSequence=1;
 INFCOST=1e6;
 
 clear Costs_LP;
@@ -78,7 +78,7 @@ else
     axis([1 inf 0 max(MAX_DISCHARGE)]);
     %}
     
-    %
+    %{
     figure
     hold on;
     plot(U1Opt,':*','MarkerSize',10); plot(Load-U1Opt,':*','MarkerSize',10); plot(Load,':o','MarkerSize',10);

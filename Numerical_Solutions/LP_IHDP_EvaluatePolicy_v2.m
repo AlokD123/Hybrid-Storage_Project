@@ -8,7 +8,7 @@
 %E1_INIT=E_MAX(1); 
 %E2_INIT=E_MAX(2);
 
-%STEP 1: initalize
+%STEP 1: initialize
 optE1=[]; optE2=[]; D1Opt=[]; D2Opt=[]; Load=[];
 global resL_Mult;
 

@@ -38,8 +38,8 @@ MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[1;0.99]; %Efficiency of charging
-ALPHA_D=[1;0.95]; %Efficiency of discharging
+ALPHA_C=[0.9;0.95]; %Efficiency of charging
+ALPHA_D=[0.9;0.95]; %Efficiency of discharging
 BETA=[1;1];    %Storage efficiency
 K=1e2;           %Weighting factor for D1^2 cost
 PERFECT_EFF=0;
