@@ -3,12 +3,13 @@
 % COMBINED CONTROLS (default mutual exclusion)
 % **** NEW STAGE COST ****
 
-clearvars -except X V cost approx_err %E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost;
+clearvars -except X V cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-global E_MAX; E_MAX=[100,2]; %Maximum energy to be stored (upper bound)
-
+global E_MAX; 
+%E_MAX=[3,3]; %Maximum energy to be stored (upper bound)
+   
 %Solver tolerance
 tolerance=1e-6;
 
@@ -23,8 +24,8 @@ MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
-MAX_CHARGE=[2;2]; %Maximum charging of the 1) battery and 2) supercap
-MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[1*size1_mult;1*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[1*size1_mult;1*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD; global MAX_LOAD;
 MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
@@ -33,10 +34,10 @@ MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K;
-ALPHA_C=[1;0.95]; %Efficiency of charging
-ALPHA_D=[1;0.95]; %Efficiency of discharging
+ALPHA_C=[0.95;0.95]; %Efficiency of charging
+ALPHA_D=[0.95;0.95]; %Efficiency of discharging
 BETA=[1;1];       %Storage efficiency
-K=[1e5;1e5];      %Weighting factors for D1^2 and C1^2 costs
+K=[1e3;1e3];      %Weighting factors for D1^2 and C1^2 costs
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -150,7 +151,7 @@ c_state=[];     %Vector of state-relevance weightings
                     fbleEStates_p=[fbleEStates_p;E_Ind1,E_Ind2];
 
                     %For each perturbation at the CURRENT time...
-                    for indL=1:(MAX_DISCHARGE(2)+MAX_CHARGE(2)-MIN_LOAD+1)
+                    for indL=1:(MAX_LOAD-MIN_LOAD+1)
                         %Map index to value of load
                         L=indL+MIN_LOAD-1;
 
@@ -276,12 +277,13 @@ c_state=[];     %Vector of state-relevance weightings
           end
 
 
-          for U1_next=0:MAX_DISCHARGE(1)
+          for U1_Ind_next=1:(MAX_DISCHARGE(1)+MAX_CHARGE(1))*RES_U1+1
+                U1_next=(U1_Ind_next-1)/RES_U1-MAX_CHARGE(1);
                 %Get number of FEASIBLE next loads
                 %Check excess discharge condition
                 if( ~(U1_next>nextE1 || U1_next<(nextE1-E_MAX(1))) )
                     %For each perturbation at the NEXT time...
-                    for L=(-MAX_CHARGE(2)+U1_next):(MAX_CHARGE(1)+U1_next)
+                    for L=MIN_LOAD:MAX_LOAD                                                         %Next L is defined to be ON GRID!! (NOT OFF GRID due to control resolution)
                         [next_nextE1,next_nextE2]=optNextStateLimited_v3(nextE1,nextE2,U1_next,L);
                         %Check other conditions
                         if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
@@ -302,7 +304,7 @@ c_state=[];     %Vector of state-relevance weightings
 
          if round(nextE_Ind_Vect_p(i))~=nextE_Ind_Vect_p(i) %ONLY if off grid..
              %Store count of unique loads for this next state
-             numLoads_OffGrd_p=[numLoads_OffGrd_p;nnz(abs(nextE_Ind_L_Vect_p-nextE_Ind_Vect_p(i))<epsilon2)];
+             numLoads_OffGrd_p=[numLoads_OffGrd_p;nnz(abs(nextE_Ind_L_Vect_p(:,1)-nextE_Ind_Vect_p(i))<epsilon2)];
              %Reset feasible loads count, for subsequent NEXT energy state
              numL_OffGrd=0;
          end
@@ -327,7 +329,7 @@ c_state=[];     %Vector of state-relevance weightings
             p_max=p_max+1;
         else
             %Else, IGNORE
-            
+
             %Store vector data in cell array
             g{p}=[];
             E_Ind_Vect{p}=[];
@@ -344,7 +346,7 @@ c_state=[];     %Vector of state-relevance weightings
 
             %Continue testing next control
             p_max=p_max+1;
-            
+
         end
 
         %Reset matrices/vectors
@@ -360,18 +362,18 @@ c_state=[];     %Vector of state-relevance weightings
         feasStatesArr_p=[];
         nextE_Ind_L_Vect_p=[];
         E_Ind_L_Vect_p=[];
-        
+
   end
-  
+
   %% REMOVE LOADS NOT FEASIBLE FOR ANY E-STATE <----------------------------------------------------------------------------------------------------------------------------------------------
   for i=1:size(feasStates,3) %Iterate through loads
     if all(all(feasStates(:,:,i)==0))
     feasStates(:,:,i)=[]; %Remove
     end
   end
- 
+
   %%
-  
+
   %STEP 6: Get MINIMUM load for every E-state in E_VectALL (i.e. baseline for
   %indexing loads for that E-state). NOT SAME AS L_min_offs, which is the
   %minimum offset given a PARTICULAR set of controls.
@@ -384,7 +386,7 @@ c_state=[];     %Vector of state-relevance weightings
        MINLoad_E_state(j+N2*(i-1),1)=k+MIN_LOAD-1; %k is now index of minimum L <----------------------------------------------------------------------------------------------------------------------ASSUMING k=1 corresponds to MIN_LOAD!!!!!!!!!!!!!!!
     end
   end
-  
+
   %STEP 7: Construct vector of ALL FEASIBLE energies, for all controls
   E_Ind_VectALL=[];
   E_VectALL_Ls=[]; %Vector with associated loads
@@ -398,24 +400,25 @@ c_state=[];     %Vector of state-relevance weightings
       numLoads_gt_MAXLoad=nnz(~E_Ind_MtxALL(row,(MINLoad_E_state(row)+nnzRow):size(E_Ind_MtxALL,2)));
       %feasInf_E_VectALL_Ls=[feasInf_E_VectALL_Ls;Inf*ones(numLoads_lt_MINLoad,1);(MINLoad_E_state(row):(MINLoad_E_state(row)+nnzRow-1))';Inf*ones(numLoads_gt_MAXLoad,1);];
   end
-  
-  
+
+
   %STEP 8: Create full probability matrix
-  %DISTRIBUTION: UNIFORM
-  %(Note: can't create until E_Ind_MtxALL complete, so outside main loop)
+  %DISTRIBUTION: UNIFORM (unused)
+  %(NOTE: actual probabilities are UNUSED!!!)
   for r=1:size(E_Ind_MtxALL,1)
       P_fullmtx(r,:)=E_Ind_MtxALL(r,:)/sum(E_Ind_MtxALL(r,:)); %<----------------For UNIFORM probability, just NORMALIZE rows of feasible states!!
   end
 
   for p=1:p_max
     if (~isempty(fbleEStates{p})) %IF CONTROLS NOT IMMEDIATELY INFEASIBLE for all states...
-        
+
     E_Ind_Vect_p=E_Ind_Vect{p};
     nextE_Ind_Vect_p=nextE_Ind_Vect{p};
     Lmin_offs_p=Lmin_offs{p};
     numLoads_OffGrd_p=numLoads_OffGrd{p};
     nextE_Ind_L_Vect_p=nextE_Ind_L_Vect{p};
-    
+    feasStatesArr_p=feasStatesArr_ctrl{p};
+
     %STEP 9: Create augmented vector containing current E-states - EXCLUDING those nextly infeasible - AND ALSO next E-states
     %(Note: doing after E_Ind_VectALL complete)
     augVectRow=1; %Index row in new augmented vector
@@ -432,7 +435,7 @@ c_state=[];     %Vector of state-relevance weightings
         end
         if(r~=(length(nextE_Ind_Vect_p)+1))
             %Determine TOTAL number of possible loads for that E-state, given ANY POSSIBLE control used
-            
+
             %If off grid... STEP E
             if round(nextE_Ind_Vect_p(r))~=nextE_Ind_Vect_p(r)
                 numRepNextE=numLoads_OffGrd_p(offGrdNxtE_Idx);
@@ -440,7 +443,7 @@ c_state=[];     %Vector of state-relevance weightings
             else %Otherwise...        
                 numRepNextE=nnz(E_Ind_VectALL==nextE_Ind_Vect_p(r)); %Number of possible loads is number of times repeated in E_Ind_VectALL
             end
-            
+
             %Add given E-state to augmented vector that many times (for each load)
             aug_nextE_Ind_Vect_p(augVectRow:(augVectRow+numRepNextE-1),1)=nextE_Ind_Vect_p(r);
             indNextL=find(abs(nextE_Ind_L_Vect_p-nextE_Ind_Vect_p(r))<epsilon2,1); %Get index of first nextE_Ind element in vector with associated loads
@@ -449,52 +452,50 @@ c_state=[];     %Vector of state-relevance weightings
         end
         r=r+1; %Manually increment index in while loop
     end
-    
+
     %Also, exclude from the augmented vector states that are nextly infeasible
     nextlyInfE=~ismember(aug_nextE_Ind_Vect_p,nextE_Ind_Vect_p);
     aug_nextE_Ind_Vect_p(nextlyInfE)=[];
     aug_Vect_Ls_p(nextlyInfE)=[];
     Lmin_offs_p(nextlyInfE)=[];
-    
+
     %Store in cell array
     aug_nextE_Ind_Vect{p}=aug_nextE_Ind_Vect_p;
     aug_Vect_Ls{p}=aug_Vect_Ls_p;
-    
+
     %Get index of subsequent next state that is off the grid
     x=1;
-    
+
     %STEP 10: Create each P matrix
     %For P matrix, select rows corresponding to components in nextE_Ind_Vect
     %(Note: doing after P_fullmtx completed)
     for r=1:length(E_Ind_Vect_p)
         Ind_nextE=nextE_Ind_Vect_p(r);    %Get index of state stored in r-th row of nextE_Ind_Vect (i.e. the next energy state)
-        
+
         %Get column number of next row of probabilities as RELATED to the NEXT ENERGY STATE INDEX (mapping to deterministic component!!!)
         c=find(abs(aug_nextE_Ind_Vect_p-Ind_nextE)<epsilon2,1); %Get from position of FIRST Ind_nextE in AUG_nextE_Ind_Vect!!!!! (b/c same width as AUGMENTED VECTOR)
-        
+
         %IF off grid... STEP F
         if round(Ind_nextE)~=Ind_nextE
             %Count number of non-zero load probabilities for next state Ind_nextE
             nnzProb_nextE=numLoads_OffGrd_p(x);
-            %Get non-zero probabilities
-            prob_nextE=1/nnzProb_nextE*ones(1,nnzProb_nextE)';
+            %Transform probabilities to custom distribution
+            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1),1);
+
             x=x+1;
         else %Otherwise...
             %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
             nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
-            %Get said non-zero probabilities
-            prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
+            %Transform probabilities to custom distribution
+            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD+1),1);
         end
-        
+
         %Store subscript pairs and associated values in array P
         len=length(prob_nextE); 
         cols=c:(c+nnzProb_nextE-1);
-        P=[P;r*ones(len,1),cols',prob_nextE];
-
-        %Fill in row r with said probabilities
-        %P(r,c:(c+nnzProb_nextE-1))=prob_nextE';
+        P=[P;r*ones(len,1),cols',prob_nextE'];
     end
-        
+
     %Store in p-th PF matrix, as well as in own P_mtx
     PF{p}=sparse(P(:,1),P(:,2),P(:,3)); %Store as SPARSE MATRIX 
     P_mtx{p}=PF{p};
@@ -502,50 +503,50 @@ c_state=[];     %Vector of state-relevance weightings
     P=[];
     aug_nextE_Ind_Vect_p=[];
     aug_Vect_Ls_p=[];
-    
-    
+
+
     else %ELSE IF CONTROLS ARE INFEASIBLE for this value of "p"
         %Ignore p
         PF{p}=[];
         P_mtx{p}=PF{p};
     end
   end
-  
-  
-  
-  
+
+
+
+
   %STEP 11: Construct each F matrix
   for p=1:p_max
       if (~isempty(fbleEStates{p})) %IF CONTROLS NOT IMMEDIATELY INFEASIBLE for all states...
-      
+
       aug_nextE_Ind_Vect_p=aug_nextE_Ind_Vect{p};
       aug_Vect_Ls_p=aug_Vect_Ls{p};
       offGrdNxtE1E2_p=offGrdNxtE1E2{p};
       %Index COLUMN of F matrix by ROW number of E_Ind_VectALL
       row=1; %Row being checked in E_Ind_VectALL to start when starting on next E_Ind vector. Reset it
-      
+
       %Go through next E-state index vector for current value of p...
       for r=1:length(aug_nextE_Ind_Vect_p)
-          
+
           %IF next state is off grid...
           if round(aug_nextE_Ind_Vect_p(r))~=aug_nextE_Ind_Vect_p(r)
-              
+
               %STEP G:
-              
+
               %Get individual off-grid next state indices
               idx=find(abs(offGrdNxtE1E2_p(:,3)-aug_nextE_Ind_Vect_p(r))<epsilon2);
               idx=idx(1); %Take only first element if repeats in offGrdNxtE1E2_p ................. ASSUMING REPEATED OFF-GRID linear INDICES MAP TO SAME SET OF index pairs
-              
+
               nextE1_Ind=offGrdNxtE1E2_p(idx,1);
               nextE2_Ind=offGrdNxtE1E2_p(idx,2);
               nextL=aug_Vect_Ls_p(r);
-              
+
               for col=1:length(E_Ind_VectALL)
                   %Get individual current state indices
                   E2_Ind=remainder(E_Ind_VectALL(col),N2);
                   E1_Ind=(E_Ind_VectALL(col)-E2_Ind)/N2+1;
                   L=E_VectALL_Ls(col);
-                  
+
                   %INTERPOLATION
                   %Check if (nextE1,nextE2) is on edge of square
                   %If so, apply different interpolation
@@ -588,16 +589,16 @@ c_state=[];     %Vector of state-relevance weightings
                   else
                       q=0;
                   end
-                      
-                  
+
+
                   %Store subscript pairs and associated weightings in F_p
                   if q~=0
                     F_p=[F_p;r,col,q]; %Use states on grid for interpolation, with WEIGHTING q
                   end
               end
-              
+
           else %Otherwise, if ON-GRID...
-              
+
               %If next state is currently infeasible...
               if aug_nextE_Ind_Vect_p(r)<E_Ind_VectALL(row) %(i.e. NOT continuously increasing in augmented vector)
                  row=1; %Restart from beginning of E_Ind_VectALL to find the state <----- ASSUMING ONLY 1 distinct new currently infeasible state!
@@ -613,14 +614,14 @@ c_state=[];     %Vector of state-relevance weightings
               %^-------- Assuming continuously increasing in augmented vector (fixed above)
           end
       end
-      
+
       if isempty(F_p)   %If empty, ignore
          F{p}=0;
       else      %IN MOST CASES... 
         F{p}=sparse(F_p(:,1),F_p(:,2),F_p(:,3),max(F_p(:,1)),length(E_Ind_VectALL)); %STORE AS SPARSE MATRIX
         %Also add extra zeros at end to ensure dimensions of F{p} and E_Ind_VectALL match
       end
-     
+
       %Correct for infeasible neighbouring states for next state interpolation in F matrix
       for i=1:size(F{p},1)
           if sum(F{p}(i,:))~=1
@@ -629,35 +630,35 @@ c_state=[];     %Vector of state-relevance weightings
               F{p}(i,inds)=F{p}(i,inds)+(1-sum(F{p}(i,:)))/nnz(F{p}(i,:));
           end
       end
-      
+
       F_p=[]; %Reset
-      
+
       if isempty(PF{p}) %If no next state..
           PF{p}=0;  %Ignore constraint
       else      %IN MOST CASES...
          PF{p} = PF{p}*F{p}; %Finish PF matrices 
       end
-      
-      
-      
+
+
+
       else %ELSE IF CONTROLS ARE INFEASIBLE
         %Ignore p
-        
+
         PF{p} = zeros(length(E_Ind_VectALL),length(E_Ind_VectALL));
       end
   end
-  
+
   %STEP 12: Construct each G matrix
   for p=1:p_max
       if (~isempty(fbleEStates{p})) %IF CONTROLS NOT IMMEDIATELY INFEASIBLE for all states...
-      
+
       E_Ind_Vect_p=E_Ind_Vect{p};
       %Lmin_offs_p=Lmin_offs{p};
       E_Ind_L_Vect_p=E_Ind_L_Vect{p};
       feasStatesArr_p=feasStatesArr_ctrl{p};
       %Index COLUMN of G matrix by ROW number of E_Ind_VectALL
       row=1; %Reset row being checked in E_Ind_VectALL to start when start on next E_Ind vector
-      
+
       %Go through E-state index vector for current value of p...
       for r=1:length(E_Ind_Vect_p)
           %Find distinct new E-state
@@ -680,12 +681,12 @@ c_state=[];     %Vector of state-relevance weightings
           else
               %Otherwise, do nothing because already starting from offset
           end
-          
+
           %Store subscript pairs and associated 1's (feasible next) in array G_p 
           G_p=[G_p;r,row,1]; %Mark current state as feasible
           row=min(row+1,length(E_Ind_VectALL));  %Start at next column in G next time (continuously increasing)
       end
-      
+
       if isempty(G_p)   %If empty, ignore constraint
          G{p}=0;
       else      %IN MOST CASES... 
@@ -695,31 +696,31 @@ c_state=[];     %Vector of state-relevance weightings
 
       G_p=[]; %Reset
 
-      
+
       else %ELSE IF CONTROLS ARE INFEASIBLE
         %Ignore p
         G{p} = zeros(length(E_Ind_VectALL),length(E_Ind_VectALL));
       end
   end
-  
+
   %If get empty g vector...
   for p=1:p_max
     if (~isempty(fbleEStates{p})) %IF CONTROLS NOT IMMEDIATELY INFEASIBLE for all states...
-        
+
         if isempty(g{p})
             disp('ERROR!!'); %Error!!!
            g{p}=zeros(length(E_Ind_VectALL),1); %Set equal to zeros
         end
-    
+
     else %If controls infeasible, set cost to infinity
         g{p}=Inf*ones(length(E_Ind_VectALL),1); %Set equal to infinity
     end
   end
-  
-  
+
+
   %% CORRECTED MATRICES (REMAINING infeasible states removed)
   %1) Coefficients
-  
+
   Q=[];
   for p=1:p_max
       %Create full 'A' matrices for coefficients (A=G-alpha*PF)
@@ -727,13 +728,13 @@ c_state=[];     %Vector of state-relevance weightings
         %Adjoin A matrices to form Q
         Q=[Q;A{p}];
   end
-  
+
   %If empty columns in Q...
   if (~all(any(Q,1)))
       disp('ERROR!!!!!'); %ERROR
      Q(:,~any(Q,1))=[]; %Remove, for now 
   end
-  
+
   %2) Constants
   %Create full 'b' vector for constants
   b=[]; b_dcpcvx=[];
@@ -745,15 +746,15 @@ c_state=[];     %Vector of state-relevance weightings
          b_dcpcvx=[b_dcpcvx;zeros(length(E_Ind_VectALL),1)];
       end
   end
-  
+
   %% PART B: COST APPROXIMATION AND BASIS FUNCTION GENERATION
   %Create initial design matrix (1 row per feasible state)
   %Use state aggregation for first 'num_steps', then start to generate
   %monomials
-  
+
   feasE2s=[]; feasE1s=[]; feasLs=[]; %To add polynomial basis functions (order R-1)
-  
-  
+
+
   %1) find bounds of linear fit
   exprMax=0; exprMin=0;
   for i=1:N1
@@ -797,12 +798,12 @@ c_state=[];     %Vector of state-relevance weightings
                     if phi_vec==0
                         disp('State out of bounds of aggregation!!');
                     end
-                    
+
                     %Add to design matrix, and then reset
                     Phi=[Phi;phi_vec];
                     phi_vec=0;
-                    
-                    
+
+
                     %PREPARE to form monomials for remainder of vectors
                     %If feasible state, add to list (for developing the
                     %design matrix of monomials)
@@ -811,7 +812,7 @@ c_state=[];     %Vector of state-relevance weightings
           end
       end
   end
-  
+
   %Adjoin feasible state vectors to form a ?x3 array
   feasStatesArr=[feasE1s,feasE2s,feasLs];
   %{
@@ -835,8 +836,8 @@ c_state=[];     %Vector of state-relevance weightings
 
   %}
  %Alternative: use EXACT LP (Phi=I)
- Phi=eye(size(full(Q),2));
-    
+ Phi=eye(length(E_Ind_VectALL));
+
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
 % Probabilities are given in P_fullmtx (non-zero for feasible states)
@@ -846,13 +847,13 @@ c_state=[];     %Vector of state-relevance weightings
 
 % Alternative: TAKE c TO BE ALL EQUAL WEIGHTS
 c_state=ones(size(Phi,1),1);
-  
+
   %Created LP matrices and vectors.
 
 %N=2;
 %Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-2*N),eye(N)];
 %Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-N-1),ones(N,1)];
- 
+
   cvx_solver Gurobi
  %Get approximate solution
   cvx_begin
@@ -894,15 +895,16 @@ c_state=ones(size(Phi,1),1);
 %   plot(0:1:E_MAX(1),margApproxErr,'o');
 %   xlabel('Energy E1'); ylabel('Marginalized Error');
 %   title('Marginalized Error for default test');
-  
-  
+
+
   optD = d; %Get vector of FINAL dual
   cost=Phi*r_fit; %Get FINAL approximated cost
-  
+
+ 
   %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
   ConvCosts=FormatCostVect_v2(cost);
-    
-  %
+
+    %
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix
@@ -910,8 +912,8 @@ c_state=ones(size(Phi,1),1);
         PF_mtx=[PF_mtx;PF{p}];
     end
     q_value=b+DISCOUNT*PF_mtx*cost; %DETERMINE OPTIMAL Q-VALUES
-    
-    
+
+
     %PART 1: Create vector of Q-values for each action
     %1) Augment q_value vector to include those of infeasible states too (infeasible q-value)
     %Make each E_Ind_Mtx same size to compare ALL states between different
@@ -929,10 +931,10 @@ c_state=ones(size(Phi,1),1);
             trE_Ind_Mtx_p=E_Ind_Mtx_p';
             E_MtxALL_Vect_subs{p}=trE_Ind_Mtx_p(:);
     end
-    
+
     %2) Create augmented vectors of q-values for ALL states - feasible
     %AND INFEASIBLE TOO - for EACH CONTROL p
-    
+
     %For each element in E_MtxALL_Vect_subs{p}, if...
     %a) 0, append INF to aug_optQ_subP{p} (since infeasible, for Q-value minimization)
     %b) non-zero, append some value from q_value to aug_optQ_subP{p}
@@ -954,7 +956,7 @@ c_state=ones(size(Phi,1),1);
            end
            aug_optQ_subP{p}=aug_optQ_subP_p;
     end
-    
+
     %PART 2: Get optimal q-values vector
     %Create augmented q-value vector, for ALL states
     aug_optQ=[];
@@ -965,16 +967,16 @@ c_state=ones(size(Phi,1),1);
             aug_optQ=[aug_optQ;INF_Q*ones(length(aug_optQ_subP{1}),1)];
         end
     end
-    
+
     %Get final q-values for ALL states (augmented)
     aug_Q=aug_optQ;
-    
+
     %Create augmented vector of all E_MtxALL_Vect_subs vectors
     aug_E_MtxALL_Vect=[];
     for p=1:p_max
         aug_E_MtxALL_Vect=[aug_E_MtxALL_Vect;E_MtxALL_Vect_subs{p}];
     end
-    
+
     %Get FINAL q-values ONLY for feasible states (non-zero in aug_E_MtxALL_Vect)
     optQ=aug_Q(aug_E_MtxALL_Vect~=0);
     aug_optQ=aug_optQ(aug_E_MtxALL_Vect~=0);
