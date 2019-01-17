@@ -6,7 +6,7 @@ clearvars -except X V cost approx_err %E_MAX max_E_SIZE minCost max_E1 max_E2 op
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-global E_MAX; E_MAX=[50,2]; %Maximum energy to be stored (upper bound)
+global E_MAX; E_MAX=[100,2]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -277,14 +277,6 @@ c_state=[];     %Vector of state-relevance weightings
               %Then get component values
               nextE1=offGrdNxtE1E2_p(ind_offGrd,1)+E_MIN(1)-1; nextE2=offGrdNxtE1E2_p(ind_offGrd,2)+E_MIN(2)-1;
           end
-
-          
-          %{ 
-            for U1_Ind_next=1:(MAX_DISCHARGE(1)+MAX_CHARGE(1))*RES_U1+1
-                U1_next=(U1_Ind_next-1)/RES_U1-MAX_CHARGE(1)
-                ...
-            end
-          %}
 
           for U1_Ind_next=1:(MAX_DISCHARGE(1)+MAX_CHARGE(1))*RES_U1+1
                 U1_next=(U1_Ind_next-1)/RES_U1-MAX_CHARGE(1);
