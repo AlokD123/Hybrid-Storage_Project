@@ -3,10 +3,12 @@
 %ADDED Regenerative Braking
 
 %Input: feasible set for E_SIZE, size cost factors
-max_E_SIZE=[4,4];
-c1=0; c2=0;
+max_E_SIZE=[7,6];
+c1=10; c2=50;
 
-global E_MAX; global E_MIN; global MIN_LOAD;
+INFCOST=1e6;
+
+global E_MAX; global E_MIN;
 
 minCost=Inf; %Default: initial value for J(initial state)+cS cost
 vectS_netOptVal=[];%Store CONSTANT state optimal value for each given S
@@ -21,15 +23,16 @@ g_opt_vect=[]; %Stage costs vector
 PF_opt={}; g_opt={}; Exp_CostToGo={}; optCost_size={}; g_opt_mtx={}; Exp_CostToGo_mtx={};
 
 
-for max_E1=1:max_E_SIZE(1)
-    for max_E2=1:max_E_SIZE(2)
+for max_E1=2:max_E_SIZE(1)
+    for max_E2=2:max_E_SIZE(2)
     %Go through feasible set for E_SIZE
-    %max_E1=2*max_E2;            %Choose battery to be at least 2x supercap
-    E_MAX=[max_E1;max_E2];
+    size1_mult=max_E1; size2_mult=max_E2;
+    
+    E_MAX=[1*size1_mult;1*size2_mult];
     
     size_iter=size_iter+1; %Next size up
     
-    ApproxLP_sol_IHDP_v14; %Get optimal values for this size
+    ApproxLP_sol_IHDP_v17; %Get optimal values for this size
     %GetCtrlPolicy_OptQVals_v2; %Get optimal policy matrix
     
     %{
@@ -68,31 +71,38 @@ for max_E1=1:max_E_SIZE(1)
     %Store optimal values, for reference;
     optVal_size{size_iter}=ConvCosts; %<--------- DIFFERENCE IS LARGE
     
-    %Get norm of optimal values for INITIAL energy state
-    %First, get vector of optimal values for INITIAL E-state w/ ONLY POSITIVE DEMANDS 
-    InitEPosLCosts=ConvCosts(max_E1-E_MIN(1)+1,max_E2-E_MIN(2)+1,:);
-    InitEPosLCosts=InitEPosLCosts(InitEPosLCosts<Inf);
-    netOptVal_initE=max(  InitEPosLCosts  ); %ASSUMING that E_min=0
+    %Get optimal value for INITIAL energy state w/ ZERO LOAD
+    optVal_initE=ConvCosts(max_E1-E_MIN(1)+1,max_E2-E_MIN(2)+1,-MIN_LOAD+1);
     
-    vectS_netOptVal=[vectS_netOptVal;netOptVal_initE]; %Store in vector
+    vectS_netOptVal=[vectS_netOptVal;optVal_initE]; %Store in vector
     
     %Get optimal storage size till this point
-    if (netOptVal_initE + c1*max_E1 + c2*max_E2) < minCost
-        minCost=netOptVal_initE + c1*max_E1 + c2*max_E2;
+    if (optVal_initE + c1*max_E1 + c2*max_E2) < minCost
+        minCost=optVal_initE + c1*max_E1 + c2*max_E2;
         opt_E_SIZE=[max_E1,max_E2];
     end
     
     %Get total cost (convex)
-    totCost=[totCost;(netOptVal_initE + c1*max_E1 + c2*max_E2)];
+    totCost(max_E1,max_E2)=(optVal_initE + c1*max_E1 + c2*max_E2);
     
     %Plot
-    plot(size_iter,(netOptVal_initE + c1*max_E1 + c2*max_E2),'O');
-    hold on
+    %plot(size_iter,(optVal_initE + c1*max_E1 + c2*max_E2),'O');
+    %hold on
     end
 end
 
+%{
 title(sprintf('Storage size vs Total Cost (c1=%d, c2=%d), WITH regenerative braking',c1,c2));
-xlabel('Linear combination of size of supercapacitor and size of battery, E_{2}^{max}+3*E_{1}^{max}');
+xlabel('Linear combination of size of supercapacitor and size of battery, E_{2}^{max}+1*E_{1}^{max}');
 ylabel('Total Cost');
+%}
 
-%diffVal=optVal_size{4}(1:5,1:3,1:5)-optVal_size{1};
+%Visualize all possible policies
+max_E1=1:max_E_SIZE(1)-1;
+max_E2=1:max_E_SIZE(2)-1;
+
+figure
+surf(max_E2,max_E1,totCost(max_E1+1,max_E2+1));
+
+xlabel('Supercapacitor Size (E_2^{max})'); ylabel('Battery Size (E_1^{max})');zlabel('Total Cost');
+title('Optimal Cost as a Function of Storage Size');
