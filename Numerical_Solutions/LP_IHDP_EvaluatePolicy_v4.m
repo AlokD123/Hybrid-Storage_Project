@@ -1,9 +1,6 @@
 %GET INFINITE HORIZON POLICY USING LP SOLUTION
 %V4: COMBINED CONTROLS
 
-global MAX_CHARGE; global MAX_DISCHARGE;
-global MAX_LOAD; global MIN_LOAD;
-
 %E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
 %E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 %E1_INIT=E_MAX(1); 
@@ -11,7 +8,6 @@ global MAX_LOAD; global MIN_LOAD;
 
 %Initialize
 optE1=[]; optE2=[]; D1Opt=[]; D2Opt=[]; Load=[];
-global resL_Mult; global RES_U1;
 
 %%Evaluate policy for a random sequence of loads (ONLINE)
 %Set up matrices
@@ -23,8 +19,6 @@ countRepeatZeros=0; %Count of repeated zero loads
 
 NumIter=20; %Number of iterations of the policy to do
 
-DeltaL_min=0.2;
-
 DeltaL_min=1/resL_Mult;
 
 t_ind_VI=1; %Start evaluation
@@ -32,8 +26,8 @@ t_ind_VI=1; %Start evaluation
 L=0; %Assume that the first demand is ZERO (starting from rest)
 while t_ind_VI<NumIter
     %Set state index
-    indE1=optE1(t_ind_VI)-E_MIN(1)+1;
-    indE2=optE2(t_ind_VI)-E_MIN(2)+1;
+    indE1=RES_STATE*(optE1(t_ind_VI)-E_MIN(1))+1;
+    indE2=RES_STATE*(optE2(t_ind_VI)-E_MIN(2))+1;
     
     %% Create demand sequences and run online
     %Get optimal controls for given state
@@ -113,13 +107,6 @@ while t_ind_VI<NumIter
     %Get number of feasible loads in next state
     numL_OffGrd=0; nxtL=[];
     
-    %{ 
-        for U1_Ind_next=1:(MAX_DISCHARGE(1)+MAX_CHARGE(1))*RES_U1+1
-            U1_next=(U1_Ind_next-1)/RES_U1-MAX_CHARGE(1)
-            ...
-        end
-    %}
-    
      for U1_Ind_next=1:(MAX_DISCHARGE(1)+MAX_CHARGE(1))*RES_U1+1
         U1_next=(U1_Ind_next-1)/RES_U1-MAX_CHARGE(1);
         %Get number of FEASIBLE next loads...
@@ -127,7 +114,7 @@ while t_ind_VI<NumIter
         %Check excess discharge condition
         if( ~(U1_next>nextE1 || U1_next<(nextE1-E_MAX(1))) )
             %For each perturbation at the NEXT time...
-            for L=(-MAX_CHARGE(2)+U1_next):(MAX_DISCHARGE(2)+U1_next)
+            for L=linspace(-MAX_CHARGE(2)+U1_next,MAX_DISCHARGE(2)+U1_next,resL_Mult*(MAX_DISCHARGE(2)+MAX_CHARGE(2))+1)
                 [next_nextE1,next_nextE2]=optNextStateLimited_v3(nextE1,nextE2,U1_next,L);
                 %Check other conditions
                 if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))

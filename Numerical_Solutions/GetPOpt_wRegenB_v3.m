@@ -5,7 +5,7 @@ function [U1] = GetPOpt_wRegenB_v3(indCurrE1,indCurrE2,CurrL)
 %   Output: optimal (battery) control
 
 global epsilon2; global E_Ind_VectALL; global E_VectALL_Ls; global N2;
-global fullPolicyMtx; global MIN_LOAD;
+global fullPolicyMtx; global MIN_LOAD; global RES_STATE;
 
 if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2)||(round(CurrL)~=CurrL) %If state falls off the grid...
     q_pOpt_Mtx=[];
@@ -107,7 +107,7 @@ if (round(indCurrE1)~=indCurrE1)||(round(indCurrE2)~=indCurrE2)||(round(CurrL)~=
    %C) FINALLY, calculate optimal control value using interpolation
       U1_interp=0;
       for i=1:length(E_Ind_VectALL) %For every state on grid...
-          if max(fullPolicyMtx(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)-MIN_LOAD+1,:))==0 %If demand is OUTSIDE the space of the grid (not just off of the grid)...
+          if max(fullPolicyMtx(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),RES_STATE*(q_pOpt_Mtx(i,3)-MIN_LOAD)+1,:))==0 %If demand is OUTSIDE the space of the grid (not just off of the grid)...
               U1_onGRD=[];
           else
             U1_onGRD=GetPOpt_wo_Interp_wRegenB_v3(q_pOpt_Mtx(i,1),q_pOpt_Mtx(i,2),q_pOpt_Mtx(i,3)); %Get optimal controls on grid

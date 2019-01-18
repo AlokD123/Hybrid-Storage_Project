@@ -16,12 +16,12 @@ Sigma=size(E_Ind_MtxALL,2); %i.e. -E_MAX -> M-2
 
 %Create CONCATENATED matrix of feasible controls per state
 feasStates_ctrl_i=[];
-feasStatesArr=[]; %<------- MUST RENAME WHEN DOING APPROXIMATION
+%feasStatesArr=[]; %<------- MUST RENAME WHEN DOING APPROXIMATION
 feasStatesCatArr=[];
 feasStates_ctrl={};
 
 for i=1:length(feasStatesArr_ctrl)
-    feasStatesArr=[feasStatesArr;feasStatesArr_ctrl{i}];
+    %feasStatesArr=[feasStatesArr;feasStatesArr_ctrl{i}];
     for j=1:size(feasStatesArr_ctrl{i},1)
         feasStates_ctrl_i(feasStatesArr_ctrl{i}(j,1),feasStatesArr_ctrl{i}(j,2),feasStatesArr_ctrl{i}(j,3))=1;
     end
