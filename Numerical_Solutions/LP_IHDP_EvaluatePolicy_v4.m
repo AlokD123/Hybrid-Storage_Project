@@ -26,8 +26,8 @@ t_ind_VI=1; %Start evaluation
 L=0; %Assume that the first demand is ZERO (starting from rest)
 while t_ind_VI<NumIter
     %Set state index
-    indE1=RES_STATE*(optE1(t_ind_VI)-E_MIN(1))+1;
-    indE2=RES_STATE*(optE2(t_ind_VI)-E_MIN(2))+1;
+    indE1=RES_E1*(optE1(t_ind_VI)-E_MIN(1))+1;
+    indE2=RES_E2*(optE2(t_ind_VI)-E_MIN(2))+1;
     
     %% Create demand sequences and run online
     %Get optimal controls for given state
@@ -127,14 +127,18 @@ while t_ind_VI<NumIter
                 end
             end
         end
-      end
+     end
     
-    nxtL=unique(nxtL); %Remove duplicates
-    numL_OffGrd=length(nxtL); %Get number of feasible loads
+    %Get indices 
+    idxCurrL=round((currL-MIN_LOAD)*resL_Mult+1);
+    idxNxtL=round((nxtL-MIN_LOAD)*resL_Mult+1);
+     
+    idxNxtL=unique(idxNxtL); %Remove duplicates
+    numL_OffGrd=length(idxNxtL); %Get number of feasible loads
     
     %Create vector of next state probabilities for each of the next demands
     %Probabilities follow custom distribution sampled resL_Mult times more finely
-    prob_nextL=ProbDistr_v2(numL_OffGrd,(currL-MIN_LOAD)*resL_Mult+1,(nxtL-MIN_LOAD)*resL_Mult+1,0);
+    prob_nextL=ProbDistr_v2(numL_OffGrd,idxCurrL,idxNxtL,0);
     
     %SAMPLE FROM CONDITIONAL DISTRIBUTION TO GET INDEX OF NEXT LOAD in vector nxtL (NOT RELATIVE TO MIN_LOAD) 
     nxt_indL=find(mnrnd(1,prob_nextL),1);

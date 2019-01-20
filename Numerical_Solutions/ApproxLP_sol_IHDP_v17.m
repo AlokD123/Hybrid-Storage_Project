@@ -3,13 +3,14 @@
 % COMBINED CONTROLS (default mutual exclusion)
 % **** NEW STAGE COST ****
 
-clearvars -except cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_STATE;
+clearvars -except cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
 global E_MAX; 
-%{
-E_MAX=[10,6]; %Maximum energy to be stored (upper bound)        %Comment out when running storage sizing
+%
+E_MAX=[50000,250]; %Maximum energy to be stored (upper bound)        %Comment out when running storage sizing
+%E_MAX=[10,5];
 %}
 
 %Solver tolerance
@@ -26,9 +27,11 @@ MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
+%{
 MAX_CHARGE=[1*size1_mult;1*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
 MAX_DISCHARGE=[1*size1_mult;1*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
-%{
+%}
+%
 MAX_CHARGE=[2,2];                                                           %Comment out when running storage sizing
 MAX_DISCHARGE=[2,2];
 %}
@@ -53,18 +56,25 @@ DISCOUNT=0.99;
 
 %% Definitions
 %Resolution of battery charge/dischage
-global RES_U1; RES_U1=4;
+global RES_U1; RES_U1=1;
 %Resolution of state variables  (GRID RESOLUTION)
-global RES_STATE; RES_STATE=0.5;
+global RES_E1;
+global RES_E2;
+global RES_L;
+%
+RES_E1=1/1000;
+RES_E2=1/5;
+RES_L=1;
+%}
 %Resolution of demand DURING SIMULATION ("continuous" demands)
 global resL_Mult
-resL_Mult=100;                                                               %NOT necessarily equal to grid resolution for DP
+resL_Mult=10;                                                               %NOT necessarily equal to grid resolution for DP
 
 global N2; global N1; global M; global P0;
 
-M=RES_STATE*(MAX_LOAD-MIN_LOAD)+1;
-N1=RES_STATE*(E_MAX(1)-E_MIN(1))+1;
-N2=RES_STATE*(E_MAX(2)-E_MIN(2))+1;
+M=RES_L*(MAX_LOAD-MIN_LOAD)+1;
+N1=RES_E1*(E_MAX(1)-E_MIN(1))+1;
+N2=RES_E2*(E_MAX(2)-E_MIN(2))+1;
 
 P0=RES_U1*(MAX_CHARGE(1)+MAX_DISCHARGE(1))+1;
 
@@ -142,8 +152,8 @@ c_state=[];     %Vector of state-relevance weightings
         for E_Ind1=1:N1
             for E_Ind2=1:N2
                 %Map state index to state
-                E1=E_MIN(1)+(E_Ind1-1)/RES_STATE;
-                E2=E_MIN(2)+(E_Ind2-1)/RES_STATE;
+                E1=E_MIN(1)+(E_Ind1-1)/RES_E1;
+                E2=E_MIN(2)+(E_Ind2-1)/RES_E2;
 
                 %Get index of current state energies in vector of state energies
                 E_Ind=(E_Ind1-1)*N2+E_Ind2;
@@ -164,7 +174,7 @@ c_state=[];     %Vector of state-relevance weightings
                     %For each perturbation at the CURRENT time...
                     for indL=1:M
                         %Map index to value of load
-                        L=MIN_LOAD+(indL-1)/RES_STATE;
+                        L=MIN_LOAD+(indL-1)/RES_L;
 
                         %STEP 0
                         %Calculate the state these values of u and w will lead to, even if
@@ -193,15 +203,15 @@ c_state=[];     %Vector of state-relevance weightings
                                   E_Ind_Mtx_p(rowInd_Emtx,indL)=E_Ind;
 
                                   %Map state to state index, to find cost of next state based on its index
-                                  if(abs((RES_STATE*(nextE1-E_MIN(1))+1)-round(RES_STATE*(nextE1-E_MIN(1))+1)<epsilon))
-                                      nextE_Ind1=round(RES_STATE*(nextE1-E_MIN(1))+1);  %IF within error bound, round
+                                  if(abs((RES_E1*(nextE1-E_MIN(1))+1)-round(RES_E1*(nextE1-E_MIN(1))+1)<epsilon))
+                                      nextE_Ind1=round(RES_E1*(nextE1-E_MIN(1))+1);  %IF within error bound, round
                                   else
-                                      nextE_Ind1=RES_STATE*(nextE1-E_MIN(1))+1;         %.. Otherwise, will interpolate
+                                      nextE_Ind1=RES_E1*(nextE1-E_MIN(1))+1;         %.. Otherwise, will interpolate
                                   end
-                                  if(abs((RES_STATE*(nextE2-E_MIN(2))+1)-round(RES_STATE*(nextE2-E_MIN(2))+1))<epsilon)
-                                      nextE_Ind2=round(RES_STATE*(nextE2-E_MIN(2))+1);
+                                  if(abs((RES_E2*(nextE2-E_MIN(2))+1)-round(RES_E2*(nextE2-E_MIN(2))+1))<epsilon)
+                                      nextE_Ind2=round(RES_E2*(nextE2-E_MIN(2))+1);
                                   else
-                                      nextE_Ind2=RES_STATE*(nextE2-E_MIN(2))+1;
+                                      nextE_Ind2=RES_E2*(nextE2-E_MIN(2))+1;
                                   end
 
                                   %STEP 2: create vector of next state energies for each load
@@ -226,7 +236,7 @@ c_state=[];     %Vector of state-relevance weightings
                                   feasStates(E_Ind1,E_Ind2,indL)=1;
                                   %Also create separate lists just for current control
                                   feasE1s_p=[feasE1s_p;E1]; feasE2s_p=[feasE2s_p;E2]; feasLs_p=[feasLs_p;L];
-                                  feasStatesArr_p=[RES_STATE*(feasE1s_p-E_MIN(1))+1,RES_STATE*(feasE2s_p-E_MIN(2))+1,RES_STATE*(feasLs_p-MIN_LOAD)+1];%Adjoin into array
+                                  feasStatesArr_p=[RES_E1*(feasE1s_p-E_MIN(1))+1,RES_E2*(feasE2s_p-E_MIN(2))+1,RES_L*(feasLs_p-MIN_LOAD)+1];%Adjoin into array
 
                                 else
                                   %If no feasible state for this combination of (E1,E2) and L...
@@ -275,7 +285,7 @@ c_state=[];     %Vector of state-relevance weightings
               %If next state is on grid, calculate components regularly
               nextE2_Ind=remainder(nextE_Ind_Vect_p(i),N2);
               nextE1_Ind=(nextE_Ind_Vect_p(i)-nextE2_Ind)/N2+1;
-              nextE1=(nextE1_Ind-1)/RES_STATE+E_MIN(1); nextE2=(nextE2_Ind-1)/RES_STATE+E_MIN(2); 
+              nextE1=(nextE1_Ind-1)/RES_E1+E_MIN(1); nextE2=(nextE2_Ind-1)/RES_E2+E_MIN(2); 
           else
               %Otherwise, if off grid...
               %Find in table of off-grid states %<----------------------------------- ASSUMING ALL OFF-GRID INDICES ARE UNIQUE
@@ -284,7 +294,7 @@ c_state=[];     %Vector of state-relevance weightings
                   disp("Error, next state off grid not found!");
               end
               %Then get component values
-              nextE1=(offGrdNxtE1E2_p(ind_offGrd,1)-1)/RES_STATE+E_MIN(1); nextE2=(offGrdNxtE1E2_p(ind_offGrd,2)-1)/RES_STATE+E_MIN(2);
+              nextE1=(offGrdNxtE1E2_p(ind_offGrd,1)-1)/RES_E1+E_MIN(1); nextE2=(offGrdNxtE1E2_p(ind_offGrd,2)-1)/RES_E2+E_MIN(2);
           end
 
 
@@ -296,7 +306,7 @@ c_state=[];     %Vector of state-relevance weightings
                     %For each perturbation at the NEXT time...
                     for indL=1:M
                         %Map index to value of load
-                        L=MIN_LOAD+(indL-1)/RES_STATE;                          %Next L is defined to be ON GRID!! (NOT OFF GRID due to control resolution)
+                        L=MIN_LOAD+(indL-1)/RES_L;                          %Next L is defined to be ON GRID!! (NOT OFF GRID due to control resolution)
                         [next_nextE1,next_nextE2]=optNextStateLimited_v3(nextE1,nextE2,U1_next,L);
                         %Check other conditions
                         if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
@@ -396,7 +406,7 @@ c_state=[];     %Vector of state-relevance weightings
         while feasStates(i,j,k)~=1 %Feasible state matrix contains 0s until minimum feasible L
             k=k+1; %So increment till 1
         end
-       MINLoad_E_state(j+N2*(i-1),1)=(k-1)/RES_STATE+MIN_LOAD; %k is now index of minimum L <----------------------------------------------------------------------------------------------------------------------ASSUMING k=1 corresponds to MIN_LOAD!!!!!!!!!!!!!!!
+       MINLoad_E_state(j+N2*(i-1),1)=(k-1)/RES_L+MIN_LOAD; %k is now index of minimum L <----------------------------------------------------------------------------------------------------------------------ASSUMING k=1 corresponds to MIN_LOAD!!!!!!!!!!!!!!!
     end
   end
 
@@ -408,8 +418,8 @@ c_state=[];     %Vector of state-relevance weightings
       nnzRow=nnz(E_Ind_MtxALL(row,:));
       %E_Ind_Mtx_nzRow=E_Ind_MtxALL(row,1:nnzRow);
       E_Ind_VectALL=[E_Ind_VectALL; nonzeros(E_Ind_MtxALL(row,:))];
-      E_VectALL_Ls=[E_VectALL_Ls;linspace(MINLoad_E_state(row),MINLoad_E_state(row)+(nnzRow-1)/RES_STATE,nnzRow)']; %Create vector of all loads per E-state (for all controls)
-      %numLoads_lt_MINLoad=nnz(~E_Ind_MtxALL(row,1:RES_STATE*(MINLoad_E_state(row)-MIN_LOAD)+1));
+      E_VectALL_Ls=[E_VectALL_Ls;linspace(MINLoad_E_state(row),MINLoad_E_state(row)+(nnzRow-1)/RES_L,nnzRow)']; %Create vector of all loads per E-state (for all controls)
+      %numLoads_lt_MINLoad=nnz(~E_Ind_MtxALL(row,1:RES_L*(MINLoad_E_state(row)-MIN_LOAD)+1));
       %numLoads_gt_MAXLoad=nnz(~E_Ind_MtxALL(row,(MINLoad_E_state(row)+nnzRow):size(E_Ind_MtxALL,2)));
       %feasInf_E_VectALL_Ls=[feasInf_E_VectALL_Ls;Inf*ones(numLoads_lt_MINLoad,1);(MINLoad_E_state(row):(MINLoad_E_state(row)+nnzRow-1))';Inf*ones(numLoads_gt_MAXLoad,1);];
   end
@@ -493,14 +503,14 @@ c_state=[];     %Vector of state-relevance weightings
             %Count number of non-zero load probabilities for next state Ind_nextE
             nnzProb_nextE=numLoads_OffGrd_p(x);
             %Transform probabilities to custom distribution
-            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(RES_STATE*(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD)+1),1);
+            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(RES_L*(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD)+1),1);
 
             x=x+1;
         else %Otherwise...
             %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
             nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
             %Transform probabilities to custom distribution
-            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(RES_STATE*(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD)+1),1);
+            prob_nextE=ProbDistr_v2(nnzProb_nextE,feasStatesArr_p(r,3),(RES_L*(aug_Vect_Ls_p(c:c+nnzProb_nextE-1)-MIN_LOAD)+1),1);
         end
 
         %Store subscript pairs and associated values in array P
@@ -690,7 +700,7 @@ c_state=[];     %Vector of state-relevance weightings
           row2=row; %Temporary variable to hold row index of E_Ind_VectALL.
           %E_Ind_VectALL(row2) is value (AND INDEX) for UNIQUE E-states
           if(boolNewEState==1)  %Only if distinct new state...
-              row=row+RES_STATE*(E_Ind_L_Vect_p(r,2)-MINLoad_E_state(E_Ind_VectALL(row2))); %Add minimum load offset + negative loads offset to first state #
+              row=row+RES_L*(E_Ind_L_Vect_p(r,2)-MINLoad_E_state(E_Ind_VectALL(row2))); %Add minimum load offset + negative loads offset to first state #
           else
               %Otherwise, do nothing because already starting from offset
           end
@@ -765,6 +775,7 @@ c_state=[];     %Vector of state-relevance weightings
   %Use state aggregation for first 'num_steps', then start to generate
   %monomials
 
+  %{
   feasE2s=[]; feasE1s=[]; feasLs=[]; %To add polynomial basis functions (order R-1)
 
 
@@ -775,7 +786,7 @@ c_state=[];     %Vector of state-relevance weightings
       for j=1:N2
           E2=j-1;
           for k=1:size(feasStates,3)
-                L=(k-1)/RES_STATE+MIN_LOAD;
+                L=(k-1)/RES_L+MIN_LOAD;
                 if(feasStates(i,j,k)==1)
                     exprMax=max(fitStateExpr(E1,E2,L),exprMax);
                     exprMin=min(fitStateExpr(E1,E2,L),exprMin);
@@ -795,7 +806,7 @@ c_state=[];     %Vector of state-relevance weightings
       for j=1:N2
           E2=j-1;
           for k=1:size(feasStates,3)
-                L=(k-1)/RES_STATE+MIN_LOAD;
+                L=(k-1)/RES_L+MIN_LOAD;
                 if(feasStates(i,j,k)==1)
                     %Create parameter fitting vector by aggregating states
                     %with same LINEAR EXPRESSION value (i.e. LINEAR FIT)
@@ -828,7 +839,7 @@ c_state=[];     %Vector of state-relevance weightings
 
   %Adjoin feasible state vectors to form a ?x3 array
   feasStatesArr=[feasE1s,feasE2s,feasLs];
-  %{
+  %
   %Create design matrix with fitting functions up to order R
   phi_poly=DesignMtx(feasStatesArr,ones(length(feasStatesArr),1),R);
   %Add to present basis vectors
@@ -917,7 +928,7 @@ c_state=ones(size(Phi,1),1);
   %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
   ConvCosts=FormatCostVect_v2(cost);
 
-    %{
+    %
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix
