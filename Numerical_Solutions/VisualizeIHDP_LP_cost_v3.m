@@ -3,9 +3,9 @@
 
 %% Parameter setup
 
-E_SCALE_BATT=75/1000; %0.075 kWh/unit for battery
-E_SCALE_SC_L=75;      %75 Wh/unit for supercapacitor and load
-T_SCALE=2.5;          %2.5s/unit
+E_SCALE_BATT=674/1000000; %0.000674 kWh/unit for battery
+E_SCALE_SC_L=64/100;      %0.64 Wh/unit for supercapacitor and load
+T_SCALE=0.1;              %0.1s/unit
 
 %% Visualization
 
@@ -63,7 +63,7 @@ else
 	plot(time,optE2*E_SCALE_SC_L,'-','MarkerSize',10); plot(time,[Load,0]*E_SCALE_SC_L,'--','MarkerSize',10);
     hold off;
     ylabel('Supercapacitor energy and demand (Wh)');
-    ylim([-200 1000])
+    ylim([-2 2])
     legend('Battery (E1)','Supercapacitor (E2)','Demand (L)');
     
     %{

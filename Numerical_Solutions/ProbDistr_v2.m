@@ -30,7 +30,7 @@ d=find(abs(currState_indL-nextState_indLs_Vect)<epsilon3);
 %If current load not possible in next state (under ANY control), find closest feasible one
 diffL=1; %difference between current load and closest feasible one next
 while isempty(d)
-    d=find(abs(currState_indL-nextState_indLs_Vect)<diffL);
+    d=find(abs(currState_indL-nextState_indLs_Vect)<diffL,1);
     diffL=diffL+1; %Step by discretization in load %<--------------------------------------- TO DO: make <1 if deltaL discretization is <1 (almost never)
 end
 

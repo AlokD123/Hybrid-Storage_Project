@@ -17,12 +17,11 @@ countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 
 
-NumIter=20; %Number of iterations of the policy to do
+NumIter=1000; %Number of iterations of the policy to do
 
 DeltaL_min=1/resL_Mult;
 
 t_ind_VI=1; %Start evaluation
-
 L=0; %Assume that the first demand is ZERO (starting from rest)
 while t_ind_VI<NumIter
     %Set state index

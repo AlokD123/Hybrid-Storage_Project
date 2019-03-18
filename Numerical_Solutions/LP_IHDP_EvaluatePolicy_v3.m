@@ -12,7 +12,7 @@ global MAX_CHARGE;
 
 %%Evaluate policy for a random sequence of loads (ONLINE)
 %Set up matrices
-optE1(1)=E1_INIT-2; optE2(1)=E2_INIT-2;
+optE1(1)=E1_INIT; optE2(1)=E2_INIT;
 % Debug counts
 countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
