@@ -3,37 +3,37 @@
 % COMBINED CONTROLS (default mutual exclusion)
 % **** NEW STAGE COST ****
 
-clearvars -except cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L;
+clearvars -except cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L RES_U1 SCALE_BATT SCALE_SC Phi_size;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
 global E_MAX; 
-%
-E_MAX=[50000,250]; %Maximum energy to be stored (upper bound)        %Comment out when running storage sizing
+%{
+E_MAX=[800,4];
+%E_MAX=[50000,250]; %Maximum energy to be stored (upper bound)        %Comment out when running storage sizing
 %E_MAX=[10,5];
 %}
 
 %Solver tolerance
 tolerance=1e-6;
 
-%% Input: initial state, horizon, number of bases in approximation
+%% Input: initial state, number of bases in approximation
 %Initial stored energy (user-defined)
 %Must be between MIN_STATE and MAX_STATE
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
-R=E_MAX(2);   %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
-%{
-MAX_CHARGE=[1*size1_mult;1*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
-MAX_DISCHARGE=[1*size1_mult;1*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
-%}
 %
-MAX_CHARGE=[2,2];                                                           %Comment out when running storage sizing
-MAX_DISCHARGE=[2,2];
+MAX_CHARGE=[2*size1_mult;3*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[2*size1_mult;3*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
+%}
+%{
+MAX_CHARGE=[2*E_MAX(1)/200,3*E_MAX(2)];                                                           %Comment out when running storage sizing
+MAX_DISCHARGE=[2*E_MAX(1)/200,3*E_MAX(2)];
 %}
 
 global MIN_LOAD; global MAX_LOAD;
@@ -56,19 +56,20 @@ DISCOUNT=0.99;
 
 %% Definitions
 %Resolution of battery charge/dischage
-global RES_U1; RES_U1=1;
+global RES_U1;
 %Resolution of state variables  (GRID RESOLUTION)
 global RES_E1;
 global RES_E2;
 global RES_L;
-%
-RES_E1=1/1000;
-RES_E2=1/5;
-RES_L=1;
-%}
 %Resolution of demand DURING SIMULATION ("continuous" demands)
-global resL_Mult
-resL_Mult=10;                                                               %NOT necessarily equal to grid resolution for DP
+global resL_Mult;
+%{
+RES_U1=200/E_MAX(1);
+RES_E1=2/E_MAX(1);
+RES_E2=2/E_MAX(2);
+RES_L=1/(2*E_MAX(1)/200+3*E_MAX(2));
+resL_Mult=1;  %NOT necessarily equal to grid resolution for DP             %<----CHANGE THIS TO CHANGE THE SIMULATION RUNTIME!!!!
+%}
 
 global N2; global N1; global M; global P0;
 
@@ -89,6 +90,8 @@ epsilon5=0.01; %Number of repeated q-values count tolerance
 gamma=1e-2; %Regularization term weighting factor
 INF_Q=Inf; %Define infeasible Q-value to be infinite (so cannot choose as minimal)
 
+%% Monomial Bases
+R=RES_E2*E_MAX(2);   %MAXIMUM order of extra polynomial bases added by iteration (TOTAL MUST BE LESS THAN NUMBER OF FEASIBLE STATES)
 
 %% Initialization
 E_Ind_Vect_p=[];      %Vector of current state energies
@@ -375,7 +378,7 @@ c_state=[];     %Vector of state-relevance weightings
         %Reset matrices/vectors
         nextE_Ind_Vect_p=[];
         E_Ind_Vect_p=[];
-        gVec_p=[];
+        gVec_p=[];  
         fbleEStates_p=[];
         Lmin_offs_p=[];
         E_Ind_Mtx_p=[];
@@ -389,10 +392,12 @@ c_state=[];     %Vector of state-relevance weightings
   end
 
   %% REMOVE LOADS NOT FEASIBLE FOR ANY E-STATE <----------------------------------------------------------------------------------------------------------------------------------------------
-  for i=1:size(feasStates,3) %Iterate through loads
+  i=1;
+  while i<=size(feasStates,3) %Iterate through loads
     if all(all(feasStates(:,:,i)==0))
-    feasStates(:,:,i)=[]; %Remove
+        feasStates(:,:,i)=[]; %Remove
     end
+    i=i+1;
   end
 
   %%
@@ -851,16 +856,26 @@ c_state=[];     %Vector of state-relevance weightings
     boolNonAff=~[zeros(1,indBaseE1-1) 1 zeros(1,indBaseE2-indBaseE1-1) 1 zeros(1,lenPoly-2-indBaseE2) 1 1]; 
     %Remove these bases
     nonAff_phi_poly=phi_poly(:,boolNonAff);
-    Phi=[Phi,nonAff_phi_poly]; %Ignore constant and linear terms (ALREADY ACCOUNTED FOR IN S.A.)
+    
+    if rank(Phi)>1
+       Phi=[Phi,nonAff_phi_poly]; %Ignore constant and linear terms (ALREADY ACCOUNTED FOR IN S.A.) 
+    else
+       Phi=[Phi,phi_poly]; %Use all terms and no S.A.
+    end
+    
     origSizePhi=size(Phi,2); %Store old size of Phi
     %Remove column vectors UNTIL FULL RANK Phi
-    while rank(Phi)~=size(Phi,2) %rank( Phi(:,1:(size(Phi,2)-i) ))~=(size(Phi,2)-i)
+    oldPhi=Phi;
+    Phi=licols(oldPhi,1e-13);
+    %{
+    while rank(Phi)~=size(Ph ci,2) %rank( Phi(:,1:(size(Phi,2)-i) ))~=(size(Phi,2)-i)
         Phi=Phi(:,1:(size(Phi,2)-1));
     end
-
+    %}
+    
   %}
  %Alternative: use EXACT LP (Phi=I)
- Phi=eye(length(E_Ind_VectALL));
+ %Phi=eye(length(E_Ind_VectALL));
 
 % Find state-relevance vector for minimization, c
 % TAKE c TO BE STEADY STATE ENTERING PROBABILITIES FOR EACH STATE
@@ -878,7 +893,7 @@ c_state=ones(size(Phi,1),1);
 %Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-2*N),eye(N)];
 %Phi=[eye(length(c_state)-N);zeros(N,length(c_state)-N-1),ones(N,1)];
 
-  cvx_solver Gurobi
+  %cvx_solver Gurobi
  %Get approximate solution
   cvx_begin
     %cvx_solver_settings('Method',1) % Use dual simplex method
@@ -887,9 +902,9 @@ c_state=ones(size(Phi,1),1);
     variable r_fit(size(Phi,2))
     dual variables d
     %dual variables d2
-    maximize( c_state'*Phi*r_fit ) % - gamma*norm(r_fit,1) )
+    maximize( c_state'*r_fit ) % - gamma*norm(r_fit,1) )
     subject to
-        d : Q*Phi*r_fit <= b_dcpcvx
+        d : Q*r_fit <= b_dcpcvx
         %d2 : Phi*r_fit >= 0
   cvx_end
 
@@ -922,13 +937,14 @@ c_state=ones(size(Phi,1),1);
 
 
   optD = d; %Get vector of FINAL dual
-  cost=Phi*r_fit; %Get FINAL approximated cost
+  %cost=Phi*r_fit; %Get FINAL approximated cost
+  cost=r_fit; %Get FINAL approximated cost
 
  
   %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
   ConvCosts=FormatCostVect_v2(cost);
 
-    %
+    %{
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix

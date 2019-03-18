@@ -2,9 +2,12 @@
 %---------- Using APPROX LP ONLY!! -----------
 %ADDED Regenerative Braking
 
+SCALE_BATT=33.7/250; %0.135 kWh/unit for battery
+SCALE_SC=0.16/250; %0.00064 kWh/unit for supercap
+
 %Input: feasible set for E_SIZE, size cost factors
-max_E_SIZE=[6,6];
-c1=0; c2=0;
+max_E_SIZE=[2,2];
+c1=0; c2=200*0;
 
 INFCOST=1e6;
 
@@ -22,27 +25,37 @@ g_opt_vect=[]; %Stage costs vector
 %Store transition weights and stage costs for optimal policies for EACH iteration
 PF_opt={}; g_opt={}; Exp_CostToGo={}; optCost_size={}; g_opt_mtx={}; Exp_CostToGo_mtx={};
 
-global RES_E1; RES_E1=1/5;
-global RES_E2; RES_E2=1/1000;
-global RES_L; RES_L=1;
+%Approximation sizes
+Phi_size={};
 
-for max_E1=2:(1/RES_E1):max_E_SIZE(1)
-    for max_E2=2:(1/RES_E2):max_E_SIZE(2)
+global RES_E1; global RES_E2; global RES_L; global RES_U1; 
+
+%for max_E1=2:(1/RES_E1):max_E_SIZE(1)
+    %for max_E2=2:(1/RES_E2):max_E_SIZE(2)
+        
+for max_E1=max_E_SIZE(1):-1:2
+    for max_E2=max_E_SIZE(2):-1:2
     %Go through feasible set for E_SIZE
     size1_mult=max_E1; size2_mult=max_E2;
     
-    E_MAX=[1*size1_mult;1*size2_mult];
+    E_MAX=[200*size1_mult;1*size2_mult];
     
     size_iter=size_iter+1; %Next size up
     
-    ApproxLP_sol_IHDP_v17; %Get optimal values for this size
+    %Define resolutions in simulation
+    RES_E1=2/(200*size1_mult);
+    RES_E2=2/(size2_mult);
+    RES_L=2/(2*size1_mult+3*size2_mult);
+    RES_U1=1/size1_mult;
+    
+    ApproxLP_sol_IHDP_v17_alt; %Get optimal values for this size
     %GetCtrlPolicy_OptQVals_v2; %Get optimal policy matrix
     
     %Store optimal values, for reference;
     optVal_size{size_iter}=ConvCosts; %<--------- DIFFERENCE IS LARGE
     
     %Get optimal value for INITIAL energy state w/ ZERO LOAD
-    optVal_initE=ConvCosts(RES_E1*(max_E1-E_MIN(1))+1,RES_E2*(max_E2-E_MIN(2))+1,(-MIN_LOAD)*RES_L+1);
+    optVal_initE=ConvCosts(1*(max_E1-E_MIN(1))+1,1*(max_E2-E_MIN(2))+1,(-MIN_LOAD)*RES_L+1);
     
     vectS_netOptVal=[vectS_netOptVal;optVal_initE]; %Store in vector
     
@@ -62,20 +75,24 @@ for max_E1=2:(1/RES_E1):max_E_SIZE(1)
             disp('Error!'); %For other cases, break, since not implemented
         end
     
+    Phi_size{size_iter}=[size(Phi,1),size(Phi,2)];
+        
     end
 end
 
 %Visualize all possible policies
-max_E1=1:(1/RES_E1):max_E_SIZE(1)-1;
-max_E2=1:(1/RES_E2):max_E_SIZE(2)-1;
+%max_E1=1:(1/RES_E1):max_E_SIZE(1)-1;
+%max_E2=1:(1/RES_E2):max_E_SIZE(2)-1;
+max_E1=fliplr(1:2:max_E_SIZE(1)-1);
+max_E2=fliplr(1:2:max_E_SIZE(2)-1);
 
 %Plot
 figure
 %Get data differently from matrix depending on whether states are fractional (high resolution) or not
 if RES_E1<=1 && RES_E2<=1
-    surf(max_E2,max_E1,totCost(max_E1+1,max_E2+1));
+    surf((max_E2+1)*SCALE_SC,(max_E1+1)*SCALE_BATT,totCost(max_E1+1,max_E2+1));
 elseif RES_E1>1 && RES_E2>1
-    surf(max_E2,max_E1,totCost(RES_E1*max_E1,RES_E2*max_E2));
+    surf((max_E2+1)*SCALE_SC,(max_E1+1)*SCALE_BATT,totCost(RES_E1*max_E1,RES_E2*max_E2));
 else
     disp('Error!'); %For other cases, break, since not implemented
 end
