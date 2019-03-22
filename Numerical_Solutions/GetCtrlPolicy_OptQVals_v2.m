@@ -23,7 +23,7 @@ feasStates_ctrl={};
 for i=1:length(feasStatesArr_ctrl)
     %feasStatesArr=[feasStatesArr;feasStatesArr_ctrl{i}];
     for j=1:size(feasStatesArr_ctrl{i},1)
-        feasStates_ctrl_i(feasStatesArr_ctrl{i}(j,1),feasStatesArr_ctrl{i}(j,2),feasStatesArr_ctrl{i}(j,3))=1;
+        feasStates_ctrl_i(feasStatesArr_ctrl{i}(j,1),feasStatesArr_ctrl{i}(j,2),round(feasStatesArr_ctrl{i}(j,3)))=1;
     end
     feasStates_ctrl{1,i}=padarray(feasStates_ctrl_i,[N1-size(feasStates_ctrl_i,1),N2-size(feasStates_ctrl_i,2),Sigma-size(feasStates_ctrl_i,3)],'post');
     feasStates_ctrl_i=[];

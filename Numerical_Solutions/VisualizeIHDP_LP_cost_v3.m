@@ -60,7 +60,7 @@ else
     ylim([0 inf])
     title('Variation in energy storage state under demand');
     yyaxis right
-	plot(time,optE2*E_SCALE_SC_L,'-','MarkerSize',10); plot(time,[Load,0]*E_SCALE_SC_L,'--','MarkerSize',10);
+	plot(time,optE2*E_SCALE_SC_L,'-','MarkerSize',10); plot(time,Load*E_SCALE_SC_L,'--','MarkerSize',10);
     hold off;
     ylabel('Supercapacitor energy and demand (Wh)');
     ylim([-2 2])

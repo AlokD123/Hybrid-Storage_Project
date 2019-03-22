@@ -37,8 +37,8 @@ MAX_DISCHARGE=[2,2];
 %}
 
 global MIN_LOAD; global MAX_LOAD;
-MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
-MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
+MIN_LOAD=-(MAX_CHARGE(1)+E_MAX(2)); %Maximum regenerative energy expected
+MAX_LOAD=MAX_DISCHARGE(1)+E_MAX(2); %Maximum load expected
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
@@ -163,7 +163,7 @@ gVec_p=[];
                 boolFbleState=0; %Flag for checking if state is feasible. Flag=1 only if at least one demand leads to a feasible state&next-state
 
                 %If net discharge is too low (negative) or high for battery
-                if(U1>E1 || U1<(E1-E_MAX(1)))
+                if(U1>(BETA(1)*E1-E_MIN(1))*ALPHA_D(1) || U1<(BETA(1)*E1-E_MAX(1))/ALPHA_C(1))
                     %IGNORE, but still account for state being counted by inserting row of zeros
                     rowInd_Emtx = E_Ind;
                     E_Ind_Mtx_p(rowInd_Emtx,:)=0;
@@ -300,7 +300,7 @@ gVec_p=[];
           end
 
 
-          for U1_Ind_next=1:(MAX_DISCHARGE(1)+MAX_CHARGE(1))*RES_U1+1
+          for U1_Ind_next=1:P0
                 U1_next=(U1_Ind_next-1)/RES_U1-MAX_CHARGE(1);
                 %Get number of FEASIBLE next loads
                 %Check excess discharge condition
@@ -431,7 +431,9 @@ gVec_p=[];
       nnzRow=nnz(E_Ind_MtxALL(row,:));
       %E_Ind_Mtx_nzRow=E_Ind_MtxALL(row,1:nnzRow);
       E_Ind_VectALL=[E_Ind_VectALL; nonzeros(E_Ind_MtxALL(row,:))];
-      E_VectALL_Ls=[E_VectALL_Ls;linspace(MINLoad_E_state(row),MINLoad_E_state(row)+(nnzRow-1)/RES_L,nnzRow)']; %Create vector of all loads per E-state (for all controls)
+      %Create vector of all loads per E-state (for all controls)
+      Loads_E_state=(find(E_Ind_MtxALL(row,:)>0)-1)/RES_L+MIN_LOAD;
+      E_VectALL_Ls=[E_VectALL_Ls;Loads_E_state']; %Append to E_VectALL_Ls
       %numLoads_lt_MINLoad=nnz(~E_Ind_MtxALL(row,1:RES_L*(MINLoad_E_state(row)-MIN_LOAD)+1));
       %numLoads_gt_MAXLoad=nnz(~E_Ind_MtxALL(row,(MINLoad_E_state(row)+nnzRow):size(E_Ind_MtxALL,2)));
       %feasInf_E_VectALL_Ls=[feasInf_E_VectALL_Ls;Inf*ones(numLoads_lt_MINLoad,1);(MINLoad_E_state(row):(MINLoad_E_state(row)+nnzRow-1))';Inf*ones(numLoads_gt_MAXLoad,1);];
@@ -710,10 +712,9 @@ gVec_p=[];
           while(E_Ind_VectALL(round(row))~=E_Ind_Vect_p(r)) %While not reached mapping column in G (ONLY 1 per row)...
               row=row+1;    %Continue
           end
-          row2=row; %Temporary variable to hold row index of E_Ind_VectALL.
-          %E_Ind_VectALL(row2) is value (AND INDEX) for UNIQUE E-states
+          %E_Ind_VectALL(row) is value (AND INDEX) for UNIQUE E-states
           if(boolNewEState==1)  %Only if distinct new state...
-              row=row+RES_L*(E_Ind_L_Vect_p(r,2)-MINLoad_E_state(E_Ind_VectALL(round(row2)))); %Add minimum load offset + negative loads offset to first state #
+              row=row+1*( find(abs(E_VectALL_Ls(round(row):end)-E_Ind_L_Vect_p(r,2))<epsilon,1) - 1 ); %Add minimum load offset + negative loads offset to first state #
           else
               %Otherwise, do nothing because already starting from offset
           end
@@ -943,7 +944,7 @@ gVec_p=[];
     %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
     ConvCosts=FormatCostVect_v2(cost);
 
-    %{
+    %
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix
