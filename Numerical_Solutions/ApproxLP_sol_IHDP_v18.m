@@ -31,8 +31,8 @@ global MAX_CHARGE; global MAX_DISCHARGE;
 mult=1;
 
 %
-MAX_CHARGE=[1*size1_mult;1*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
-MAX_DISCHARGE=[1*size1_mult;1*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[1*5/5*size1_mult;1*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[1*5/5*size1_mult;1*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
 %}
 %{
 MAX_CHARGE=mult*[1,15];                                                           %Comment out when running storage sizing

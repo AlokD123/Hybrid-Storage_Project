@@ -39,8 +39,8 @@ maxE_stepSize_E2=1;
 
 mult_cost_idx=0;
 
-for cost_mult_1=2:2
-    for cost_mult_2=2:2    
+for cost_mult_1=1:1
+    for cost_mult_2=1:1    
         
     mult_cost_idx=mult_cost_idx+1;
                
@@ -60,16 +60,16 @@ for cost_mult_1=2:2
             %Go through feasible set for E_SIZE
             size1_mult=max_E1; size2_mult=max_E2;
 
-            E_MAX=[7500*size1_mult;3*size2_mult];
+            E_MAX=[7500*5/5*size1_mult;3*size2_mult];
 
             size_iter=size_iter+1; %Next size up
 
-            if size_iter~=100 && size_iter~=99
+            if size_iter<95
         
             else
             
             %Define resolutions in simulation
-            RES_E1=1/(7500); %*maxE_stepSize_E1);%*size1_mult);
+            RES_E1=1/(7500*5/5); %*maxE_stepSize_E1);%*size1_mult);
             RES_E2=1/(3); %(maxE_stepSize_E2);%size2_mult);
             RES_L=1; %4/(2*size1_mult+30*size1_mult);
             RES_U1=1; %/size1_mult;
