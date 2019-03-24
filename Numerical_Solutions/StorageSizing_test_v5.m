@@ -39,67 +39,73 @@ maxE_stepSize_E2=1;
 
 mult_cost_idx=0;
 
-for cost_mult_1=1:5
-    for cost_mult_2=1:5
-
+for cost_mult_1=2:2
+    for cost_mult_2=2:2    
+        
     mult_cost_idx=mult_cost_idx+1;
-        
+               
     %Cost for size
-    c1=RES_E1*(cost_mult_1-1); %0.01;
-    c2=RES_E2*(cost_mult_2-1); %0.5;
+    c1=RES_E1/100*(cost_mult_1-1); %0.01;
+    c2=RES_E2/100*(cost_mult_2-1); %0.5;
     
-%Counters for grid
-E1_counter=length(min_E_SIZE(1):maxE_stepSize_E1:max_E_SIZE(1))+1;
-for max_E1=fliplr(min_E_SIZE(1):maxE_stepSize_E1:max_E_SIZE(1))
-    E1_counter=E1_counter-1;
-    
-    E2_counter=length(min_E_SIZE(1):maxE_stepSize_E2:max_E_SIZE(2))+1;
-    for max_E2=fliplr(min_E_SIZE(1):maxE_stepSize_E2:max_E_SIZE(2))
-        E2_counter=E2_counter-1;
+    %Counters for grid
+    E1_counter=length(min_E_SIZE(1):maxE_stepSize_E1:max_E_SIZE(1))+1;
+    for max_E1=fliplr(min_E_SIZE(1):maxE_stepSize_E1:max_E_SIZE(1))
+        E1_counter=E1_counter-1;
 
-        %Go through feasible set for E_SIZE
-        size1_mult=max_E1; size2_mult=max_E2;
+        E2_counter=length(min_E_SIZE(1):maxE_stepSize_E2:max_E_SIZE(2))+1;
+        for max_E2=fliplr(min_E_SIZE(1):maxE_stepSize_E2:max_E_SIZE(2))
+            E2_counter=E2_counter-1;
 
-        E_MAX=[750*size1_mult;33*size2_mult];
+            %Go through feasible set for E_SIZE
+            size1_mult=max_E1; size2_mult=max_E2;
 
-        size_iter=size_iter+1; %Next size up
+            E_MAX=[7500*size1_mult;3*size2_mult];
 
-        %Define resolutions in simulation
-        RES_E1=1/(750); %*maxE_stepSize_E1);%*size1_mult);
-        RES_E2=1/(33); %(maxE_stepSize_E2);%size2_mult);
-        RES_L=1/14; %10/(2*size1_mult+2*size1_mult+2*E_MAX(2)); %1/(MAX_D_1+MAX_C_1+2*E_MAX(2)) %/(2*size1_mult+3*size2_mult);
-        RES_U1=max_E_SIZE(1); %/size1_mult;
-        %^ MAY NEED TO set to 1 and increase all gridpts by x10
+            size_iter=size_iter+1; %Next size up
 
-        ApproxLP_sol_IHDP_v18; %Get optimal values for this size
-        %GetCtrlPolicy_OptQVals_v2; %Get optimal policy matrix
+            if size_iter~=100 && size_iter~=99
+        
+            else
+            
+            %Define resolutions in simulation
+            RES_E1=1/(7500); %*maxE_stepSize_E1);%*size1_mult);
+            RES_E2=1/(3); %(maxE_stepSize_E2);%size2_mult);
+            RES_L=1; %4/(2*size1_mult+30*size1_mult);
+            RES_U1=1; %/size1_mult;
+            %^ MAY NEED TO set to 1 and increase all gridpts by x10
 
-        %Store optimal values, for reference;
-        optVal_size{size_iter}=ConvCosts; %<--------- DIFFERENCE IS LARGE
+            ApproxLP_sol_IHDP_v18; %Get optimal values for this size
+            %GetCtrlPolicy_OptQVals_v2; %Get optimal policy matrix
 
-        %Get optimal value for MINIMUM allowable capacity w/ ZERO LOAD.
-        %NOTE: have index 2 ASSUMING E_MIN=[0,0] is a state.
-        optVal_initE=ConvCosts((min_E_SIZE(1)-0)+1,(min_E_SIZE(1)-1-0)+1,round((-MIN_LOAD)*RES_L+1));
+            %Store optimal values, for reference;
+            optVal_size{size_iter}=ConvCosts; %<--------- DIFFERENCE IS LARGE
 
-        vectS_netOptVal=[vectS_netOptVal;optVal_initE]; %Store in vector
+            %Get optimal value for MINIMUM allowable capacity w/ ZERO LOAD.
+            %NOTE: have index 2 ASSUMING E_MIN=[0,0] is a state.
+            optVal_initE=ConvCosts((min_E_SIZE(1)-0)+1,(min_E_SIZE(1)-0)+1,round((-MIN_LOAD)*RES_L+1));
 
-        %Get optimal storage size till this point
-        if (optVal_initE + c1*E_MAX(1) + c2*E_MAX(2)) < minCost   %c is COST-PER-UNIT, **not** cost/gridpt
-            minCost=optVal_initE + c1*E_MAX(1) + c2*E_MAX(2);
-            opt_E_mult=[size1_mult,size2_mult];
-            optE_SIZE=[E_MAX(1),E_MAX(2)];
+            vectS_netOptVal=[vectS_netOptVal;optVal_initE]; %Store in vector
+
+            %Get optimal storage size till this point
+            if (optVal_initE + c1*E_MAX(1) + c2*E_MAX(2)) < minCost   %c is COST-PER-UNIT, **not** cost/gridpt
+                minCost=optVal_initE + c1*E_MAX(1) + c2*E_MAX(2);
+                opt_E_mult=[size1_mult,size2_mult];
+                optE_SIZE=[E_MAX(1),E_MAX(2)];
+            end
+
+            %Store in matrix
+            totCost(E1_counter,E2_counter)=(optVal_initE +  c1*E_MAX(1) + c2*E_MAX(2));
+
+            Phi_size{size_iter}=[size(Phi,1),size(Phi,2)];
+            
+            end
+
         end
-        
-        %Store in matrix
-        totCost(E1_counter,E2_counter)=(optVal_initE +  c1*E_MAX(1) + c2*E_MAX(2));
-        
-        Phi_size{size_iter}=[size(Phi,1),size(Phi,2)];
-        
     end
-end
-
-    optRatio{cost_mult_idx}=opt_E_SIZE(1)/opt_E_SIZE(2);
-
+    
+    %optRatio{mult_cost_idx}=opt_E_SIZE(1)/opt_E_SIZE(2);
+    
     end
 end
 

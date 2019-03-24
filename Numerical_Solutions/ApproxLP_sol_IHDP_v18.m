@@ -28,18 +28,27 @@ MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
+mult=1;
+
 %
-MAX_CHARGE=[1/10*size1_mult;2*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
-MAX_DISCHARGE=[1/10*size1_mult;2*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[1*size1_mult;1*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[1*size1_mult;1*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
 %}
 %{
-MAX_CHARGE=[1/10,2];                                                           %Comment out when running storage sizing
-MAX_DISCHARGE=[1/10,2];
+MAX_CHARGE=mult*[1,15];                                                           %Comment out when running storage sizing
+MAX_DISCHARGE=mult*[1,15];
 %}
 
 global MIN_LOAD; global MAX_LOAD;
+%
 MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
+%}
+
+%{
+MIN_LOAD=-mult*2;
+MAX_LOAD=mult*2;
+%}
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
@@ -76,7 +85,7 @@ resL_Mult=10;  %NOT necessarily equal to grid resolution for DP             %<--
 
 global N2; global N1; global M; global P0;
 
-M=RES_L*(MAX_LOAD-MIN_LOAD)+1;
+M=round2even(RES_L*(MAX_LOAD-MIN_LOAD))+1;
 N1=RES_E1*(E_MAX(1)-E_MIN(1))+1;
 N2=RES_E2*(E_MAX(2)-E_MIN(2))+1;
 
