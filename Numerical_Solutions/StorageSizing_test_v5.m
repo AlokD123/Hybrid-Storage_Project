@@ -4,7 +4,7 @@
 %Realistic sizing
 
 %Input: feasible set for E_SIZE, size cost factors
-max_E_SIZE=[4,4];
+max_E_SIZE=[10,10];
 min_E_SIZE=[1,1];
 
 %Parameters
@@ -33,8 +33,8 @@ maxE_stepSize_E1=1;
 maxE_stepSize_E2=1;
 
 %CONSTANT resolutions in simulation
-RES_E1=1/(7500*2); %*maxE_stepSize_E1);%*size1_mult);
-RES_E2=1/(330*2); %(maxE_stepSize_E2);%size2_mult);
+RES_E1=1/(7500); %*maxE_stepSize_E1);%*size1_mult);
+RES_E2=1/(330); %(maxE_stepSize_E2);%size2_mult);
 RES_L=1/4; %4/(2*size1_mult+30*size1_mult);
 RES_U1=1; %/size1_mult;
 
@@ -53,6 +53,7 @@ for cost_mult_1=1:5
     minCost=Inf; %Default: initial value for J(initial state)+cS cost
     vectS_netOptVal=[];%Store CONSTANT state optimal value for each given S
     totCost=[]; %Store total cost for each size (convex function)
+    opt_E_size={}; %Store optimal size vector (for fixed c-value)
     
     %Counters for grid
     E1_counter=length(min_E_SIZE(1):maxE_stepSize_E1:max_E_SIZE(1))+1;
@@ -66,7 +67,7 @@ for cost_mult_1=1:5
             %Go through feasible set for E_SIZE
             size1_mult=max_E1; size2_mult=max_E2;
 
-            E_MAX=[7500*2*size1_mult;330*2*size2_mult];
+            E_MAX=[7500*size1_mult;330*size2_mult];
 
             size_iter=size_iter+1; %Next size up
 
@@ -75,7 +76,6 @@ for cost_mult_1=1:5
             %else
             
             ApproxLP_sol_IHDP_v18; %Get optimal values for this size
-            %GetCtrlPolicy_OptQVals_v2; %Get optimal policy matrix
 
             %Store optimal values, for reference;
             optVal_size{size_iter}=ConvCosts; %<--------- DIFFERENCE IS LARGE
@@ -95,16 +95,15 @@ for cost_mult_1=1:5
 
             %Store in matrix
             totCost(E1_counter,E2_counter)=(optVal_initE +  c1*E_MAX(1) + c2*E_MAX(2));
-
-            Phi_size{size_iter}=[size(Phi,1),size(Phi,2)];
-            
+            opt_E_size{E1_counter,E2_counter}=optE_SIZE;
             %end
 
         end
     end
     
-    optRatio(cost_mult_1,cost_mult_2)=optE_SIZE(1)/optE_SIZE(2);
+    optRatio(cost_mult_1,cost_mult_2)=(optE_SIZE(1)/7500)*SCALE_BATT / (optE_SIZE(2)/330*SCALE_SC);
     optCosts{mult_cost_idx}=totCost;
+    optSize{mult_cost_idx}=opt_E_size;
     
     end
 end
@@ -121,9 +120,9 @@ title(sprintf('Variation in optimal sizing with financial costs of storages'));
 %OLD: plot optimal cost as a function of storage size
 %{
 %Visualize all possible policies
-max_E1=fliplr(1:1:size(totCost,1)); max_E2=fliplr(1:1:size(totCost,2));
+max_E1=fliplr(1:1:size(optCosts{7},1)); max_E2=fliplr(1:1:size(optCosts{7},2));
 
-surf((max_E2)*SCALE_SC,(max_E1)*SCALE_BATT,totCost(max_E1,max_E2));
+surf((max_E2)*SCALE_SC,(max_E1)*SCALE_BATT,optCosts{7}(max_E1,max_E2));
 xlabel('Supercapacitor Size (E_2^{max}, kWh)'); ylabel('Battery Size (E_1^{max}, kWh)'); zlabel('Total Cost');
-title(sprintf('Optimal Cost as a Function of Storage Size (c1=%d, c2=%d)',c1,c2));
+title(sprintf('Optimal Cost as a Function of Storage Size (c_{1}=%d, c_{2}=%d)',0,0));
 %}

@@ -4,7 +4,7 @@
 % **** NEW STAGE COST ****
 %Realistic sizing
 
-clearvars -except cost approx_err E_MAX max_E_SIZE min_E_SIZE minCost max_E1 max_E2 optE_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L RES_U1 SCALE_BATT SCALE_SC Phi_size maxE_stepSize E1_counter E2_counter maxE_stepSize_E1 maxE_stepSize_E2 mult_cost_idx cost_mult_1 cost_mult_2 optRatio optCosts c1_fact c2_fact;
+clearvars -except cost approx_err E_MAX max_E_SIZE min_E_SIZE minCost max_E1 max_E2 optE_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L RES_U1 SCALE_BATT SCALE_SC Phi_size maxE_stepSize E1_counter E2_counter maxE_stepSize_E1 maxE_stepSize_E2 mult_cost_idx cost_mult_1 cost_mult_2 optRatio optCosts c1_fact c2_fact optSize opt_E_size;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -28,7 +28,7 @@ MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
-mult=2;
+mult=1;
 
 %{
 MAX_CHARGE=[1*2*size1_mult;15*2*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
