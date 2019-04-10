@@ -3,11 +3,11 @@
 
 clearvars -except X V cost approx_err %E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost;
 
-size1_mult=10; size2_mult=10;
+size1_mult=1; size2_mult=1;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-global E_MAX; E_MAX=[1*size1_mult,1*size2_mult]; %Maximum energy to be stored (upper bound)
+global E_MAX; E_MAX=[10*size1_mult,1*size2_mult]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -23,11 +23,11 @@ MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
-MAX_CHARGE=[1*size1_mult;1*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
-MAX_DISCHARGE=[1*size1_mult;1*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[2*size1_mult;3*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[2*size1_mult;3*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD; global MAX_LOAD;
-MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
+MIN_LOAD=0; %-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
@@ -46,7 +46,7 @@ DISCOUNT=0.99;
 
 %% Definitions
 %Resolution of battery charge/dischage
-global RES_U1; RES_U1=4;
+global RES_U1; RES_U1=2;
 
 global N2; global P0; global P1;
 
@@ -126,6 +126,8 @@ c_state=[];     %Vector of state-relevance weightings
 
         indCount=0; %Index for feasible state #, for a given value of p
 
+        gVec_p=[];
+        
         %For each state at an iteration...
         for E_Ind1=1:(E_MAX(1)-E_MIN(1)+1)
             for E_Ind2=1:(E_MAX(2)-E_MIN(2)+1)
@@ -902,7 +904,7 @@ c_state=ones(size(Phi,1),1);
   %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
   ConvCosts=FormatCostVect_v2(cost);
     
-  %{
+  %
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix

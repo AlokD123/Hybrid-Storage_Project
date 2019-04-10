@@ -8,9 +8,9 @@ clearvars -except cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_S
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
 global E_MAX; 
-%{
-E_MAX=[800,4];
-%E_MAX=[50000,250]; %Maximum energy to be stored (upper bound)        %Comment out when running storage sizing
+%
+%E_MAX=[800,4];
+E_MAX=[10,5]; %Maximum energy to be stored (upper bound)        %Comment out when running storage sizing
 %E_MAX=[10,5];
 %}
 
@@ -23,13 +23,15 @@ tolerance=1e-6;
 E1_INIT=E_MAX(1); 
 E2_INIT=E_MAX(2);
 
+size1_mult=1; size2_mult=1;
+
 MAX_STEPS=10; %MAXIMUM number of groups in state aggregation
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
 %
-MAX_CHARGE=[2*size1_mult;3*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
-MAX_DISCHARGE=[2*size1_mult;3*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
+MAX_CHARGE=[1,1]; %[2*size1_mult;3*size2_mult]; %Maximum charging of the 1) battery and 2) supercap
+MAX_DISCHARGE=[1,1]; %[2*size1_mult;3*size2_mult]; %Maximum discharging of the 1) battery and 2) supercap
 %}
 %{
 MAX_CHARGE=[2*E_MAX(1)/200,3*E_MAX(2)];                                                           %Comment out when running storage sizing
@@ -37,16 +39,17 @@ MAX_DISCHARGE=[2*E_MAX(1)/200,3*E_MAX(2)];
 %}
 
 global MIN_LOAD; global MAX_LOAD;
-MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
+MIN_LOAD=0; %-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
-global ALPHA_C; global ALPHA_D; global BETA; global K;
+global ALPHA_C; global ALPHA_D; global BETA; global K; global nu;
 ALPHA_C=[0.95;0.95]; %Efficiency of charging
 ALPHA_D=[0.95;0.95]; %Efficiency of discharging
 BETA=[1;1];       %Storage efficiency
 K=[1e3;1e3];      %Weighting factors for D1^2 and C1^2 costs
+nu=0;
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -70,6 +73,12 @@ RES_E2=2/E_MAX(2);
 RES_L=1/(2*E_MAX(1)/200+3*E_MAX(2));
 resL_Mult=1;  %NOT necessarily equal to grid resolution for DP             %<----CHANGE THIS TO CHANGE THE SIMULATION RUNTIME!!!!
 %}
+
+RES_U1=1;
+RES_E1=1;
+RES_E2=1;
+RES_L=1;
+resL_Mult=1;
 
 global N2; global N1; global M; global P0;
 
@@ -885,7 +894,7 @@ c_state=[];     %Vector of state-relevance weightings
 %c_state(c_state==0)=[]; %Remove zero probability states
 
 % Alternative: TAKE c TO BE ALL EQUAL WEIGHTS
-c_state=ones(size(Phi,1),1);
+c_state=ones(size(Q,2),1);
 
   %Created LP matrices and vectors.
 
@@ -899,7 +908,7 @@ c_state=ones(size(Phi,1),1);
     %cvx_solver_settings('Method',1) % Use dual simplex method
     cvx_solver_settings('Presolve',0) % Don't use presolver
     %cvx_solver_settings('FeasibilityTol',1e-4) %Set tolerance
-    variable r_fit(size(Phi,2))
+    variable r_fit(size(Q,2))
     dual variables d
     %dual variables d2
     maximize( c_state'*r_fit ) % - gamma*norm(r_fit,1) )
@@ -944,7 +953,7 @@ c_state=ones(size(Phi,1),1);
   %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
   ConvCosts=FormatCostVect_v2(cost);
 
-    %{
+    %
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix

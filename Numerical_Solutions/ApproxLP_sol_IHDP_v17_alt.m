@@ -8,7 +8,7 @@ clearvars -except cost approx_err E_MAX max_E_SIZE minCost max_E1 max_E2 opt_E_S
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
 global E_MAX; 
-%{
+%
 E_MAX=[50000,250]; %Maximum energy to be stored (upper bound)        %Comment out when running storage sizing
 %E_MAX=[10,5];
 %}
@@ -37,8 +37,8 @@ MAX_DISCHARGE=[2,2];
 %}
 
 global MIN_LOAD; global MAX_LOAD;
-MIN_LOAD=-(MAX_CHARGE(1)+E_MAX(2)); %Maximum regenerative energy expected
-MAX_LOAD=MAX_DISCHARGE(1)+E_MAX(2); %Maximum load expected
+MIN_LOAD=0; %-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
+MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
@@ -63,13 +63,13 @@ global RES_E2;
 global RES_L;
 %Resolution of demand DURING SIMULATION ("continuous" demands)
 global resL_Mult;
-resL_Mult=1/RES_L;
-%{
+resL_Mult=RES_L;
+%
 RES_U1=1;
-RES_E1=1/1000;
-RES_E2=1/5;
-RES_L=1;
-resL_Mult=10;  %NOT necessarily equal to grid resolution for DP             %<----CHANGE THIS TO CHANGE THE SIMULATION RUNTIME!!!!
+RES_E1=1/5000;
+RES_E2=1/50;
+RES_L=2;
+resL_Mult=2;  %NOT necessarily equal to grid resolution for DP             %<----CHANGE THIS TO CHANGE THE SIMULATION RUNTIME!!!!
 %}
 
 global N2; global N1; global M; global P0;

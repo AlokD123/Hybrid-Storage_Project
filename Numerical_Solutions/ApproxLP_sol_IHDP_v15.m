@@ -6,7 +6,7 @@ clearvars -except X V cost approx_err %E_MAX max_E_SIZE minCost max_E1 max_E2 op
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
-global E_MAX; E_MAX=[100,2]; %Maximum energy to be stored (upper bound)
+global E_MAX; E_MAX=[10,5]; %Maximum energy to be stored (upper bound)
 
 %Solver tolerance
 tolerance=1e-6;
@@ -25,11 +25,11 @@ resL_Mult=10;       %Set resolution of demands by a dividing factor (natural num
 
 %% Model setup
 global MAX_CHARGE; global MAX_DISCHARGE;
-MAX_CHARGE=[2;2]; %Maximum charging of the 1) battery and 2) supercap
+MAX_CHARGE=[1;1]; %Maximum charging of the 1) battery and 2) supercap
 MAX_DISCHARGE=[2;2]; %Maximum discharging of the 1) battery and 2) supercap
 
 global MIN_LOAD; global MAX_LOAD;
-MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
+MIN_LOAD=-0; %(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
@@ -48,7 +48,7 @@ DISCOUNT=0.99;
 
 %% Definitions
 %Resolution of battery charge/dischage
-global RES_U1; RES_U1=resL_Mult;         %% SET RESOLUTION OF DEMANDS EQUAL TO CONTROLS (SINCE SAME QUANTITY)
+global RES_U1; RES_U1=2;         %% SET RESOLUTION OF DEMANDS EQUAL TO CONTROLS (SINCE SAME QUANTITY)
 
 global N2; global P0; global P1;
 
