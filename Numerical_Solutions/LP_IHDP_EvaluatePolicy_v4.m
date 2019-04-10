@@ -5,7 +5,6 @@
 %E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 %E1_INIT=E_MAX(1); 
 %E2_INIT=E_MAX(2);
-global P0;
 
 %Initialize
 optE1=[]; optE2=[]; D1Opt=[]; D2Opt=[]; Load=[];
@@ -18,14 +17,9 @@ countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 
 
-NumIter=100000/100; %Number of iterations of the policy to do
+NumIter=1000; %Number of iterations of the policy to do
 
-%
-resL_Mult=1;
 DeltaL_min=1/resL_Mult;
-
-RES_E1=1; RES_E2=1; RES_L=1; RES_U1=1;
-%}
 
 t_ind_VI=1; %Start evaluation
 L=0; %Assume that the first demand is ZERO (starting from rest)
@@ -43,11 +37,11 @@ while t_ind_VI<NumIter
     while isempty(U1)||(L-U1)<-MAX_CHARGE(2)-eps||(L-U1)>MAX_DISCHARGE(2)+eps %Infeasible if no optimal control OR C2 constraints violated
         %SHOULD NOT GET HERE!!
         if L<0
-            %L=L+DeltaL_min;
-            L=0;                   %To test with no R.B.
+            L=L+DeltaL_min;
+            %L=0;                   %To test with no R.B.
         elseif L>0
-            %L=L-DeltaL_min;
-            L=max(0,L-DeltaL_min); %To test with no R.B.
+            L=L-DeltaL_min;
+            %L=max(0,L-DeltaL_min); %To test with no R.B.
         else
             U1=GetPOpt_wRegenB_v3(indE1,indE2,L);
             break;
@@ -65,11 +59,11 @@ while t_ind_VI<NumIter
         countOOB=countOOB+1;
         %Change load till feasible
         if L<0
-            %L=L+DeltaL_min;
-            L=0;                   %To test with no R.B.
+            L=L+DeltaL_min;
+            %L=0;                   %To test with no R.B.
         elseif L>0
-            %L=L-DeltaL_min;
-            L=max(0,L-DeltaL_min); %To test with no R.B.
+            L=L-DeltaL_min;
+            %L=max(0,L-DeltaL_min); %To test with no R.B.
         else            %For L=0, just get controls and exit
             U1=GetPOpt_wRegenB_v3(indE1,indE2,L);
             [nextE1,nextE2]=optNextStateLimited_v3(optE1(t_ind_VI),optE2(t_ind_VI),U1,L);
@@ -119,7 +113,7 @@ while t_ind_VI<NumIter
         %Check excess discharge condition
         if( ~(U1_next>nextE1 || U1_next<(nextE1-E_MAX(1))) )
             %For each perturbation at the NEXT time...
-            for L=linspace(0,MAX_DISCHARGE(2)+U1_next,resL_Mult*(MAX_DISCHARGE(2)+MAX_CHARGE(2))+1)
+            for L=linspace(-MAX_CHARGE(2)+U1_next,MAX_DISCHARGE(2)+U1_next,resL_Mult*(MAX_DISCHARGE(2)+MAX_CHARGE(2))+1)
                 [next_nextE1,next_nextE2]=optNextStateLimited_v3(nextE1,nextE2,U1_next,L);
                 %Check other conditions
                 if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
