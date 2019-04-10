@@ -4,7 +4,7 @@
 % **** NEW STAGE COST ****
 %Realistic sizing
 
-clearvars -except cost approx_err E_MAX max_E_SIZE min_E_SIZE minCost max_E1 max_E2 optE_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L RES_U1 SCALE_BATT SCALE_SC Phi_size maxE_stepSize E1_counter E2_counter maxE_stepSize_E1 maxE_stepSize_E2 mult_cost_idx cost_mult_1 cost_mult_2 optRatio optCosts c1_fact c2_fact optSize opt_E_size;
+clearvars -except cost approx_err E_MAX max_E_SIZE min_E_SIZE minCost max_E1 max_E2 optE_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L RES_U1 SCALE_BATT SCALE_SC Phi_size maxE_stepSize E1_counter E2_counter maxE_stepSize_E1 maxE_stepSize_E2 mult_cost_idx cost_mult_1 cost_mult_2 optRatio optCosts c1_fact c2_fact optSize opt_E_size P0;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -41,7 +41,7 @@ MAX_DISCHARGE=mult*[1,15];
 
 global MIN_LOAD; global MAX_LOAD;
 %
-MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
+MIN_LOAD=0; %-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 %}
 
@@ -53,11 +53,11 @@ MAX_LOAD=mult*2;
 MAX_NUM_ZEROS=3; %Maximum number of zero load counts before end sim
 
 global ALPHA_C; global ALPHA_D; global BETA; global K; global nu;
-ALPHA_C=[0.87;0.84]; %Efficiency of charging
-ALPHA_D=[0.87;0.84]; %Efficiency of discharging
+ALPHA_C=[0.87;0.5]; %Efficiency of charging
+ALPHA_D=[0.87;0.5]; %Efficiency of discharging
 BETA=[1;1];       %Storage efficiency
-K=[1e3;1e3];      %Weighting factors for D1^2 and C1^2 costs
-nu=1;  %Cost for high state of charge
+K=[1e3;1e3]*1e6;      %Weighting factors for D1^2 and C1^2 costs
+nu=0;  %Cost for high state of charge
 PERFECT_EFF=0;
 
 %Discounted infinite horizon problem
@@ -74,7 +74,7 @@ global RES_E2;
 global RES_L;
 %Resolution of demand DURING SIMULATION ("continuous" demands)
 global resL_Mult;
-resL_Mult=1/RES_L;
+resL_Mult=4*RES_L;
 %{
 RES_U1=1;
 RES_E1=1/1000;
@@ -181,7 +181,7 @@ gVec_p=[];
                 else
                     %Index row in E-state indices mtx (for feasible E-state) same as VALUE of E-state index
                     rowInd_Emtx = E_Ind;
-                    %Store number of feasible E-states in which can  apply control
+                    %Store number of feasible E-states in which can apply control
                     fbleEStates_p=[fbleEStates_p;E_Ind1,E_Ind2];
 
                     %For each perturbation at the CURRENT time...
@@ -955,7 +955,7 @@ gVec_p=[];
     %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
     ConvCosts=FormatCostVect_v2(cost);
 
-    %{
+    %
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix
