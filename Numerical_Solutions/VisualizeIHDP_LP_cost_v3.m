@@ -4,9 +4,11 @@
 %% Parameter setup
 
 E_SCALE_BATT=SCALE_BATT/7500;  %kWh/unit for battery
-E_SCALE_SC_L=SCALE_SC/330*1000;%Wh/unit for supercapacitor and load
+E_SCALE_SC=SCALE_SC*10/330*1000;%Wh/unit for supercapacitor and load
+E_SCALE_L=SCALE_L;
 
 global T_SCALE;
+T_SCALE=0.1;
 
 %% Visualization
 
@@ -52,20 +54,39 @@ else
     time=[1:length(optE1)]*T_SCALE;
     
     %Visualize a possible sequence of loads, as previously found
+    %
     figure
     hold on;
-    plot(time,optE1*E_SCALE_BATT,'-','MarkerSize',10); plot(time,optE2*E_SCALE_SC_L,'-','MarkerSize',10);
+    plot(time,optE1*E_SCALE_BATT,'-','MarkerSize',10);
+    xlabel('Time (s)');
+    xlim([0 max(time)]);
+    ylabel('Battery energy (kWh)');
+    ylim([0 inf])
+    title('Variation in energy storage state under demand');
+    yyaxis right
+	plot(time,optE2*E_SCALE_SC,'-','MarkerSize',10); plot(time,[Load,0]*E_SCALE_L,'--','MarkerSize',10);
+    hold off;
+    ylabel('Supercapacitor energy and demand (Wh)');
+    ylim([-50 1000])
+    legend('Battery (E1)','Supercapacitor (E2)','Demand (L)');
+    %}
+    
+    %{
+    figure
+    hold on;
+    plot(time,optE1*E_SCALE_BATT,'-','MarkerSize',10); plot(time,optE2*E_SCALE_SC/10,'-','MarkerSize',10);
     xlabel('Time (s)');
     xlim([0 max(time)]);
     ylabel('Battery energy (kWh) and supercapacitor energy (Wh)');
     ylim([0 inf])
     title('Variation in energy storage state under demand');
     yyaxis right
-    plot(time,[Load,0]*E_SCALE_SC_L,'--','MarkerSize',10);
+    plot(time,[Load,0]*E_SCALE_L,'--','MarkerSize',10);
     hold off;
     ylabel('Demand (Wh)');
-    ylim([-inf 1])
+    ylim([-100 100])
     legend('Battery (E1)','Supercapacitor (E2)','Demand (L)');
+    %}
     
     %{
     figure

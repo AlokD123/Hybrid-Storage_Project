@@ -100,7 +100,7 @@ for cost_mult_1=1:5
         end
     end
     
-    optRatio(cost_mult_1,cost_mult_2)=(optE_SIZE(1)/7500)*SCALE_BATT / (optE_SIZE(2)/330*SCALE_SC);
+    optRatio(cost_mult_1,cost_mult_2)=(optE_SIZE(1)/7500)*SCALE_BATT / (optE_SIZE(2)*10/330*SCALE_SC);
     optCosts{mult_cost_idx}=totCost;
     optSize{mult_cost_idx}=opt_E_size;
     

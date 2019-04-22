@@ -4,7 +4,7 @@
 % **** NEW STAGE COST ****
 %Realistic sizing
 
-clearvars -except cost approx_err E_MAX max_E_SIZE min_E_SIZE minCost max_E1 max_E2 optE_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L RES_U1 SCALE_BATT SCALE_SC Phi_size maxE_stepSize E1_counter E2_counter maxE_stepSize_E1 maxE_stepSize_E2 mult_cost_idx cost_mult_1 cost_mult_2 optRatio optCosts c1_fact c2_fact optSize opt_E_size;
+clearvars -except cost approx_err E_MAX max_E_SIZE min_E_SIZE minCost max_E1 max_E2 optE_SIZE c1 c2 vectS_netOptVal PF_opt_mtx g_opt_vect P_opt_mtx size_iter PF_opt g_opt Exp_CostToGo feasStatesArr_size optVal_size optCost_size g_opt_mtx Exp_CostToGo_mtx totCost INFCOST size1_mult size2_mult RES_E1 RES_E2 RES_L RES_U1 SCALE_BATT SCALE_SC SCALE_L Phi_size maxE_stepSize E1_counter E2_counter maxE_stepSize_E1 maxE_stepSize_E2 mult_cost_idx cost_mult_1 cost_mult_2 optRatio optCosts c1_fact c2_fact optSize opt_E_size P0;
 
 global E_MIN;
 E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
@@ -39,11 +39,12 @@ MAX_CHARGE=mult*[1,15];                                                         
 MAX_DISCHARGE=mult*[1,15];
 %}
 
-global MIN_LOAD; global MAX_LOAD;
+global MIN_LOAD; global MAX_LOAD; global SCALE_L;
 %
 MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 %}
+SCALE_L=(4.5+7.5)/MAX_LOAD; %Wh/gridpt
 
 %{
 MIN_LOAD=-mult*2;
@@ -74,7 +75,7 @@ global RES_E2;
 global RES_L;
 %Resolution of demand DURING SIMULATION ("continuous" demands)
 global resL_Mult;
-resL_Mult=1/RES_L;
+resL_Mult=RES_L;
 %{
 RES_U1=1;
 RES_E1=1/1000;
@@ -955,7 +956,7 @@ gVec_p=[];
     %Format FINAL cost vector into E1xE2 matrices (one for each value of load)
     ConvCosts=FormatCostVect_v2(cost);
 
-    %{
+    %
     %% PART C: STATIONARY POLICY
     %PART 0: get state-action Q-values
     PF_mtx=[]; %Create aggregate transition matrix

@@ -5,6 +5,7 @@
 %E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
 %E1_INIT=E_MAX(1); 
 %E2_INIT=E_MAX(2);
+global P0;
 
 %Initialize
 optE1=[]; optE2=[]; D1Opt=[]; D2Opt=[]; Load=[];
@@ -17,7 +18,7 @@ countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 
 
-NumIter=1000; %Number of iterations of the policy to do
+NumIter=100000/100; %Number of iterations of the policy to do
 
 DeltaL_min=1/resL_Mult;
 
