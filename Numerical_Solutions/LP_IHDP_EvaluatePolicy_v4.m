@@ -18,7 +18,9 @@ countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 
 
-NumIter=100000/100; %Number of iterations of the policy to do
+NumIter=1000; %Number of iterations of the policy to do
+
+resL_Mult=0.5;
 
 DeltaL_min=1/resL_Mult;
 
@@ -112,9 +114,9 @@ while t_ind_VI<NumIter
         %Get number of FEASIBLE next loads...
         
         %Check excess discharge condition
-        if( ~(U1_next>nextE1 || U1_next<(nextE1-E_MAX(1))) )
+        if( ~(U1_next>nextE1 || U1_next<(nextE1-E_MAX(1))) )  %BECAUSE nextE only impacts MIN AND MAX f'ble load, can be continuous for distribution that depends only on # of loads and ctr! ***
             %For each perturbation at the NEXT time...
-            for L=linspace(-MAX_CHARGE(2)+U1_next,MAX_DISCHARGE(2)+U1_next,resL_Mult*(MAX_DISCHARGE(2)+MAX_CHARGE(2))+1)
+            for L=MIN_LOAD : 1/resL_Mult : MAX_LOAD                                         %-MAX_CHARGE(2)+U1_next : 1/resL_Mult : MAX_DISCHARGE(2)+U1_next
                 [next_nextE1,next_nextE2]=optNextStateLimited_v3(nextE1,nextE2,U1_next,L);
                 %Check other conditions
                 if(next_nextE1<=E_MAX(1) && next_nextE1>=E_MIN(1))
@@ -130,15 +132,15 @@ while t_ind_VI<NumIter
      end
     
     %Get indices 
-    idxCurrL=round((currL-MIN_LOAD)*resL_Mult+1);
-    idxNxtL=round((nxtL-MIN_LOAD)*resL_Mult+1);
+    idxCurrL=(currL-MIN_LOAD)*resL_Mult+1;
+    idxNxtL=(nxtL-MIN_LOAD)*resL_Mult+1;
      
-    idxNxtL=unique(idxNxtL); %Remove duplicates
+    idxNxtL=unique(idxNxtL); %Remove duplicates since just need to allow %%%%%%% TO DO: CHANGE TO ALLOW FOR resL_Mult~=RES_L!!!
     numL_OffGrd=length(idxNxtL); %Get number of feasible loads
     
     %Create vector of next state probabilities for each of the next demands
     %Probabilities follow custom distribution sampled resL_Mult times more finely
-    prob_nextL=ProbDistr_v2(numL_OffGrd,idxCurrL,idxNxtL,0);
+    prob_nextL=ProbDistr_v2(numL_OffGrd,idxCurrL,idxNxtL,0); %Because resolution of next L depends only on # of loads and min/max loads, the load can be continuous!***
     
     %SAMPLE FROM CONDITIONAL DISTRIBUTION TO GET INDEX OF NEXT LOAD in vector nxtL (NOT RELATIVE TO MIN_LOAD) 
     nxt_indL=find(mnrnd(1,prob_nextL),1);

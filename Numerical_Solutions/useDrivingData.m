@@ -7,4 +7,3 @@ L_seq=P_seq/max(max(P_seq),-min(P_seq))*max(MAX_LOAD,-MIN_LOAD)/6;
 Tot_E_seq=(E_norm_seq-min(E_norm_seq))/max(E_norm_seq-min(E_norm_seq))*sum(E_MAX);  %Total energy (unitless, scaled)
 
 end
-
