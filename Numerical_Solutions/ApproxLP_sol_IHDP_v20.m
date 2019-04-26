@@ -536,21 +536,37 @@ gVec_p=[];
         %IF off grid... GET DEMANDS ASSUMING ON GRID (ROUNDED)
         
         if round(Ind_nextE)~=Ind_nextE
+            numProb_nextE=numLoads_OffGrd_p(x);
+            x=x+1;
+            prob_nextE=P_fullmtx(round(Ind_nextE),(1:numProb_nextE)); %<---- POSSIBLY CHANGE
+            if sum(prob_nextE)~=1
+                prob_nextE=prob_nextE+(1-sum(prob_nextE))/length(prob_nextE);
+            end
+            %{
             %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
             nnzProb_nextE=nnz(P_fullmtx(round(Ind_nextE),:));      %Should be equal to number of repeats in nextE_Ind_Vect
             %Get said non-zero probabilities
             prob_nextE=nonzeros(P_fullmtx(round(Ind_nextE),:));
+            %}
         else %Otherwise...
+            numProb_nextE=length(find(uniqueFeasNextStates(:,1)==Ind_nextE));
+            L_idxs=uniqueFeasNextStates(uniqueFeasNextStates(:,1)==Ind_nextE,2);
+            prob_nextE=P_fullmtx(Ind_nextE,(L_idxs+size(E_Ind_MtxALL,2)-1)*RES_L+1);
+            if sum(prob_nextE)~=1
+                prob_nextE=prob_nextE+(1-sum(prob_nextE))/length(prob_nextE);
+            end
+            %{
             %Count number of non-zero probabilities in associated E-state row of P_fullmtx (i.e. Ind_nextE)
             nnzProb_nextE=nnz(P_fullmtx(Ind_nextE,:));      %Should be equal to number of repeats in nextE_Ind_Vect
             %Get said non-zero probabilities
             prob_nextE=nonzeros(P_fullmtx(Ind_nextE,:));
+            %}
         end
 
         %Store subscript pairs and associated values in array P
         len=length(prob_nextE); 
-        cols=c:(c+nnzProb_nextE-1);
-        P=[P;r*ones(len,1),cols',prob_nextE];
+        cols=c:(c+numProb_nextE-1);
+        P=[P;r*ones(len,1),cols',prob_nextE'];
     end
 
     %Store in p-th PF matrix, as well as in own P_mtx
