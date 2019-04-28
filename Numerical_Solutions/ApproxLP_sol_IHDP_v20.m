@@ -42,7 +42,7 @@ global MIN_LOAD; global MAX_LOAD; global SCALE_L;
 MIN_LOAD=-(MAX_CHARGE(1)+MAX_CHARGE(2)); %Maximum regenerative energy expected
 MAX_LOAD=MAX_DISCHARGE(1)+MAX_DISCHARGE(2); %Maximum load expected
 %}
-SCALE_L=(4.5+7.5)/MAX_LOAD; %Wh/gridpt
+SCALE_L=4*(4.5+7.5)/MAX_LOAD; %Wh/gridpt %<----------------------------------------------------- TUNED TO HAVE 1:6 ratio!!!!
 
 %{
 MIN_LOAD=-mult*2;
@@ -154,6 +154,9 @@ margApproxErr=zeros(N1,1); %Error in each state marginalized, initialized at 0s
 c_state=[];     %Vector of state-relevance weightings
 
 gVec_p=[];
+
+totE=[];
+Ls=[];
 %% PART A: SET UP MATRICES
 %For each possible control...
   for U1_Ind=1:P0
@@ -171,6 +174,8 @@ gVec_p=[];
                 E1=E_MIN(1)+(E_Ind1-1)/RES_E1;
                 E2=E_MIN(2)+(E_Ind2-1)/RES_E2;
 
+                totE=[totE;E1+E2];
+                
                 %Get index of current state energies in vector of state energies
                 E_Ind=(E_Ind1-1)*N2+E_Ind2;
 
@@ -192,6 +197,8 @@ gVec_p=[];
                         %Map index to value of load
                         L=MIN_LOAD+(indL-1)/RES_L;
 
+                        Ls=[Ls;L];
+                        
                         %STEP 0
                         %Calculate the state these values of u and w will lead to, even if
                         %impossible...
@@ -403,6 +410,9 @@ gVec_p=[];
         E_Ind_L_Vect_p=[];
 
   end
+  
+  totE=unique(totE);
+  Ls=unique(Ls);
 
   %% REMOVE LOADS NOT FEASIBLE FOR ANY E-STATE <----------------------------------------------------------------------------------------------------------------------------------------------
   %{
@@ -456,7 +466,10 @@ gVec_p=[];
 
   %STEP 8: Create full probability matrix
   %DISTRIBUTION: based on driving patterns
-  [P_fullmtx,E_seq_disc,L_seq_disc,ctrs] = getRealProbMtx(Tot_E_seq,L_seq,size(E_Ind_MtxALL,1),size(E_Ind_MtxALL,2));
+  %Load_idxs_symm=1:size(E_Ind_MtxALL,2)-(size(E_Ind_MtxALL,2)+1)/2;
+  %numLoads=length(-ceil(Load_idxs_symm(end)/6):1:ceil(Load_idxs_symm(end)/6));
+  
+  [P_fullmtx,E_seq_disc,L_seq_disc,ctrs] = getRealProbMtx(Tot_E_seq,L_seq,totE,E_Ind_MtxALL>0);
   
   unqDiscStates=unique([E_seq_disc',L_seq_disc'],'rows');
   
@@ -536,10 +549,14 @@ gVec_p=[];
         %IF off grid... GET DEMANDS ASSUMING ON GRID (ROUNDED)
         
         if round(Ind_nextE)~=Ind_nextE
+            %numProb_nextE=numLoads_OffGrd_p(x);
+            %prob_nextE=P_fullmtx(round(Ind_nextE),(1:numProb_nextE)); %<---- POSSIBLY CHANGE
             numProb_nextE=numLoads_OffGrd_p(x);
             x=x+1;
-            prob_nextE=P_fullmtx(round(Ind_nextE),(1:numProb_nextE)); %<---- POSSIBLY CHANGE
-            if sum(prob_nextE)~=1
+            L_vals=nextE_Ind_L_Vect_p(abs(nextE_Ind_L_Vect_p(:,1)-Ind_nextE)<epsilon2,2);
+            prob_nextE=P_fullmtx(round(Ind_nextE),round((L_vals-MIN_LOAD)*RES_L)+1);
+            
+            if abs(sum(prob_nextE)-1)>epsilon2
                 prob_nextE=prob_nextE+(1-sum(prob_nextE))/length(prob_nextE);
             end
             %{
@@ -549,10 +566,10 @@ gVec_p=[];
             prob_nextE=nonzeros(P_fullmtx(round(Ind_nextE),:));
             %}
         else %Otherwise...
-            numProb_nextE=length(find(uniqueFeasNextStates(:,1)==Ind_nextE));
-            L_idxs=uniqueFeasNextStates(uniqueFeasNextStates(:,1)==Ind_nextE,2);
-            prob_nextE=P_fullmtx(Ind_nextE,(L_idxs+size(E_Ind_MtxALL,2)-1)*RES_L+1);
-            if sum(prob_nextE)~=1
+            numProb_nextE=length(find(nextE_Ind_L_Vect_p(:,1)==Ind_nextE));
+            L_vals=nextE_Ind_L_Vect_p(nextE_Ind_L_Vect_p(:,1)==Ind_nextE,2);
+            prob_nextE=P_fullmtx(Ind_nextE,round((L_vals-MIN_LOAD)*RES_L)+1);
+            if abs(sum(prob_nextE)-1)>epsilon2
                 prob_nextE=prob_nextE+(1-sum(prob_nextE))/length(prob_nextE);
             end
             %{

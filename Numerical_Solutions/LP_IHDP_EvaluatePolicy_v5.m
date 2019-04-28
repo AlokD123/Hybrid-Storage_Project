@@ -1,5 +1,5 @@
 %GET INFINITE HORIZON POLICY USING LP SOLUTION
-%V4: COMBINED CONTROLS
+%V5: Using driving data distribution
 
 %E_MIN=[0;0]; %Minimum energy to be stored (lower bound)
 %E_MAX=[5;4]; %Maximum energy to be stored (upper bound)
@@ -18,7 +18,7 @@ countOOB=0;         %Out of bounds count
 countRepeatZeros=0; %Count of repeated zero loads
 
 
-NumIter=100000/100; %Number of iterations of the policy to do
+NumIter=1000; %Number of iterations of the policy to do
 
 DeltaL_min=1/resL_Mult;
 
@@ -151,14 +151,14 @@ while t_ind_VI<NumIter
     %Create vector of next state probabilities for each of the next demands
     %Probabilities follow custom distribution sampled resL_Mult times more finely
     Ind_nextE=(nextE_Ind1-1)*N2+nextE_Ind2;
-    prob_nextL=P_fullmtx(round(Ind_nextE),1:numL_OffGrd);
-    if sum(prob_nextL)~=1
+    prob_nextL=P_fullmtx(round(Ind_nextE),idxNxtL);
+    if abs(sum(prob_nextE)-1)>epsilon2
         prob_nextL=prob_nextL+(1-sum(prob_nextL))/length(prob_nextL);
     end
     
     %SAMPLE FROM CONDITIONAL DISTRIBUTION TO GET INDEX OF NEXT LOAD in vector nxtL (NOT RELATIVE TO MIN_LOAD) 
     nxt_indL=find(mnrnd(1,prob_nextL),1);
     %Get demand value from index
-    minL=nxtL(1);
+    minL=min(nxtL);
     L=minL+(nxt_indL-1)/resL_Mult;
 end
