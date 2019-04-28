@@ -8,7 +8,7 @@ E_SCALE_SC=SCALE_SC*10/330*1000;%Wh/unit for supercapacitor and load
 E_SCALE_L=SCALE_L;
 
 global T_SCALE;
-T_SCALE=0.1;
+T_SCALE=0.25;
 
 %% Visualization
 
