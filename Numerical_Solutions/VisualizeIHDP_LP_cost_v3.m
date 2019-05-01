@@ -67,7 +67,7 @@ else
 	plot(time,optE2*E_SCALE_SC,'-','MarkerSize',10); plot(time,[Load,0]*E_SCALE_L,'--','MarkerSize',10);
     hold off;
     ylabel('Supercapacitor energy and demand (Wh)');
-    ylim([-50 1000])
+    ylim([-50 500])
     legend('Battery (E1)','Supercapacitor (E2)','Demand (L)');
     %}
     

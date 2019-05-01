@@ -39,7 +39,7 @@ maxE_stepSize_E2=1;
 %CONSTANT resolutions in simulation
 RES_E1=3/(7500); %*maxE_stepSize_E1);%*size1_mult);
 RES_E2=3/(330); %(maxE_stepSize_E2);%size2_mult);
-RES_L=1; %4/(2*size1_mult+30*size1_mult);
+RES_L=1/2; %4/(2*size1_mult+30*size1_mult);
 RES_U1=2; %/size1_mult;
 
 mult_cost_idx=0;

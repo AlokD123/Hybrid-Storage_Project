@@ -1,11 +1,11 @@
 function [P_fullmtx,SOC_seq_disc,L_seq_disc,ctrs] = getRealProbMtx(SOC_seq,L_seq,binsE,E_Ind_MtxALL) %numBinsE should be N1*N2
 %getRealProbMtx Uses real driving data, discretized into bins, to create demand probability distribution.
 %Inputs:
-%   SOC_seq: real battery SOC data. Assuming horizontal vector
+%   SOC_seq: real battery energy data. Assuming horizontal vector
 %   L_seq: real energy demand data. Assuming horizontal vector
 %   binsE: discretization of total energy (centre values of bins)
 %   E_Ind_MtxALL: matrix indicating if state is feasible
-%Outputs
+%Outputs:
 %   P_fullmtx: matrix of probabilities for each state. Rows: E-states. Cols:  L-values
 
 global RES_L; global SCALE_BATT;
@@ -29,6 +29,7 @@ SOC_seq_disc=discretize(SOC_seq,SOC_edges,SOC_values);
 L_seq_disc=discretize(L_seq,L_edges,L_values);
 %}
 
+[histbefore,~]=hist3([SOC_seq_disc',L_seq_disc'],'Ctrs',{SOC_values L_values});
 %
 L_seq_disc=L_seq_disc+max((SOC_seq_disc-L_seq_disc)-SOC_seq_disc(1),0);     %<------ ASSUMING SOC_seq_disc(1) is maximum value of E
 L_seq_disc=L_seq_disc-max(SOC_seq_disc(end)-(SOC_seq_disc-L_seq_disc),0);   %<------ ASSUMING SOC_seq_disc(end) is minimum value of E
@@ -36,6 +37,8 @@ L_seq_disc=L_seq_disc-max(SOC_seq_disc(end)-(SOC_seq_disc-L_seq_disc),0);   %<--
 X=[SOC_seq_disc',L_seq_disc'];
 %[hist2D,ctrs]=hist3(X,'Nbins',[numBinsE,numBinsL]);
 [hist2D,ctrs]=hist3(X,'Ctrs',{SOC_values L_values});
+
+fprintf('Modified %f percent of data\n\n',(1-nnz(hist2D)/nnz(histbefore))*100);
 
 %hist3(X,'Ctrs',{SOC_values L_values}); set(gca,'XTickLabel',linspace(SCALE_BATT*0.31,SCALE_BATT*0.76,9)); xlabel('Total Energy Stored (kWh)'); ylabel('Demand (Wh)'); zlabel('Count'); title('Histogram of stored energy and demand');
 
@@ -49,8 +52,14 @@ hist2D=[zeros(size(E_Ind_MtxALL,1),missingLoadsNum/2),hist2D,zeros(size(E_Ind_Mt
 fprintf('Lost %f percent of data\n\n',sum(sum(hist2D.*~E_Ind_MtxALL))/sum(sum(hist2D))*100);
 hist2D=hist2D.*E_Ind_MtxALL;
 
+%{
+hist=load('hist4.mat');
+hist2D=hist.hist2D;
+%}
+
 %3) Normalize over demands for each E-state
 P_fullmtx=normalize(hist2D','norm',1)';
+
 
 
 end
