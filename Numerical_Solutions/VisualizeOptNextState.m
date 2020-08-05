@@ -1,3 +1,5 @@
+%Script to visualize costs-to-go as a function of state
+
 E_Ind1=1:(E_MAX(1)-E_MIN(1)+1);
 E_Ind2=1:(E_MAX(2)-E_MIN(2)+1);
 indL=1:(MAX_LOAD-MIN_LOAD+1);

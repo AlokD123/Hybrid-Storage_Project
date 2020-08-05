@@ -1,4 +1,4 @@
-%Method to visualize optimal energy transfers
+%Script to visualize optimal energy transfers (real-time policy evaluation)
 %v3: combined controls
 
 %% Parameter setup

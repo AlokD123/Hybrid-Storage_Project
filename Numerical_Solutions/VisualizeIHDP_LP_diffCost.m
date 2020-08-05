@@ -1,4 +1,6 @@
-%PREREQUISITE: need to crease matrix of difference between optimal values
+%Script to visualize difference between (discretized) value functions
+
+%PREREQUISITE: need to create matrix of difference between optimal values
 %for subset of common states for OVFs with different sizes
 
 INFCOST=0;

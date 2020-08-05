@@ -1,6 +1,7 @@
 %Create matrix of optimal control policy, fullPolicyMtx 
 %fullPolicyMtx(E1,E2,L,:) is control vector of state (E1,E2,L), containing 1 in optimal p-th element
 %policyMtx contains policy in elements, but also indicates infeasible states (NaN)
+%For NO regenerative braking case (uncombined controls)
 
 clear policyMtx;
 global fullPolicyMtx;

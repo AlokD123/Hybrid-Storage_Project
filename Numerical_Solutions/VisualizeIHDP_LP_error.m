@@ -1,3 +1,5 @@
+%Script to visualize approximation errors over states
+
 clear ERRORS_LP;
 INFCOST=max(max(max(ConvCosts)));
 ERRORS_LP=Costs(:,:,:)-ConvCosts(:,:,:);

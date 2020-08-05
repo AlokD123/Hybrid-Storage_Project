@@ -1,4 +1,5 @@
 function [ cost ] = CtrlCost_Modified_v3( U1,L,E1 ) % Input: U1(t), L(t), E1(t)
+%Calculate stage cost
 %V3: UPDATED stage cost
   global ALPHA_C; global ALPHA_D; global K;
   global MAX_DISCHARGE; global E_MAX; global MAX_CHARGE;

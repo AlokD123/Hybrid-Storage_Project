@@ -1,3 +1,5 @@
+%Script to DIRECTLY visualize an optimal set of controls over states at a given point t=_ during evaluation
+
 clearvars -except seqL MAX_LOAD MIN_LOAD E_MAX E_MIN D1Opt_State D2Opt_State
 
 %Visualize all possible policies

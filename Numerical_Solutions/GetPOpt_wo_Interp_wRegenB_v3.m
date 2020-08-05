@@ -1,6 +1,6 @@
 function U1 = GetPOpt_wo_Interp_wRegenB_v3(indE1,indE2,L)
 %GetPOpt_wo_Interp_wRegenB Returns the optimal control in the given state.
-%                          Accounts for R.B.
+%                          Accounts for regenerative braking
 %   Input: state, assumed ON GRID
 %   Output: optimal control
 

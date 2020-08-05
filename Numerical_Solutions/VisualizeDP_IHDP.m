@@ -1,3 +1,4 @@
+%Script to visualize real-time policy evaluation for DP approach
 boolSingleSequence=0;
 
 

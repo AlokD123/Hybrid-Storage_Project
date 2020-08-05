@@ -1,3 +1,4 @@
+%Script to verify iterative minimization of value function (with boolean indicators of decrease in each state)
 %clearvars -except seqL MAX_LOAD MIN_LOAD E_MAX E_MIN BOOL_VI_CONV BOOL_VI_CONV_PREV
 
 E_Ind1=1:(E_MAX(1)-E_MIN(1)+1);

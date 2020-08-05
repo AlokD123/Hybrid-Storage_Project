@@ -1,4 +1,4 @@
-%Method to visualize optimal energy transfers
+%Script to visualize optimal energy transfers (real-time policy evaluation)
 %v2: for realistic sizing of components
 
 %% Parameter setup

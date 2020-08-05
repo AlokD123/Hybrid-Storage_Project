@@ -1,4 +1,6 @@
 function [ cost ] = CtrlCost( D1,D2,L ) % Input: D1(t), D2(t), L(t)
+  %Calculate staget cost
+  %For NO regenerative braking case (uncombined controls)
   global ALPHA_C; global ALPHA_D; global K;
   global MAX_DISCHARGE;
   

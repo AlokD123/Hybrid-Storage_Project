@@ -2,6 +2,7 @@ function [formatMtxCosts] = FormatCostVect(cost_vect)
 %FormatCostVect Format cost vector into E1xE2 matrices (one for each value of load)
 %   Input: vector of costs (actual or approximate)
 %   Output: formatted matrices
+%For NO regenerative braking case (uncombined controls)
 
 global E_Ind_MtxALL; global N2; global CostMtx; global MAX_LOAD; global MIN_LOAD;
 

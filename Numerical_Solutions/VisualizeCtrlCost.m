@@ -1,3 +1,6 @@
+%Script to visualize cost of applied controls at a point in time
+%UNCOMBINED controls (non-negatives)
+
 clearvars -except seqL MAX_DISCHARGE ALPHA_D ALPHA_C K
 
 D1vals=1:MAX_DISCHARGE(1);

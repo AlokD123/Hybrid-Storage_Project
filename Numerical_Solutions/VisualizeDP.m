@@ -1,3 +1,4 @@
+%Script to visualize DP approach with FINITE horizon
 boolSingleSequence=0;
 clear Costs_DP;
 

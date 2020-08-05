@@ -1,4 +1,5 @@
-%Finds the control value D1 leading to next state E1 from current E1, if BOTH known
+%Finds the control value D1 leading to next state E2 from current E2, if BOTH known
+%For NO regenerative braking case (uncombined controls)
 %Input: E2(t), E2(t+1), D1 (found from D1Opt_State), and L (particular load for which opt control)
 function [ D2Opt_State ] = GetCtrl2_CurrNextState( E2,nextE2,D1Opt_State,L )
     global ALPHA_D;global ALPHA_C; global BETA;

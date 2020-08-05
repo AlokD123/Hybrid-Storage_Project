@@ -1,5 +1,5 @@
 %Calculate subsequent state accounting for no inherent storage loss when dropping below lower bound of state.
-%V3: single control, R.B.
+%V3: single control, with regenerative braking
 function [ nextE1,nextE2 ] = optNextStateLimited_v3( E1,E2,U1,L ) % Input: state, control, load
     global E_MIN; global BETA; global ALPHA_C; global ALPHA_D;
     newE1=StateEqn1_wRegenBraking_v2(E1,U1,BETA(1));
