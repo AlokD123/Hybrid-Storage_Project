@@ -1,6 +1,8 @@
 # Hybrid-Storage_Project
 Project on the optimal control of an electric vehicle's (EV's) energy storage system to help drivers. Log_Reports contains various upublished documents about the project. Numerical_Solutions contains the Software-in-the-Loop simulation of an EV using our contol algorithm, done in MATLAB and to be ported to Python.
 
+Refer to the conference publication [here](https://cigreconference.ca/papers/2019/CIGRE-236.pdf) for more details, while the journal paper has yet to be officially published.
+
 ## Background
 Range anxiety is a major issue that discourages drivers from considering electric cars as an alternative mode of transportation to the standard combustion engine vehicle. This project aims to provide such drivers with an upper bound prediction of travel time if they were to use an electric vehicle based on their own driving habits. The goal is to help such drivers estimate whether it would be reasonable for them to considering to this more environmentally-friendly alternative without impacting their current driving habits.
 
